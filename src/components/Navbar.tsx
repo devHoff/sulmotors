@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Car, LogOut, User as UserIcon } from 'lucide-react';
+import { Menu, X, Car, LogOut, User as UserIcon, ChevronDown, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -24,17 +24,23 @@ export default function Navbar() {
     };
 
     return (
-        <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 shadow-sm">
+        <nav className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
+            {/* Top accent line */}
+            <div className="h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent opacity-60" />
+
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
-                    <Link to="/" className="flex items-center gap-2 group">
-                        <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center group-hover:bg-brand-700 transition-colors">
-                            <Car className="w-5 h-5 text-white" />
+                    <Link to="/" className="flex items-center gap-2.5 group">
+                        <div className="relative w-9 h-9">
+                            <div className="absolute inset-0 bg-brand-400/20 rounded-xl blur-sm group-hover:bg-brand-400/30 transition-all" />
+                            <div className="relative w-9 h-9 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center shadow-glow">
+                                <Car className="w-5 h-5 text-zinc-950" />
+                            </div>
                         </div>
-                        <span className="text-xl font-bold">
-                            <span className="text-brand-600">Sul</span>
-                            <span className="text-slate-900">Motors</span>
+                        <span className="text-xl font-black tracking-tight">
+                            <span className="text-brand-400">Sul</span>
+                            <span className="text-white">Motors</span>
                         </span>
                     </Link>
 
@@ -44,12 +50,18 @@ export default function Navbar() {
                             <Link
                                 key={link.to}
                                 to={link.to}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.to)
-                                    ? 'text-brand-600 bg-brand-50'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                                className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(link.to)
+                                    ? 'text-brand-400'
+                                    : 'text-zinc-400 hover:text-white'
                                     }`}
                             >
-                                {link.label}
+                                {isActive(link.to) && (
+                                    <motion.div
+                                        layoutId="nav-active"
+                                        className="absolute inset-0 bg-brand-400/10 rounded-lg border border-brand-400/20"
+                                    />
+                                )}
+                                <span className="relative">{link.label}</span>
                             </Link>
                         ))}
                     </div>
@@ -58,18 +70,20 @@ export default function Navbar() {
                     <div className="hidden md:flex items-center gap-3">
                         <Link
                             to="/anunciar"
-                            className="px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-all hover:shadow-lg hover:shadow-brand-600/25 active:scale-95"
+                            className="group relative flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl overflow-hidden transition-all hover:shadow-glow"
                         >
-                            Anunciar Carro
+                            <div className="absolute inset-0 bg-gradient-to-r from-brand-500 to-brand-400 transition-all group-hover:opacity-90" />
+                            <Zap className="relative w-4 h-4 text-zinc-950" />
+                            <span className="relative text-zinc-950">Anunciar Carro</span>
                         </Link>
 
                         {user ? (
                             <div className="relative">
                                 <button
                                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10"
                                 >
-                                    <div className="w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center text-brand-700 overflow-hidden">
+                                    <div className="w-7 h-7 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-zinc-950 overflow-hidden">
                                         {user.user_metadata?.avatar_url ? (
                                             <img
                                                 src={user.user_metadata.avatar_url}
@@ -85,44 +99,45 @@ export default function Navbar() {
                                             ? user.user_metadata.full_name.split(' ')[0]
                                             : user.email?.split('@')[0]}
                                     </span>
+                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                                 </button>
 
                                 <AnimatePresence>
                                     {userMenuOpen && (
                                         <motion.div
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: 10 }}
-                                            className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1"
+                                            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute right-0 mt-2 w-52 bg-zinc-900 rounded-2xl shadow-2xl border border-white/10 py-2 overflow-hidden"
                                         >
-                                            <Link
-                                                to="/meu-perfil"
-                                                className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                                                onClick={() => setUserMenuOpen(false)}
-                                            >
-                                                Meu Perfil
-                                            </Link>
-                                            <Link
-                                                to="/favoritos"
-                                                className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                                                onClick={() => setUserMenuOpen(false)}
-                                            >
-                                                Meus Favoritos
-                                            </Link>
-                                            <Link
-                                                to="/meus-anuncios"
-                                                className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                                                onClick={() => setUserMenuOpen(false)}
-                                            >
-                                                Meus Anúncios
-                                            </Link>
-                                            <button
-                                                onClick={handleSignOut}
-                                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                            >
-                                                <LogOut className="w-4 h-4" />
-                                                Sair
-                                            </button>
+                                            <div className="px-4 py-2 border-b border-white/5 mb-1">
+                                                <p className="text-xs text-zinc-500">Conta</p>
+                                                <p className="text-sm font-semibold text-white truncate">{user.email}</p>
+                                            </div>
+                                            {[
+                                                { to: '/meu-perfil', label: 'Meu Perfil' },
+                                                { to: '/favoritos', label: 'Meus Favoritos' },
+                                                { to: '/meus-anuncios', label: 'Meus Anúncios' },
+                                            ].map((item) => (
+                                                <Link
+                                                    key={item.to}
+                                                    to={item.to}
+                                                    className="block px-4 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-white/5 transition-colors"
+                                                    onClick={() => setUserMenuOpen(false)}
+                                                >
+                                                    {item.label}
+                                                </Link>
+                                            ))}
+                                            <div className="border-t border-white/5 mt-1 pt-1">
+                                                <button
+                                                    onClick={handleSignOut}
+                                                    className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
+                                                >
+                                                    <LogOut className="w-4 h-4" />
+                                                    Sair
+                                                </button>
+                                            </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
@@ -130,7 +145,7 @@ export default function Navbar() {
                         ) : (
                             <Link
                                 to="/login"
-                                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
+                                className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10"
                             >
                                 Entrar
                             </Link>
@@ -139,7 +154,7 @@ export default function Navbar() {
 
                     {/* Mobile toggle */}
                     <button
-                        className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                        className="md:hidden p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
                         onClick={() => setMobileOpen(!mobileOpen)}
                     >
                         {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -154,7 +169,7 @@ export default function Navbar() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="md:hidden overflow-hidden bg-white border-t border-slate-100"
+                        className="md:hidden overflow-hidden bg-zinc-950 border-t border-white/5"
                     >
                         <div className="px-4 py-4 space-y-1">
                             {links.map((link) => (
@@ -163,47 +178,42 @@ export default function Navbar() {
                                     to={link.to}
                                     onClick={() => setMobileOpen(false)}
                                     className={`block px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive(link.to)
-                                        ? 'text-brand-600 bg-brand-50'
-                                        : 'text-slate-600 hover:bg-slate-50'
+                                        ? 'text-brand-400 bg-brand-400/10 border border-brand-400/20'
+                                        : 'text-zinc-400 hover:text-white hover:bg-white/5'
                                         }`}
                                 >
                                     {link.label}
                                 </Link>
                             ))}
-                            <hr className="my-2 border-slate-100" />
-                            <Link
-                                to="/anunciar"
-                                onClick={() => setMobileOpen(false)}
-                                className="block px-4 py-3 text-sm font-semibold text-brand-600"
-                            >
-                                Anunciar Carro
-                            </Link>
+                            <div className="border-t border-white/5 my-2 pt-2">
+                                <Link
+                                    to="/anunciar"
+                                    onClick={() => setMobileOpen(false)}
+                                    className="flex items-center gap-2 px-4 py-3 text-sm font-bold text-zinc-950 bg-gradient-to-r from-brand-500 to-brand-400 rounded-xl"
+                                >
+                                    <Zap className="w-4 h-4" />
+                                    Anunciar Carro
+                                </Link>
+                            </div>
                             {user ? (
                                 <>
-                                    <Link
-                                        to="/meu-perfil"
-                                        onClick={() => setMobileOpen(false)}
-                                        className="block px-4 py-3 text-sm font-medium text-slate-600"
-                                    >
-                                        Meu Perfil
-                                    </Link>
-                                    <Link
-                                        to="/favoritos"
-                                        onClick={() => setMobileOpen(false)}
-                                        className="block px-4 py-3 text-sm font-medium text-slate-600"
-                                    >
-                                        Meus Favoritos
-                                    </Link>
-                                    <Link
-                                        to="/meus-anuncios"
-                                        onClick={() => setMobileOpen(false)}
-                                        className="block px-4 py-3 text-sm font-medium text-slate-600"
-                                    >
-                                        Meus Anúncios
-                                    </Link>
+                                    {[
+                                        { to: '/meu-perfil', label: 'Meu Perfil' },
+                                        { to: '/favoritos', label: 'Meus Favoritos' },
+                                        { to: '/meus-anuncios', label: 'Meus Anúncios' },
+                                    ].map((item) => (
+                                        <Link
+                                            key={item.to}
+                                            to={item.to}
+                                            onClick={() => setMobileOpen(false)}
+                                            className="block px-4 py-3 text-sm font-medium text-zinc-400 hover:text-white"
+                                        >
+                                            {item.label}
+                                        </Link>
+                                    ))}
                                     <button
                                         onClick={() => { handleSignOut(); setMobileOpen(false); }}
-                                        className="w-full text-left px-4 py-3 text-sm font-medium text-red-600"
+                                        className="w-full text-left px-4 py-3 text-sm font-medium text-red-400"
                                     >
                                         Sair
                                     </button>
@@ -212,7 +222,7 @@ export default function Navbar() {
                                 <Link
                                     to="/login"
                                     onClick={() => setMobileOpen(false)}
-                                    className="block px-4 py-3 text-sm font-medium text-slate-600"
+                                    className="block px-4 py-3 text-sm font-medium text-zinc-400 hover:text-white"
                                 >
                                     Entrar
                                 </Link>

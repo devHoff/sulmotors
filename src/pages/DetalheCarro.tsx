@@ -3,7 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
     ChevronLeft, ChevronRight, ArrowLeft, Phone, MessageCircle,
-    Calendar, Gauge, Fuel, Settings2, Palette, MapPin, ArrowLeftRight, Loader2, Heart
+    Calendar, Gauge, Fuel, Settings2, Palette, MapPin, ArrowLeftRight,
+    Loader2, Heart, Share2, ArrowUpRight
 } from 'lucide-react';
 import { type Car } from '../data/mockCars';
 import { supabase } from '../lib/supabase';
@@ -16,39 +17,25 @@ export default function DetalheCarro() {
     const [loading, setLoading] = useState(true);
     const [imgIndex, setImgIndex] = useState(0);
     const [liked, setLiked] = useState(false);
+    const [likeCount, setLikeCount] = useState(0);
 
     useEffect(() => {
         async function fetchCar() {
             if (!id) return;
-            // 1. Fetch ONLY from Supabase
             try {
                 const { data, error } = await supabase
-                    .from('anuncios')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
-
+                    .from('anuncios').select('*').eq('id', id).single();
                 if (error) throw error;
-
                 if (data) {
-                    const mappedCar: Car = {
-                        ...data,
-                        aceitaTroca: data.aceita_troca,
-                        modelo_3d: data.modelo_3d,
-                        imagens: data.imagens || [],
-                    };
-                    setCar(mappedCar);
-
-                    // Check like status
+                    setCar({ ...data, aceitaTroca: data.aceita_troca, modelo_3d: data.modelo_3d, imagens: data.imagens || [] });
                     if (user) {
                         const { data: likeData } = await supabase
-                            .from('curtidas')
-                            .select('id')
-                            .eq('anuncio_id', id)
-                            .eq('user_id', user.id)
-                            .maybeSingle();
+                            .from('curtidas').select('id').eq('anuncio_id', id).eq('user_id', user.id).maybeSingle();
                         setLiked(!!likeData);
                     }
+                    const { count } = await supabase
+                        .from('curtidas').select('*', { count: 'exact', head: true }).eq('anuncio_id', id);
+                    setLikeCount(count ?? 0);
                 }
             } catch (error) {
                 console.error('Error fetching car:', error);
@@ -56,35 +43,35 @@ export default function DetalheCarro() {
                 setLoading(false);
             }
         }
-
         fetchCar();
     }, [id, user]);
 
     const toggleLike = async () => {
         if (!user || !car) return;
-
         if (liked) {
             await supabase.from('curtidas').delete().eq('anuncio_id', car.id).eq('user_id', user.id);
             setLiked(false);
+            setLikeCount(c => Math.max(0, c - 1));
         } else {
             await supabase.from('curtidas').insert({ anuncio_id: car.id, user_id: user.id });
             setLiked(true);
+            setLikeCount(c => c + 1);
         }
     };
 
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+            <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full border-2 border-brand-400/20 border-t-brand-400 animate-spin" />
             </div>
         );
     }
 
     if (!car) {
         return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center">
-                <p className="text-xl text-slate-500 mb-4">Carro não encontrado.</p>
-                <Link to="/estoque" className="text-brand-600 font-bold hover:underline">Voltar para o estoque</Link>
+            <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center">
+                <p className="text-xl text-zinc-400 mb-4">Veículo não encontrado.</p>
+                <Link to="/estoque" className="text-brand-400 font-bold hover:underline">Voltar ao estoque</Link>
             </div>
         );
     }
@@ -99,7 +86,7 @@ export default function DetalheCarro() {
     const nextImg = () => setImgIndex((i) => (i === car.imagens.length - 1 ? 0 : i + 1));
 
     const specs = [
-        { icon: Calendar, label: 'Ano', value: car.ano },
+        { icon: Calendar, label: 'Ano', value: String(car.ano) },
         { icon: Gauge, label: 'Quilometragem', value: formatKm(car.quilometragem) },
         { icon: Fuel, label: 'Combustível', value: car.combustivel },
         { icon: Settings2, label: 'Câmbio', value: car.cambio },
@@ -109,104 +96,244 @@ export default function DetalheCarro() {
     ];
 
     return (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex justify-between items-center mb-6">
-                <Link to="/estoque" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-600 transition-colors">
-                    <ArrowLeft className="w-4 h-4" />
-                    Voltar ao estoque
-                </Link>
-                {/* Like Button on Details Page */}
-                {user && (
-                    <button
-                        onClick={toggleLike}
-                        className={`p-2 rounded-full border transition-colors ${liked ? 'bg-red-50 border-red-200 text-red-500' : 'bg-white border-slate-200 text-slate-400 hover:text-red-500'}`}
+        <div className="bg-zinc-950 min-h-screen">
+            {/* Hero Image - full bleed */}
+            <div className="relative h-[50vh] md:h-[65vh] overflow-hidden">
+                <motion.img
+                    key={imgIndex}
+                    initial={{ opacity: 0.7, scale: 1.02 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4 }}
+                    src={car.imagens[imgIndex] || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1400&q=80'}
+                    alt={`${car.marca} ${car.modelo}`}
+                    className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-zinc-950/40" />
+
+                {/* Nav overlay */}
+                <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 sm:p-6">
+                    <Link
+                        to="/estoque"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-black/40 backdrop-blur-sm border border-white/15 text-white text-sm font-bold rounded-xl hover:bg-black/60 transition-all"
                     >
-                        <Heart className={`w-5 h-5 ${liked ? 'fill-red-500' : ''}`} />
-                    </button>
+                        <ArrowLeft className="w-4 h-4" />
+                        Estoque
+                    </Link>
+                    <div className="flex items-center gap-2">
+                        <button
+                            className="flex items-center gap-2 px-3 py-2.5 bg-black/40 backdrop-blur-sm border border-white/15 text-white/70 text-sm rounded-xl hover:text-white transition-all"
+                            onClick={() => navigator.share?.({ title: `${car.marca} ${car.modelo}`, url: window.location.href })}
+                        >
+                            <Share2 className="w-4 h-4" />
+                        </button>
+                        {user && (
+                            <button
+                                onClick={toggleLike}
+                                className={`flex items-center gap-2 px-4 py-2.5 backdrop-blur-sm border text-sm font-bold rounded-xl transition-all ${
+                                    liked
+                                        ? 'bg-red-500/20 border-red-500/40 text-red-400'
+                                        : 'bg-black/40 border-white/15 text-white/70 hover:text-red-400'
+                                }`}
+                            >
+                                <Heart className={`w-4 h-4 ${liked ? 'fill-red-400' : ''}`} />
+                                {likeCount > 0 && likeCount}
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Image navigation */}
+                {car.imagens.length > 1 && (
+                    <>
+                        <button
+                            onClick={prevImg}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition border border-white/10"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={nextImg}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition border border-white/10"
+                        >
+                            <ChevronRight className="w-5 h-5" />
+                        </button>
+                    </>
                 )}
+
+                {/* Image counter */}
+                <div className="absolute bottom-6 right-6 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg text-xs text-white/80 font-bold border border-white/10">
+                    {imgIndex + 1} / {car.imagens.length}
+                </div>
+
+                {/* Dots */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {car.imagens.map((_, i) => (
+                        <button
+                            key={i}
+                            onClick={() => setImgIndex(i)}
+                            className={`transition-all duration-300 rounded-full ${i === imgIndex ? 'w-6 h-2 bg-brand-400' : 'w-2 h-2 bg-white/30 hover:bg-white/60'}`}
+                        />
+                    ))}
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                {/* Left — Image Gallery */}
-                <div className="lg:col-span-3">
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative aspect-[16/10] rounded-2xl overflow-hidden bg-slate-100">
-                        <img src={car.imagens[imgIndex] || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80'} alt="" className="w-full h-full object-cover" />
-                        {car.imagens.length > 1 && (
-                            <>
-                                <button onClick={prevImg} className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition">
-                                    <ChevronLeft className="w-5 h-5 text-slate-700" />
-                                </button>
-                                <button onClick={nextImg} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition">
-                                    <ChevronRight className="w-5 h-5 text-slate-700" />
-                                </button>
-                            </>
-                        )}
-                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                            {car.imagens.map((_, i) => (
-                                <button key={i} onClick={() => setImgIndex(i)} className={`w-2 h-2 rounded-full transition-all ${i === imgIndex ? 'bg-white w-5' : 'bg-white/50'}`} />
-                            ))}
-                        </div>
-                    </motion.div>
-
-                    {/* Thumbnails */}
-                    <div className="flex gap-3 mt-4">
+            {/* Thumbnails strip */}
+            {car.imagens.length > 1 && (
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 -mt-6 relative z-10">
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                         {car.imagens.map((url, i) => (
-                            <button key={i} onClick={() => setImgIndex(i)} className={`w-20 h-14 rounded-xl overflow-hidden border-2 transition-all ${i === imgIndex ? 'border-brand-500' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                            <button
+                                key={i}
+                                onClick={() => setImgIndex(i)}
+                                className={`flex-shrink-0 w-16 h-12 md:w-20 md:h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                                    i === imgIndex
+                                        ? 'border-brand-400 opacity-100'
+                                        : 'border-transparent opacity-50 hover:opacity-80'
+                                }`}
+                            >
                                 <img src={url} alt="" className="w-full h-full object-cover" />
                             </button>
                         ))}
                     </div>
                 </div>
+            )}
 
-                {/* Right — Info */}
-                <div className="lg:col-span-2">
-                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-                        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">
-                            {car.marca} {car.modelo}
-                        </h1>
-                        <p className="text-4xl font-extrabold text-brand-600 mt-4 mb-6">
-                            {formatPrice(car.preco)}
-                        </p>
+            {/* Content */}
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
+                    {/* Left - Details */}
+                    <div className="lg:col-span-3">
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                            {/* Title & Price */}
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+                                <div>
+                                    <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-1">
+                                        {car.marca} {car.modelo}
+                                    </h1>
+                                    <p className="text-zinc-500 text-sm">{car.ano} • {formatKm(car.quilometragem)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs text-zinc-600 mb-1">Preço</p>
+                                    <p className="text-3xl md:text-4xl font-black text-brand-400 tracking-tight">
+                                        {formatPrice(car.preco)}
+                                    </p>
+                                </div>
+                            </div>
 
-                        {/* Specs Grid */}
-                        <div className="grid grid-cols-2 gap-4 mb-8">
-                            {specs.map(({ icon: Icon, label, value }) => (
-                                <div key={label} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-                                    <Icon className="w-5 h-5 text-brand-500 mt-0.5 flex-shrink-0" />
-                                    <div>
-                                        <p className="text-xs text-slate-400">{label}</p>
-                                        <p className="text-sm font-semibold text-slate-700">{value}</p>
+                            {/* Specs Grid */}
+                            <div className="mb-8">
+                                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Especificações</h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {specs.map(({ icon: Icon, label, value }) => (
+                                        <div
+                                            key={label}
+                                            className="flex items-center gap-3 p-4 bg-zinc-900 border border-white/5 rounded-xl hover:border-brand-400/20 transition-colors"
+                                        >
+                                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                                                <Icon className="w-4 h-4 text-brand-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-zinc-600">{label}</p>
+                                                <p className="text-sm font-bold text-white">{value}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Description */}
+                            {car.descricao && (
+                                <div className="p-6 bg-zinc-900 border border-white/5 rounded-2xl">
+                                    <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">Descrição do vendedor</h3>
+                                    <p className="text-zinc-300 leading-relaxed text-sm">{car.descricao}</p>
+                                </div>
+                            )}
+                        </motion.div>
+                    </div>
+
+                    {/* Right - Contact */}
+                    <div className="lg:col-span-2">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="sticky top-24"
+                        >
+                            <div className="bg-zinc-900 border border-white/8 rounded-2xl overflow-hidden">
+                                {/* Header */}
+                                <div className="p-6 border-b border-white/5">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center text-zinc-950 font-black text-lg">
+                                            V
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-white">Vendedor</p>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                                <p className="text-xs text-emerald-400 font-medium">Disponível</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-zinc-400">
+                                        <MapPin className="w-4 h-4" />
+                                        {car.cidade}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
 
-                        {/* Description */}
-                        <div className="mb-8">
-                            <h3 className="font-bold text-slate-900 mb-2">Descrição</h3>
-                            <p className="text-sm text-slate-600 leading-relaxed">{car.descricao}</p>
-                        </div>
+                                {/* Price summary */}
+                                <div className="p-6 border-b border-white/5">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-zinc-500 text-sm">Valor do veículo</span>
+                                        <span className="text-2xl font-black text-brand-400">{formatPrice(car.preco)}</span>
+                                    </div>
+                                    {car.aceitaTroca && (
+                                        <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                                            <ArrowLeftRight className="w-4 h-4 text-emerald-400" />
+                                            <span className="text-xs font-bold text-emerald-400">Aceita troca</span>
+                                        </div>
+                                    )}
+                                </div>
 
-                        {/* Contact */}
-                        <div className="space-y-3">
-                            <a
-                                href={`tel:${car.telefone}`}
-                                className="flex items-center justify-center gap-2 w-full py-4 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition-all hover:shadow-lg"
-                            >
-                                <Phone className="w-5 h-5" />
-                                Ligar: {car.telefone}
-                            </a>
-                            <a
-                                href={`https://wa.me/55${car.telefone.replace(/\D/g, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-2 w-full py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all hover:shadow-lg"
-                            >
-                                <MessageCircle className="w-5 h-5" />
-                                WhatsApp
-                            </a>
-                        </div>
-                    </motion.div>
+                                {/* CTA Buttons */}
+                                <div className="p-6 space-y-3">
+                                    <a
+                                        href={`https://wa.me/55${car.telefone.replace(/\D/g, '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-2.5 w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-black rounded-xl hover:shadow-lg hover:shadow-emerald-500/20 transition-all"
+                                    >
+                                        <MessageCircle className="w-5 h-5" />
+                                        Chamar no WhatsApp
+                                    </a>
+                                    <a
+                                        href={`tel:${car.telefone}`}
+                                        className="flex items-center justify-center gap-2.5 w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-bold rounded-xl transition-all"
+                                    >
+                                        <Phone className="w-5 h-5" />
+                                        {car.telefone}
+                                    </a>
+                                </div>
+
+                                {/* Safety note */}
+                                <div className="px-6 pb-6">
+                                    <p className="text-xs text-zinc-600 text-center">
+                                        🔒 Negocie com segurança. Nunca faça pagamentos antecipados.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Share */}
+                            <div className="mt-4 flex gap-3">
+                                <Link
+                                    to="/estoque"
+                                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-zinc-900 border border-white/8 text-zinc-400 hover:text-white text-sm font-bold rounded-xl transition-all hover:border-white/20"
+                                >
+                                    <ArrowLeft className="w-4 h-4" />
+                                    Ver mais carros
+                                </Link>
+                            </div>
+                        </motion.div>
+                    </div>
                 </div>
             </div>
         </div>

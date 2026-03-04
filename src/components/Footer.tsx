@@ -1,59 +1,31 @@
 import { Link } from 'react-router-dom';
-import { Car, Facebook, Instagram, Twitter, Youtube, Mail, Phone } from 'lucide-react';
+import { Car, Instagram, Twitter, Youtube, Mail, Phone, MapPin, ArrowUpRight } from 'lucide-react';
 
 export default function Footer() {
     return (
-        <footer className="bg-slate-900 text-slate-300">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+        <footer className="bg-zinc-950 border-t border-white/5">
+            {/* Top glow line */}
+            <div className="h-px bg-gradient-to-r from-transparent via-brand-400/40 to-transparent" />
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-10 mb-16">
                     {/* Brand */}
-                    <div className="md:col-span-1">
-                        <Link to="/" className="flex items-center gap-2 mb-4">
-                            <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center">
-                                <Car className="w-5 h-5 text-white" />
+                    <div className="md:col-span-4">
+                        <Link to="/" className="flex items-center gap-2.5 mb-5">
+                            <div className="w-9 h-9 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center">
+                                <Car className="w-5 h-5 text-zinc-950" />
                             </div>
-                            <span className="text-xl font-bold">
+                            <span className="text-xl font-black tracking-tight">
                                 <span className="text-brand-400">Sul</span>
                                 <span className="text-white">Motors</span>
                             </span>
                         </Link>
-                        <p className="text-sm text-slate-400 leading-relaxed">
-                            O melhor marketplace de carros do Brasil. Compre e venda com segurança e confiança.
+                        <p className="text-sm text-zinc-500 leading-relaxed max-w-xs">
+                            O marketplace automotivo mais moderno do Brasil. Compre e venda veículos com segurança, tecnologia e confiança.
                         </p>
-                    </div>
 
-                    {/* Estoque */}
-                    <div>
-                        <h4 className="text-white font-semibold mb-4">Estoque</h4>
-                        <ul className="space-y-3 text-sm">
-                            <li><Link to="/estoque" className="hover:text-white transition-colors">Todos os Carros</Link></li>
-                            <li><Link to="/estoque?tipo=seminovos" className="hover:text-white transition-colors">Seminovos</Link></li>
-                            <li><Link to="/estoque?tipo=novos" className="hover:text-white transition-colors">0 KM</Link></li>
-                            <li><Link to="/estoque?tipo=suv" className="hover:text-white transition-colors">SUVs</Link></li>
-                        </ul>
-                    </div>
-
-                    {/* Atendimento */}
-                    <div>
-                        <h4 className="text-white font-semibold mb-4">Atendimento</h4>
-                        <ul className="space-y-3 text-sm">
-                            <li className="flex items-center gap-2">
-                                <Mail className="w-4 h-4 text-brand-400" />
-                                contato@sulmotors.com.br
-                            </li>
-                            <li className="flex items-center gap-2">
-                                <Phone className="w-4 h-4 text-brand-400" />
-                                (51) 99999-9999
-                            </li>
-                        </ul>
-                    </div>
-
-                    {/* Social */}
-                    <div>
-                        <h4 className="text-white font-semibold mb-4">Siga-nos</h4>
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 mt-6">
                             {[
-                                { icon: Facebook, label: 'Facebook' },
                                 { icon: Instagram, label: 'Instagram' },
                                 { icon: Twitter, label: 'Twitter' },
                                 { icon: Youtube, label: 'Youtube' },
@@ -62,17 +34,84 @@ export default function Footer() {
                                     key={label}
                                     href="#"
                                     aria-label={label}
-                                    className="w-10 h-10 bg-slate-800 hover:bg-brand-600 rounded-xl flex items-center justify-center transition-colors"
+                                    className="w-10 h-10 bg-white/5 hover:bg-brand-400/20 border border-white/10 hover:border-brand-400/40 rounded-xl flex items-center justify-center text-zinc-500 hover:text-brand-400 transition-all"
                                 >
-                                    <Icon className="w-5 h-5" />
+                                    <Icon className="w-4 h-4" />
                                 </a>
                             ))}
                         </div>
                     </div>
+
+                    {/* Links */}
+                    <div className="md:col-span-2">
+                        <h4 className="text-white font-bold text-sm uppercase tracking-wider mb-5">Estoque</h4>
+                        <ul className="space-y-3">
+                            {[
+                                { to: '/estoque', label: 'Todos os Carros' },
+                                { to: '/estoque?tipo=seminovos', label: 'Seminovos' },
+                                { to: '/estoque?tipo=novos', label: '0 KM' },
+                                { to: '/estoque?tipo=suv', label: 'SUVs' },
+                            ].map(({ to, label }) => (
+                                <li key={to}>
+                                    <Link to={to} className="text-sm text-zinc-500 hover:text-brand-400 transition-colors flex items-center gap-1 group">
+                                        {label}
+                                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <h4 className="text-white font-bold text-sm uppercase tracking-wider mb-5">Empresa</h4>
+                        <ul className="space-y-3">
+                            {[
+                                { to: '/sobre-nos', label: 'Sobre Nós' },
+                                { to: '/anunciar', label: 'Anunciar' },
+                                { to: '/login', label: 'Entrar' },
+                            ].map(({ to, label }) => (
+                                <li key={to}>
+                                    <Link to={to} className="text-sm text-zinc-500 hover:text-brand-400 transition-colors flex items-center gap-1 group">
+                                        {label}
+                                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Contact */}
+                    <div className="md:col-span-4">
+                        <h4 className="text-white font-bold text-sm uppercase tracking-wider mb-5">Contato</h4>
+                        <ul className="space-y-4">
+                            <li className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-brand-400/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <MapPin className="w-4 h-4 text-brand-400" />
+                                </div>
+                                <span className="text-sm text-zinc-400">Porto Alegre, RS</span>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-brand-400/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <Phone className="w-4 h-4 text-brand-400" />
+                                </div>
+                                <span className="text-sm text-zinc-400">(51) 99999-9999</span>
+                            </li>
+                            <li className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-brand-400/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <Mail className="w-4 h-4 text-brand-400" />
+                                </div>
+                                <span className="text-sm text-zinc-400">contato@sulmotors.com.br</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
 
-                <div className="mt-12 pt-8 border-t border-slate-800 text-center text-sm text-slate-500">
-                    © 2026 SulMotors. Todos os direitos reservados.
+                <div className="border-t border-white/5 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p className="text-xs text-zinc-600">© 2026 SulMotors. Todos os direitos reservados.</p>
+                    <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-xs text-zinc-600">Sistema operacional</span>
+                    </div>
                 </div>
             </div>
         </footer>
