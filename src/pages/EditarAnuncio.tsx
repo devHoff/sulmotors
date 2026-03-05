@@ -244,141 +244,90 @@ export default function EditarAnuncio() {
         }
     };
 
+    const iClass = "w-full px-4 py-3 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all";
+    const sClass = "w-full px-4 py-3 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white outline-none transition-all appearance-none cursor-pointer";
+    const lClass = "block text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2";
+    const chevron = <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></div>;
+
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-[60vh]">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+            <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full border-2 border-brand-400/20 border-t-brand-400 animate-spin" />
             </div>
         );
     }
 
-    const inputClass = "w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none";
-
     return (
-        <div className="max-w-3xl mx-auto px-4 py-10">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <h1 className="text-3xl font-bold text-slate-900 mb-1">Editar Anúncio</h1>
-                <p className="text-slate-500 mb-8">Atualize as informações do seu veículo</p>
-            </motion.div>
+        <>
+        <div className="bg-slate-50 dark:bg-zinc-950 min-h-screen py-12 transition-colors duration-300">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6">
+                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+                    <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Editar Anúncio</h1>
+                    <p className="text-slate-500 dark:text-zinc-500 text-sm">Atualize as informações do seu veículo</p>
+                </motion.div>
 
-            <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Marca *</label>
-                        <select value={form.marca} onChange={(e) => update('marca', e.target.value)} className={inputClass}>
-                            <option value="">Selecione a marca</option>
-                            {brands.map((b) => <option key={b} value={b}>{b}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Modelo *</label>
-                        <input type="text" value={form.modelo} onChange={(e) => update('modelo', e.target.value)} placeholder="Ex: Civic EXL" className={inputClass} />
+            <motion.form initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/8 rounded-2xl overflow-hidden shadow-sm dark:shadow-none">
+                <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5 space-y-5">
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2"><span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">1</span>Dados do veículo</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div><label className={lClass}>Marca *</label><div className="relative"><select value={form.marca} onChange={(e) => update('marca', e.target.value)} className={sClass}><option value="" className="bg-white dark:bg-zinc-800">Selecione a marca</option>{brands.map((b) => <option key={b} value={b} className="bg-white dark:bg-zinc-800">{b}</option>)}</select>{chevron}</div></div>
+                        <div><label className={lClass}>Modelo *</label><input type="text" value={form.modelo} onChange={(e) => update('modelo', e.target.value)} placeholder="Ex: Civic EXL" className={iClass} /></div>
+                        <div><label className={lClass}>Ano *</label><div className="relative"><select value={form.ano} onChange={(e) => update('ano', e.target.value)} className={sClass}><option value="" className="bg-white dark:bg-zinc-800">Selecione o ano</option>{years.map((y) => <option key={y} value={y} className="bg-white dark:bg-zinc-800">{y}</option>)}</select>{chevron}</div></div>
+                        <div><label className={lClass}>Preço (R$) *</label><input type="number" value={form.preco} onChange={(e) => update('preco', e.target.value)} className={iClass} /></div>
+                        <div><label className={lClass}>Quilometragem</label><input type="number" value={form.quilometragem} onChange={(e) => update('quilometragem', e.target.value)} className={iClass} /></div>
+                        <div><label className={lClass}>Telefone *</label><input type="text" value={form.telefone} onChange={(e) => update('telefone', e.target.value)} className={iClass} /></div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Ano *</label>
-                        <select value={form.ano} onChange={(e) => update('ano', e.target.value)} className={inputClass}>
-                            <option value="">Selecione o ano</option>
-                            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-                        </select>
+                <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5 space-y-5">
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2"><span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">2</span>Detalhes técnicos</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div><label className={lClass}>Combustível</label><div className="relative"><select value={form.combustivel} onChange={(e) => update('combustivel', e.target.value)} className={sClass}><option value="" className="bg-white dark:bg-zinc-800">Selecione</option>{fuels.map((f) => <option key={f} value={f} className="bg-white dark:bg-zinc-800">{f}</option>)}</select>{chevron}</div></div>
+                        <div><label className={lClass}>Câmbio</label><div className="relative"><select value={form.cambio} onChange={(e) => update('cambio', e.target.value)} className={sClass}><option value="" className="bg-white dark:bg-zinc-800">Selecione</option>{transmissions.map((t) => <option key={t} value={t} className="bg-white dark:bg-zinc-800">{t}</option>)}</select>{chevron}</div></div>
+                        <div><label className={lClass}>Cor</label><input type="text" value={form.cor} onChange={(e) => update('cor', e.target.value)} className={iClass} /></div>
+                        <div><label className={lClass}>Cidade</label><input type="text" value={form.cidade} onChange={(e) => update('cidade', e.target.value)} className={iClass} /></div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Preço (R$) *</label>
-                        <input type="number" value={form.preco} onChange={(e) => update('preco', e.target.value)} className={inputClass} />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Quilometragem</label>
-                        <input type="number" value={form.quilometragem} onChange={(e) => update('quilometragem', e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Telefone *</label>
-                        <input type="text" value={form.telefone} onChange={(e) => update('telefone', e.target.value)} className={inputClass} />
+                    <div className="flex items-center justify-between p-4 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/8 rounded-xl">
+                        <div><p className="text-sm font-bold text-slate-900 dark:text-white">Aceita troca</p><p className="text-xs text-slate-500 dark:text-zinc-500 mt-0.5">Aceito receber outro veículo como parte do pagamento</p></div>
+                        <button type="button" onClick={() => update('aceitaTroca', !form.aceitaTroca)} className={`relative w-12 h-6 rounded-full transition-all duration-300 flex-shrink-0 ${form.aceitaTroca ? 'bg-brand-400' : 'bg-zinc-600'}`}><span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${form.aceitaTroca ? 'translate-x-6' : ''}`} /></button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Combustível</label>
-                        <select value={form.combustivel} onChange={(e) => update('combustivel', e.target.value)} className={inputClass}>
-                            <option value="">Selecione</option>
-                            {fuels.map((f) => <option key={f} value={f}>{f}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Câmbio</label>
-                        <select value={form.cambio} onChange={(e) => update('cambio', e.target.value)} className={inputClass}>
-                            <option value="">Selecione</option>
-                            {transmissions.map((t) => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                    </div>
+                <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 mb-4"><span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">3</span>Descrição</h2>
+                    <textarea value={form.descricao} onChange={(e) => update('descricao', e.target.value)} rows={4} className="w-full px-4 py-3 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all resize-none" />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Cor</label>
-                        <input type="text" value={form.cor} onChange={(e) => update('cor', e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Cidade</label>
-                        <input type="text" value={form.cidade} onChange={(e) => update('cidade', e.target.value)} className={inputClass} />
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-sm font-semibold text-slate-700">Aceita troca</span>
-                    <button type="button" onClick={() => update('aceitaTroca', !form.aceitaTroca)}
-                        className={`relative w-12 h-7 rounded-full transition-colors ${form.aceitaTroca ? 'bg-brand-600' : 'bg-slate-300'}`}>
-                        <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${form.aceitaTroca ? 'translate-x-5' : ''}`} />
-                    </button>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Descrição</label>
-                    <textarea value={form.descricao} onChange={(e) => update('descricao', e.target.value)} rows={4}
-                        className={`${inputClass} resize-none`} />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-3">Fotos</label>
+                <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 mb-5"><span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">4</span>Fotos</h2>
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-                    <div className="flex flex-wrap gap-4">
+                    <div className="flex flex-wrap gap-3">
                         {images.map((url, i) => (
-                            <div key={i} className="relative w-28 h-28 rounded-xl overflow-hidden group">
+                            <div key={i} className="relative w-28 h-28 rounded-xl overflow-hidden group border border-slate-200 dark:border-white/10">
                                 <img src={url} alt="" className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-                                    <button type="button" onClick={() => setAiModal({ open: true, url })} className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                                        <Sparkles className="w-4 h-4 text-brand-600" />
-                                    </button>
-                                    <button type="button" onClick={() => removeImage(i)} className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                                        <X className="w-4 h-4 text-red-500" />
-                                    </button>
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                    <button type="button" onClick={() => setAiModal({ open: true, url })} className="w-8 h-8 bg-brand-400 rounded-full flex items-center justify-center"><Sparkles className="w-4 h-4 text-zinc-950" /></button>
+                                    <button type="button" onClick={() => removeImage(i)} className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center"><X className="w-4 h-4 text-white" /></button>
                                 </div>
                             </div>
                         ))}
                         {images.length < 6 && (
-                            <button type="button"
-                                onClick={handleImageUploadClick}
-                                disabled={uploading}
-                                className="w-28 h-28 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-brand-400 hover:text-brand-500 transition-colors">
-                                {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>
-                                    <Upload className="w-6 h-6 mb-1" />
-                                    <span className="text-xs font-medium">Adicionar</span>
-                                </>}
+                            <button type="button" onClick={handleImageUploadClick} disabled={uploading} className="w-28 h-28 border-2 border-dashed border-slate-300 dark:border-white/15 hover:border-brand-400/50 rounded-xl flex flex-col items-center justify-center text-slate-400 dark:text-zinc-500 hover:text-brand-400 transition-all disabled:opacity-40">
+                                {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Upload className="w-6 h-6 mb-1.5" /><span className="text-xs font-bold">Adicionar</span></>}
                             </button>
                         )}
                     </div>
                 </div>
 
-                <button type="submit" disabled={submitting || uploading} className="w-full py-4 bg-brand-600 text-white font-bold text-sm rounded-xl hover:bg-brand-700 transition-all hover:shadow-lg hover:shadow-brand-600/25 active:scale-[0.98] disabled:opacity-70">
-                    {submitting ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
-            </form>
+                <div className="p-6 md:p-8">
+                    <button type="submit" disabled={submitting || uploading} className="w-full flex items-center justify-center gap-3 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black text-sm rounded-xl transition-all hover:shadow-glow active:scale-[0.98] disabled:opacity-50">
+                        {submitting ? <><Loader2 className="w-5 h-5 animate-spin" />Salvando...</> : 'Salvar Alterações'}
+                    </button>
+                </div>
+            </motion.form>
+            </div>
 
+            </div>
             <AIPhotoModal isOpen={aiModal.open} onClose={() => setAiModal({ open: false, url: '' })} imageUrl={aiModal.url} carBrand={form.marca} />
 
             <AnimatePresence>
@@ -395,6 +344,6 @@ export default function EditarAnuncio() {
                     />
                 )}
             </AnimatePresence>
-        </div>
+        </>
     );
 }

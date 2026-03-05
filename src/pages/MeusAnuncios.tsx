@@ -1,123 +1,98 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Car, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import CarCard from '../components/CarCard';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import type { Car } from '../data/mockCars';
+import type { Car as CarType } from '../data/mockCars';
 
 export default function MeusAnuncios() {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [myCars, setMyCars] = useState<Car[]>([]);
+    const [myCars, setMyCars] = useState<CarType[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (user) {
-            fetchMyAds();
-        }
-    }, [user]);
+    useEffect(() => { if (user) fetchMyAds(); }, [user]);
 
     const fetchMyAds = async () => {
         try {
             const { data, error } = await supabase
-                .from('anuncios')
-                .select('*')
-                .eq('user_id', user!.id)
-                .order('created_at', { ascending: false });
-
+                .from('anuncios').select('*').eq('user_id', user!.id).order('created_at', { ascending: false });
             if (error) throw error;
             setMyCars(data || []);
-        } catch (error) {
-            console.error('Error fetching ads:', error);
+        } catch {
             toast.error('Erro ao carregar seus anúncios');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleEdit = (id: string) => {
-        navigate(`/editar/${id}`);
-    };
-
     const handleDelete = async (id: string) => {
         if (!confirm('Tem certeza que deseja excluir este anúncio?')) return;
-
         try {
-            const { error } = await supabase
-                .from('anuncios')
-                .delete()
-                .eq('id', id);
-
+            const { error } = await supabase.from('anuncios').delete().eq('id', id);
             if (error) throw error;
-
             setMyCars(myCars.filter(car => car.id !== id));
             toast.success('Anúncio excluído com sucesso!');
-        } catch (error) {
-            console.error('Error deleting ad:', error);
+        } catch {
             toast.error('Erro ao excluir anúncio');
         }
     };
 
-    const handleBoost = (id: string) => {
-        navigate(`/impulsionar/${id}`);
-    };
-
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-[60vh]">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+            <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full border-2 border-brand-400/20 border-t-brand-400 animate-spin" />
             </div>
         );
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-between mb-8"
-            >
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Meus Anúncios</h1>
-                    <p className="text-slate-500 mt-1">Gerencie seus anúncios de carros</p>
-                </div>
-                <button
-                    onClick={() => navigate('/anunciar')}
-                    className="flex items-center gap-2 px-5 py-3 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-all hover:shadow-lg hover:shadow-brand-600/25"
-                >
-                    <Plus className="w-4 h-4" />
-                    Novo Anúncio
-                </button>
-            </motion.div>
-
-            {myCars.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {myCars.map((car) => (
-                        <CarCard
-                            key={car.id}
-                            car={car}
-                            showActions
-                            onEdit={() => handleEdit(car.id)}
-                            onDelete={() => handleDelete(car.id)}
-                            onBoost={() => handleBoost(car.id)}
-                        />
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center py-20">
-                    <p className="text-xl font-semibold text-slate-700">Você ainda não tem anúncios</p>
-                    <p className="text-slate-400 mt-2 mb-6">Comece anunciando seu primeiro carro!</p>
+        <div className="bg-slate-50 dark:bg-zinc-950 min-h-screen py-10 transition-colors duration-300">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-10">
+                    <div>
+                        <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest mb-2">{myCars.length} anúncios</p>
+                        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Meus Anúncios</h1>
+                        <p className="text-slate-500 dark:text-zinc-500 mt-1 text-sm">Gerencie seus anúncios de veículos</p>
+                    </div>
                     <button
                         onClick={() => navigate('/anunciar')}
-                        className="px-8 py-3 bg-brand-600 text-white font-semibold rounded-xl hover:bg-brand-700 transition-colors"
+                        className="flex items-center gap-2 px-5 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 text-sm font-black rounded-xl transition-all hover:shadow-glow"
                     >
-                        Anunciar Carro
+                        <Plus className="w-4 h-4" />
+                        Novo Anúncio
                     </button>
-                </div>
-            )}
+                </motion.div>
+
+                {myCars.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {myCars.map((car) => (
+                            <CarCard
+                                key={car.id} car={car} showActions
+                                onEdit={() => navigate(`/editar/${car.id}`)}
+                                onDelete={() => handleDelete(car.id)}
+                                onBoost={() => navigate(`/impulsionar/${car.id}`)}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
+                        <Car className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-5" />
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Nenhum anúncio ainda</h3>
+                        <p className="text-slate-500 dark:text-zinc-500 text-sm mb-8">Comece anunciando seu primeiro carro gratuitamente!</p>
+                        <button
+                            onClick={() => navigate('/anunciar')}
+                            className="flex items-center gap-2 px-6 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all"
+                        >
+                            <Zap className="w-4 h-4" />
+                            Anunciar Carro
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

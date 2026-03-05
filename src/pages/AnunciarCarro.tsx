@@ -1,14 +1,13 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Upload, X, Sparkles, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, X, Sparkles, Loader2, Zap, Car } from 'lucide-react';
 import { toast } from 'sonner';
 import { brands, fuels, transmissions } from '../data/mockCars';
 import AIPhotoModal from '../components/AIPhotoModal';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import CropModal from '../components/CropModal';
-import { AnimatePresence } from 'framer-motion';
 
 interface FormData {
     marca: string;
@@ -31,6 +30,10 @@ const initialForm: FormData = {
     cor: '', cidade: '', aceitaTroca: false,
 };
 
+const inputClass = "w-full px-4 py-3 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-400/60 focus:bg-white dark:focus:bg-zinc-800 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all";
+const selectClass = "w-full px-4 py-3 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white outline-none transition-all appearance-none cursor-pointer";
+const labelClass = "block text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-2";
+
 export default function AnunciarCarro() {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -46,32 +49,20 @@ export default function AnunciarCarro() {
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
 
-    const update = (key: keyof FormData, value: string | boolean) => {
+    const update = (key: keyof FormData, value: string | boolean) =>
         setForm((f) => ({ ...f, [key]: value }));
-    };
 
     const handleImageUploadClick = () => {
-        if (images.length >= 6) {
-            toast.error('Máximo de 6 fotos atingido.');
-            return;
-        }
+        if (images.length >= 6) { toast.error('Máximo de 6 fotos atingido.'); return; }
         fileInputRef.current?.click();
     };
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
-
-        if (!user) {
-            toast.error('Você precisa estar logado para fazer upload.');
-            return;
-        }
-
+        if (!user) { toast.error('Você precisa estar logado para fazer upload.'); return; }
         const reader = new FileReader();
-        reader.onload = () => {
-            setSelectedImage(reader.result as string);
-            setShowCropModal(true);
-        };
+        reader.onload = () => { setSelectedImage(reader.result as string); setShowCropModal(true); };
         reader.readAsDataURL(file);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
@@ -79,28 +70,16 @@ export default function AnunciarCarro() {
     const handleCropComplete = async (croppedBlob: Blob) => {
         setShowCropModal(false);
         if (!user) return;
-
         try {
             setUploading(true);
             const fileName = `${Math.random()}.jpg`;
             const filePath = `${user.id}/${fileName}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('car-images')
-                .upload(filePath, croppedBlob, {
-                    contentType: 'image/jpeg'
-                });
-
+            const { error: uploadError } = await supabase.storage.from('car-images').upload(filePath, croppedBlob, { contentType: 'image/jpeg' });
             if (uploadError) throw uploadError;
-
-            const { data } = supabase.storage
-                .from('car-images')
-                .getPublicUrl(filePath);
-
+            const { data } = supabase.storage.from('car-images').getPublicUrl(filePath);
             setImages((imgs) => [...imgs, data.publicUrl]);
             toast.success('Foto enviada com sucesso!');
         } catch (error) {
-            console.error('Error uploading image:', error);
             toast.error('Erro ao enviar imagem. Tente novamente.');
         } finally {
             setUploading(false);
@@ -108,9 +87,7 @@ export default function AnunciarCarro() {
         }
     };
 
-    const removeImage = (index: number) => {
-        setImages((imgs) => imgs.filter((_, i) => i !== index));
-    };
+    const removeImage = (index: number) => setImages((imgs) => imgs.filter((_, i) => i !== index));
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -118,41 +95,23 @@ export default function AnunciarCarro() {
             toast.error('Preencha todos os campos obrigatórios.');
             return;
         }
-
-        if (!user) {
-            toast.error('Você precisa estar logado para anunciar.');
-            return;
-        }
-
+        if (!user) { toast.error('Você precisa estar logado para anunciar.'); return; }
         try {
             setLoading(true);
-            const { error } = await supabase
-                .from('anuncios')
-                .insert({
-                    user_id: user.id,
-                    marca: form.marca,
-                    modelo: form.modelo,
-                    ano: parseInt(form.ano),
-                    preco: parseFloat(form.preco),
-                    quilometragem: parseInt(form.quilometragem) || 0,
-                    telefone: form.telefone,
-                    descricao: form.descricao,
-                    combustivel: form.combustivel,
-                    cambio: form.cambio,
-                    cor: form.cor,
-                    cidade: form.cidade,
-                    aceita_troca: form.aceitaTroca,
-                    imagens: images,
-                    destaque: false,
-                    impulsionado: false,
-                });
-
+            const { error } = await supabase.from('anuncios').insert({
+                user_id: user.id, marca: form.marca, modelo: form.modelo,
+                ano: parseInt(form.ano), preco: parseFloat(form.preco),
+                quilometragem: parseInt(form.quilometragem) || 0,
+                telefone: form.telefone, descricao: form.descricao,
+                combustivel: form.combustivel, cambio: form.cambio,
+                cor: form.cor, cidade: form.cidade,
+                aceita_troca: form.aceitaTroca, imagens: images,
+                destaque: false, impulsionado: false,
+            });
             if (error) throw error;
-
             toast.success('Anúncio publicado com sucesso!');
             setTimeout(() => navigate('/meus-anuncios'), 1000);
         } catch (error) {
-            console.error('Error creating ad:', error);
             toast.error('Erro ao criar anúncio. Tente novamente.');
         } finally {
             setLoading(false);
@@ -160,233 +119,212 @@ export default function AnunciarCarro() {
     };
 
     return (
-        <div className="max-w-3xl mx-auto px-4 py-10">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <h1 className="text-3xl font-bold text-slate-900 mb-1">Anunciar Meu Carro</h1>
-                <p className="text-slate-500 mb-8">Preencha os dados abaixo para publicar seu anúncio gratuitamente</p>
-            </motion.div>
+        <div className="bg-slate-50 dark:bg-zinc-950 min-h-screen py-12 transition-colors duration-300">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6">
 
-            <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 space-y-6">
-                {/* Row 1: Marca + Modelo */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Marca *</label>
-                        <select
-                            value={form.marca}
-                            onChange={(e) => update('marca', e.target.value)}
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        >
-                            <option value="">Selecione a marca</option>
-                            {brands.map((b) => <option key={b} value={b}>{b}</option>)}
-                        </select>
+                {/* Header */}
+                <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Car className="w-4 h-4 text-brand-500 dark:text-brand-400" />
+                        <span className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest">Novo anúncio</span>
                     </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Modelo *</label>
-                        <input
-                            type="text"
-                            value={form.modelo}
-                            onChange={(e) => update('modelo', e.target.value)}
-                            placeholder="Ex: Civic EXL"
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        />
-                    </div>
-                </div>
+                    <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Anunciar Meu Carro</h1>
+                    <p className="text-slate-500 dark:text-zinc-500 text-sm">Preencha os dados abaixo para publicar seu anúncio gratuitamente</p>
+                </motion.div>
 
-                {/* Row 2: Ano + Preço */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Ano *</label>
-                        <select
-                            value={form.ano}
-                            onChange={(e) => update('ano', e.target.value)}
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        >
-                            <option value="">Selecione o ano</option>
-                            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Preço (R$) *</label>
-                        <input
-                            type="number"
-                            value={form.preco}
-                            onChange={(e) => update('preco', e.target.value)}
-                            placeholder="Ex: 85000"
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        />
-                    </div>
-                </div>
-
-                {/* Row 3: Km + Telefone */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Quilometragem (km)</label>
-                        <input
-                            type="number"
-                            value={form.quilometragem}
-                            onChange={(e) => update('quilometragem', e.target.value)}
-                            placeholder="Ex: 45000"
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Telefone *</label>
-                        <input
-                            type="text"
-                            value={form.telefone}
-                            onChange={(e) => update('telefone', e.target.value)}
-                            placeholder="(11) 99999-9999"
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        />
-                    </div>
-                </div>
-
-                {/* Row 4: Combustível + Câmbio */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Combustível</label>
-                        <select
-                            value={form.combustivel}
-                            onChange={(e) => update('combustivel', e.target.value)}
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        >
-                            <option value="">Selecione</option>
-                            {fuels.map((f) => <option key={f} value={f}>{f}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Câmbio</label>
-                        <select
-                            value={form.cambio}
-                            onChange={(e) => update('cambio', e.target.value)}
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        >
-                            <option value="">Selecione</option>
-                            {transmissions.map((t) => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                    </div>
-                </div>
-
-                {/* Row 5: Cor + Cidade */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Cor</label>
-                        <input
-                            type="text"
-                            value={form.cor}
-                            onChange={(e) => update('cor', e.target.value)}
-                            placeholder="Ex: Prata"
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Cidade</label>
-                        <input
-                            type="text"
-                            value={form.cidade}
-                            onChange={(e) => update('cidade', e.target.value)}
-                            placeholder="Ex: São Paulo - SP"
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        />
-                    </div>
-                </div>
-
-                {/* Aceita troca */}
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-sm font-semibold text-slate-700">Aceita troca</span>
-                    <button
-                        type="button"
-                        onClick={() => update('aceitaTroca', !form.aceitaTroca)}
-                        className={`relative w-12 h-7 rounded-full transition-colors ${form.aceitaTroca ? 'bg-brand-600' : 'bg-slate-300'
-                            }`}
-                    >
-                        <span
-                            className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${form.aceitaTroca ? 'translate-x-5' : ''
-                                }`}
-                        />
-                    </button>
-                </div>
-
-                {/* Descrição */}
-                <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Descrição</label>
-                    <textarea
-                        value={form.descricao}
-                        onChange={(e) => update('descricao', e.target.value)}
-                        rows={4}
-                        placeholder="Descreva os detalhes do veículo, opcionais, estado de conservação..."
-                        className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none resize-none"
-                    />
-                </div>
-
-                {/* Photos */}
-                <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-3">Fotos (máximo 6)</label>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                    />
-                    <div className="flex flex-wrap gap-4">
-                        {images.map((url, i) => (
-                            <div key={i} className="relative w-28 h-28 rounded-xl overflow-hidden group">
-                                <img src={url} alt="" className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-                                    <button
-                                        type="button"
-                                        onClick={() => setAiModal({ open: true, url })}
-                                        className="w-8 h-8 bg-white rounded-full flex items-center justify-center"
-                                    >
-                                        <Sparkles className="w-4 h-4 text-brand-600" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeImage(i)}
-                                        className="w-8 h-8 bg-white rounded-full flex items-center justify-center"
-                                    >
-                                        <X className="w-4 h-4 text-red-500" />
-                                    </button>
+                <motion.form
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    onSubmit={handleSubmit}
+                    className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/8 rounded-2xl overflow-hidden shadow-sm dark:shadow-none"
+                >
+                    {/* Section: Dados do veículo */}
+                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
+                        <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-6 flex items-center gap-2">
+                            <span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">1</span>
+                            Dados do veículo
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label className={labelClass}>Marca *</label>
+                                <div className="relative">
+                                    <select value={form.marca} onChange={(e) => update('marca', e.target.value)} className={selectClass}>
+                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">Selecione a marca</option>
+                                        {brands.map((b) => <option key={b} value={b} className="bg-white dark:bg-zinc-800 text-slate-900 dark:text-white">{b}</option>)}
+                                    </select>
+                                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                    </div>
                                 </div>
                             </div>
-                        ))}
-                        {images.length < 6 && (
+                            <div>
+                                <label className={labelClass}>Modelo *</label>
+                                <input type="text" value={form.modelo} onChange={(e) => update('modelo', e.target.value)} placeholder="Ex: Civic EXL" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Ano *</label>
+                                <div className="relative">
+                                    <select value={form.ano} onChange={(e) => update('ano', e.target.value)} className={selectClass}>
+                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">Selecione o ano</option>
+                                        {years.map((y) => <option key={y} value={y} className="bg-white dark:bg-zinc-800 text-slate-900 dark:text-white">{y}</option>)}
+                                    </select>
+                                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Preço (R$) *</label>
+                                <input type="number" value={form.preco} onChange={(e) => update('preco', e.target.value)} placeholder="Ex: 85000" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Quilometragem (km)</label>
+                                <input type="number" value={form.quilometragem} onChange={(e) => update('quilometragem', e.target.value)} placeholder="Ex: 45000" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Telefone *</label>
+                                <input type="text" value={form.telefone} onChange={(e) => update('telefone', e.target.value)} placeholder="(11) 99999-9999" className={inputClass} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section: Detalhes técnicos */}
+                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
+                        <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-6 flex items-center gap-2">
+                            <span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">2</span>
+                            Detalhes técnicos
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label className={labelClass}>Combustível</label>
+                                <div className="relative">
+                                    <select value={form.combustivel} onChange={(e) => update('combustivel', e.target.value)} className={selectClass}>
+                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">Selecione</option>
+                                        {fuels.map((f) => <option key={f} value={f} className="bg-white dark:bg-zinc-800 text-slate-900 dark:text-white">{f}</option>)}
+                                    </select>
+                                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Câmbio</label>
+                                <div className="relative">
+                                    <select value={form.cambio} onChange={(e) => update('cambio', e.target.value)} className={selectClass}>
+                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">Selecione</option>
+                                        {transmissions.map((t) => <option key={t} value={t} className="bg-white dark:bg-zinc-800 text-slate-900 dark:text-white">{t}</option>)}
+                                    </select>
+                                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Cor</label>
+                                <input type="text" value={form.cor} onChange={(e) => update('cor', e.target.value)} placeholder="Ex: Prata" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Cidade</label>
+                                <input type="text" value={form.cidade} onChange={(e) => update('cidade', e.target.value)} placeholder="Ex: São Paulo - SP" className={inputClass} />
+                            </div>
+                        </div>
+
+                        {/* Aceita troca */}
+                        <div className="flex items-center justify-between mt-5 p-4 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/8 rounded-xl hover:border-slate-300 dark:hover:border-white/15 transition-colors">
+                            <div>
+                                <p className="text-sm font-bold text-slate-900 dark:text-white">Aceita troca</p>
+                                <p className="text-xs text-slate-500 dark:text-zinc-500 mt-0.5">Aceito receber outro veículo como parte do pagamento</p>
+                            </div>
                             <button
                                 type="button"
-                                onClick={handleImageUploadClick}
-                                disabled={uploading}
-                                className="w-28 h-28 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-brand-400 hover:text-brand-500 transition-colors disabled:opacity-50"
+                                onClick={() => update('aceitaTroca', !form.aceitaTroca)}
+                                className={`relative w-12 h-6 rounded-full transition-all duration-300 flex-shrink-0 ${form.aceitaTroca ? 'bg-brand-400' : 'bg-zinc-600'}`}
                             >
-                                {uploading ? (
-                                    <Loader2 className="w-6 h-6 mb-1 animate-spin" />
-                                ) : (
-                                    <>
-                                        <Upload className="w-6 h-6 mb-1" />
-                                        <span className="text-xs font-medium">Adicionar</span>
-                                    </>
-                                )}
+                                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${form.aceitaTroca ? 'translate-x-6' : ''}`} />
                             </button>
-                        )}
+                        </div>
                     </div>
-                </div>
 
-                {/* Submit */}
-                <button
-                    type="submit"
-                    disabled={loading || uploading}
-                    className="w-full py-4 bg-brand-600 text-white font-bold text-sm rounded-xl hover:bg-brand-700 transition-all hover:shadow-lg hover:shadow-brand-600/25 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                    {loading ? (
-                        <span className="flex items-center justify-center gap-2">
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Publicando...
-                        </span>
-                    ) : (
-                        'Publicar Anúncio'
-                    )}
-                </button>
-            </form>
+                    {/* Section: Descrição */}
+                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
+                        <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-6 flex items-center gap-2">
+                            <span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">3</span>
+                            Descrição
+                        </h2>
+                        <textarea
+                            value={form.descricao}
+                            onChange={(e) => update('descricao', e.target.value)}
+                            rows={4}
+                            placeholder="Descreva os detalhes do veículo, opcionais, estado de conservação..."
+                            className="w-full px-4 py-3 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all resize-none"
+                        />
+                    </div>
+
+                    {/* Section: Fotos */}
+                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
+                        <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">4</span>
+                            Fotos
+                        </h2>
+                        <p className="text-xs text-slate-400 dark:text-zinc-500 mb-5">{images.length}/6 fotos adicionadas. Arraste para reordenar.</p>
+                        <input type="file" ref={fileInputRef} accept="image/*" onChange={handleFileChange} className="hidden" />
+                        <div className="flex flex-wrap gap-3">
+                            {images.map((url, i) => (
+                                <div key={i} className="relative w-28 h-28 rounded-xl overflow-hidden group border border-slate-200 dark:border-white/10">
+                                    <img src={url} alt="" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                        <button type="button" onClick={() => setAiModal({ open: true, url })}
+                                            className="w-8 h-8 bg-brand-400 rounded-full flex items-center justify-center hover:bg-brand-300 transition-colors">
+                                            <Sparkles className="w-4 h-4 text-zinc-950" />
+                                        </button>
+                                        <button type="button" onClick={() => removeImage(i)}
+                                            className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-400 transition-colors">
+                                            <X className="w-4 h-4 text-white" />
+                                        </button>
+                                    </div>
+                                    <div className="absolute top-1.5 left-1.5 w-5 h-5 bg-black/60 rounded-md flex items-center justify-center text-xs font-bold text-white">{i + 1}</div>
+                                </div>
+                            ))}
+                            {images.length < 6 && (
+                                <button type="button" onClick={handleImageUploadClick} disabled={uploading}
+                                    className="w-28 h-28 border-2 border-dashed border-slate-300 dark:border-white/15 hover:border-brand-400/50 rounded-xl flex flex-col items-center justify-center text-slate-400 dark:text-zinc-500 hover:text-brand-400 transition-all disabled:opacity-40 group">
+                                    {uploading ? (
+                                        <Loader2 className="w-6 h-6 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Upload className="w-6 h-6 mb-1.5 group-hover:scale-110 transition-transform" />
+                                            <span className="text-xs font-bold">Adicionar</span>
+                                        </>
+                                    )}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Submit */}
+                    <div className="p-6 md:p-8">
+                        <button
+                            type="submit"
+                            disabled={loading || uploading}
+                            className="w-full flex items-center justify-center gap-3 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black text-sm rounded-xl transition-all hover:shadow-glow active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    Publicando...
+                                </>
+                            ) : (
+                                <>
+                                    <Zap className="w-5 h-5" />
+                                    Publicar Anúncio Gratuitamente
+                                </>
+                            )}
+                        </button>
+                        <p className="text-center text-xs text-slate-400 dark:text-zinc-600 mt-3">Ao publicar, você concorda com nossos termos de uso</p>
+                    </div>
+                </motion.form>
+            </div>
 
             <AIPhotoModal
                 isOpen={aiModal.open}
@@ -400,10 +338,7 @@ export default function AnunciarCarro() {
                     <CropModal
                         image={selectedImage}
                         onCropComplete={handleCropComplete}
-                        onCancel={() => {
-                            setShowCropModal(false);
-                            setSelectedImage(null);
-                        }}
+                        onCancel={() => { setShowCropModal(false); setSelectedImage(null); }}
                         aspectRatio={4 / 3}
                         cropShape="rect"
                     />
