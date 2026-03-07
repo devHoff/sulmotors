@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, Loader2, X, Car } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2, X, Car, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CarCard from '../components/CarCard';
 import { brands, type Car as CarType } from '../data/mockCars';
@@ -18,6 +18,7 @@ export default function Estoque() {
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
     const [yearRange, setYearRange] = useState<[number, number]>([2010, 2025]);
     const [showFilters, setShowFilters] = useState(false);
+    const [sortOrder, setSortOrder] = useState<'default' | 'asc' | 'desc'>('default');
 
     useEffect(() => {
         const fetchCars = async () => {
@@ -50,12 +51,16 @@ export default function Estoque() {
             const matchesYear = car.ano >= yearRange[0] && car.ano <= yearRange[1];
             const matchesLoja = selectedLoja === '' || car.loja === selectedLoja;
             return matchesSearch && matchesBrand && matchesPrice && matchesYear && matchesLoja;
-        }).sort((a, b) => b.prioridade - a.prioridade || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    }, [search, selectedBrands, priceRange, yearRange, supabaseCars, selectedLoja]);
+        }).sort((a, b) => {
+            if (sortOrder === 'asc') return a.preco - b.preco;
+            if (sortOrder === 'desc') return b.preco - a.preco;
+            return b.prioridade - a.prioridade || new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+    }, [search, selectedBrands, priceRange, yearRange, supabaseCars, selectedLoja, sortOrder]);
 
-    const activeFilters = (selectedBrands.length > 0) || (priceRange[0] > 0 || priceRange[1] < 500000) || (yearRange[0] > 2010 || yearRange[1] < 2025);
+    const activeFilters = (selectedBrands.length > 0) || (priceRange[0] > 0 || priceRange[1] < 500000) || (yearRange[0] > 2010 || yearRange[1] < 2025) || sortOrder !== 'default';
 
-    const clearFilters = () => { setSelectedBrands([]); setPriceRange([0, 500000]); setYearRange([2010, 2025]); setSearch(''); };
+    const clearFilters = () => { setSelectedBrands([]); setPriceRange([0, 500000]); setYearRange([2010, 2025]); setSearch(''); setSortOrder('default'); };
     const toggleBrand = (brand: string) => setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]);
 
     return (
@@ -75,12 +80,28 @@ export default function Estoque() {
                                 {selectedLoja ? `Todos os veículos da ${selectedLoja}` : 'Encontre o carro ideal para você'}
                             </p>
                         </div>
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 flex-wrap">
+                            {/* Sort Dropdown */}
+                            <div className="relative">
+                                <select
+                                    value={sortOrder}
+                                    onChange={(e) => setSortOrder(e.target.value as 'default' | 'asc' | 'desc')}
+                                    className={`pl-3 pr-8 py-3 rounded-xl border text-sm font-bold transition-all appearance-none cursor-pointer outline-none
+                                        ${sortOrder !== 'default'
+                                            ? 'bg-brand-400/15 border-brand-400/40 text-brand-500 dark:text-brand-400'
+                                            : 'bg-slate-100 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}>
+                                    <option value="default">Ordenar por</option>
+                                    <option value="asc">Menor preço</option>
+                                    <option value="desc">Maior preço</option>
+                                </select>
+                                <ArrowUpDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />
+                            </div>
                             <div className="relative flex-1 md:w-80">
                                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" />
                                 <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Buscar marca ou modelo..."
                                     className="w-full pl-10 pr-4 py-3 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all" />
+                            </div>
                             </div>
                             <button onClick={() => setShowFilters(!showFilters)}
                                 className={`md:hidden flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${showFilters
@@ -167,6 +188,12 @@ export default function Estoque() {
                                 {priceRange[1] < 500000 && (
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-400/10 border border-brand-400/20 text-brand-500 dark:text-brand-400 text-xs font-bold rounded-lg">
                                         Até R$ {priceRange[1].toLocaleString()} <button onClick={() => setPriceRange([0, 500000])}><X className="w-3 h-3" /></button>
+                                    </span>
+                                )}
+                                {sortOrder !== 'default' && (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-400/10 border border-brand-400/20 text-brand-500 dark:text-brand-400 text-xs font-bold rounded-lg">
+                                        {sortOrder === 'asc' ? 'Menor preço' : 'Maior preço'}
+                                        <button onClick={() => setSortOrder('default')}><X className="w-3 h-3" /></button>
                                     </span>
                                 )}
                             </div>

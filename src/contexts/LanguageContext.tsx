@@ -141,7 +141,7 @@ const ptBR: Translations = {
     nav_my_ads: 'Meus Anúncios',
     nav_sign_out: 'Sair',
 
-    home_badge: 'Marketplace #1 do Sul',
+    home_badge: 'Marketplace inteligente de carros',
     home_hero_title1: 'Encontre o',
     home_hero_title2: 'carro perfeito',
     home_hero_title3: 'para você.',
@@ -261,7 +261,7 @@ const en: Translations = {
     nav_my_ads: 'My Listings',
     nav_sign_out: 'Sign Out',
 
-    home_badge: 'South Brazil\'s #1 Marketplace',
+    home_badge: 'Marketplace inteligente de carros',
     home_hero_title1: 'Find your',
     home_hero_title2: 'perfect car',
     home_hero_title3: 'today.',
@@ -381,7 +381,7 @@ const es: Translations = {
     nav_my_ads: 'Mis Anuncios',
     nav_sign_out: 'Salir',
 
-    home_badge: 'Marketplace #1 del Sur',
+    home_badge: 'Marketplace inteligente de carros',
     home_hero_title1: 'Encuentra el',
     home_hero_title2: 'auto perfecto',
     home_hero_title3: 'para ti.',
