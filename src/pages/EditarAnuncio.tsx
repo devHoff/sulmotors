@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Upload, X, Sparkles, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mockCars, brands, fuels, transmissions, type Car } from '../data/mockCars';
-import AIPhotoModal from '../components/AIPhotoModal';
+import CropModal from '../components/CropModal';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -39,7 +39,9 @@ export default function EditarAnuncio() {
         cor: '', cidade: '', aceitaTroca: false,
     });
     const [images, setImages] = useState<string[]>([]);
-    const [aiModal, setAiModal] = useState<{ open: boolean; url: string }>({ open: false, url: '' });
+    const [cropModalOpen, setCropModalOpen] = useState(false);
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [pendingDataUrl, setPendingDataUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -132,25 +134,28 @@ export default function EditarAnuncio() {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
-
-        if (!user) {
-            toast.error('Você precisa estar logado.');
-            return;
-        }
-
+        if (!user) { toast.error('Você precisa estar logado.'); return; }
         if (fileInputRef.current) fileInputRef.current.value = '';
+        const reader = new FileReader();
+        reader.onload = () => {
+            setPendingFile(file);
+            setPendingDataUrl(reader.result as string);
+            setCropModalOpen(true);
+        };
+        reader.readAsDataURL(file);
+    };
 
+    const uploadBlob = useCallback(async (blob: Blob, ext: string, mime: string) => {
+        if (!user) return;
         try {
             setUploading(true);
-            const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-            const mime = file.type || 'image/jpeg';
             const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
             const { error: uploadError } = await supabase.storage
                 .from('car-images')
-                .upload(fileName, file, { contentType: mime, upsert: false });
+                .upload(fileName, blob, { contentType: mime, upsert: false });
             if (uploadError) throw uploadError;
             const { data } = supabase.storage.from('car-images').getPublicUrl(fileName);
             setImages((imgs) => [...imgs, data.publicUrl]);
@@ -160,7 +165,27 @@ export default function EditarAnuncio() {
             toast.error('Erro ao enviar imagem.');
         } finally {
             setUploading(false);
+            setPendingFile(null);
+            setPendingDataUrl(null);
+            setCropModalOpen(false);
         }
+    }, [user]);
+
+    const handleCropComplete = useCallback(async (croppedBlob: Blob) => {
+        await uploadBlob(croppedBlob, 'jpg', 'image/jpeg');
+    }, [uploadBlob]);
+
+    const handleSkipCrop = useCallback(async () => {
+        if (!pendingFile) return;
+        const ext = pendingFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const mime = pendingFile.type || 'image/jpeg';
+        await uploadBlob(pendingFile, ext, mime);
+    }, [pendingFile, uploadBlob]);
+
+    const handleCropCancel = () => {
+        setCropModalOpen(false);
+        setPendingFile(null);
+        setPendingDataUrl(null);
     };
 
     const removeImage = (index: number) => {
@@ -283,7 +308,6 @@ export default function EditarAnuncio() {
                             <div key={i} className="relative w-28 h-28 rounded-xl overflow-hidden group border border-slate-200 dark:border-white/10">
                                 <img src={url} alt="" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                                    <button type="button" onClick={() => setAiModal({ open: true, url })} className="w-8 h-8 bg-brand-400 rounded-full flex items-center justify-center"><Sparkles className="w-4 h-4 text-zinc-950" /></button>
                                     <button type="button" onClick={() => removeImage(i)} className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center"><X className="w-4 h-4 text-white" /></button>
                                 </div>
                             </div>
@@ -305,7 +329,16 @@ export default function EditarAnuncio() {
             </div>
 
             </div>
-            <AIPhotoModal isOpen={aiModal.open} onClose={() => setAiModal({ open: false, url: '' })} imageUrl={aiModal.url} carBrand={form.marca} />
+            <AnimatePresence>
+                {cropModalOpen && pendingDataUrl && (
+                    <CropModal
+                        image={pendingDataUrl}
+                        onCropComplete={handleCropComplete}
+                        onSkip={handleSkipCrop}
+                        onCancel={handleCropCancel}
+                    />
+                )}
+            </AnimatePresence>
         </>
     );
 }
