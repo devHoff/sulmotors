@@ -9,19 +9,26 @@ import { useLanguage } from '../contexts/LanguageContext';
 import type { Car } from '../data/mockCars';
 
 const periods = [
-    { key: '1_semana',   days: 7,   price: 19.90,  perDay: 2.84 },
-    { key: '2_semanas',  days: 14,  price: 34.90,  perDay: 2.49 },
-    { key: '1_mes',      days: 30,  price: 59.90,  perDay: 2.00, savings: 30 },
-    { key: '3_meses',    days: 90,  price: 149.90, perDay: 1.67, savings: 40 },
-    { key: '6_meses',    days: 180, price: 269.90, perDay: 1.50, savings: 47 },
-    { key: '1_ano',      days: 365, price: 479.90, perDay: 1.32, savings: 53 },
+    { key: '1_semana',  days: 7,   price: 19.90,  perDay: 2.84 },
+    { key: '2_semanas', days: 14,  price: 34.90,  perDay: 2.49 },
+    { key: '1_mes',     days: 30,  price: 59.90,  perDay: 2.00, savings: 30 },
+    { key: '3_meses',   days: 90,  price: 149.90, perDay: 1.67, savings: 40 },
+    { key: '6_meses',   days: 180, price: 269.90, perDay: 1.50, savings: 47 },
+    { key: '1_ano',     days: 365, price: 479.90, perDay: 1.32, savings: 53 },
 ];
 
 const periodLabels: Record<string, Record<string, string>> = {
-    'pt-BR': { '1_semana': '1 semana', '2_semanas': '2 semanas', '1_mes': '1 mês', '3_meses': '3 meses', '6_meses': '6 meses', '1_ano': '1 ano' },
-    'en':    { '1_semana': '1 week',   '2_semanas': '2 weeks',   '1_mes': '1 month', '3_meses': '3 months', '6_meses': '6 months', '1_ano': '1 year' },
-    'es':    { '1_semana': '1 semana', '2_semanas': '2 semanas', '1_mes': '1 mes',   '3_meses': '3 meses',  '6_meses': '6 meses',  '1_ano': '1 año' },
+    'pt-BR': { '1_semana': '1 semana',  '2_semanas': '2 semanas', '1_mes': '1 mês',   '3_meses': '3 meses',  '6_meses': '6 meses',  '1_ano': '1 ano' },
+    'en':    { '1_semana': '1 week',    '2_semanas': '2 weeks',   '1_mes': '1 month', '3_meses': '3 months', '6_meses': '6 months', '1_ano': '1 year' },
+    'es':    { '1_semana': '1 semana',  '2_semanas': '2 semanas', '1_mes': '1 mes',   '3_meses': '3 meses',  '6_meses': '6 meses',  '1_ano': '1 año' },
 };
+
+// Slider geometry constants
+const DOT_D   = 20;  // dot diameter px
+const DOT_R   = DOT_D / 2;  // dot radius = 10 px
+const TRACK_H = 2;   // rail height px
+// Total wrapper height: enough room for dot + tick marks (14 px tall, centred on rail)
+const WRAP_H  = 28;  // px — rail sits at WRAP_H/2 = 14 px from top
 
 export default function Impulsionar() {
     const { id } = useParams();
@@ -32,40 +39,39 @@ export default function Impulsionar() {
     const [loading, setLoading] = useState(true);
     const [boosting, setBoosting] = useState(false);
     const [selectedPeriod, setSelectedPeriod] = useState(2);
-    // animated display index (follows selectedPeriod with spring)
-    const [displayPeriod, setDisplayPeriod] = useState(2);
 
     const trackRef = useRef<HTMLDivElement>(null);
-    const labels = periodLabels[language] ?? periodLabels['pt-BR'];
+    const isDragging = useRef(false);
+    const [dragging, setDragging] = useState(false);
 
+    const labels = periodLabels[language] ?? periodLabels['pt-BR'];
     const fmt = (p: number) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p);
 
     useEffect(() => {
         const fetchCar = async () => {
             if (!id) return;
-            const { data, error } = await supabase
-                .from('anuncios').select('*').eq('id', id).single();
-            if (error || !data) {
-                toast.error('Anúncio não encontrado.');
-                navigate('/meus-anuncios');
-                return;
-            }
-            if (data.user_id !== user?.id) {
-                toast.error('Sem permissão.');
-                navigate('/meus-anuncios');
-                return;
-            }
+            const { data, error } = await supabase.from('anuncios').select('*').eq('id', id).single();
+            if (error || !data) { toast.error('Anúncio não encontrado.'); navigate('/meus-anuncios'); return; }
+            if (data.user_id !== user?.id) { toast.error('Sem permissão.'); navigate('/meus-anuncios'); return; }
             setCar({ ...data, aceitaTroca: data.aceita_troca, modelo_3d: false, imagens: data.imagens || [] });
             setLoading(false);
         };
         fetchCar();
     }, [id, user, navigate]);
 
-    // Smoothly transition the dot
-    useEffect(() => {
-        setDisplayPeriod(selectedPeriod);
+    // Convert a clientX to the nearest snap index
+    const xToSnap = useCallback((clientX: number) => {
+        const track = trackRef.current;
+        if (!track) return selectedPeriod;
+        const rect = track.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        return Math.round(ratio * (periods.length - 1));
     }, [selectedPeriod]);
+
+    // Left % for a given index
+    const dotPct = (idx: number) =>
+        periods.length <= 1 ? 0 : (idx / (periods.length - 1)) * 100;
 
     const handleBoost = async () => {
         if (!id || !user) return;
@@ -76,22 +82,33 @@ export default function Impulsionar() {
         const { error } = await supabase
             .from('anuncios')
             .update({ impulsionado: true, destaque: true, impulsionado_ate: until.toISOString(), prioridade: 5 })
-            .eq('id', id)
-            .eq('user_id', user.id);
-        if (error) {
-            toast.error('Erro ao impulsionar.');
-        } else {
-            toast.success(`Impulsionado por ${labels[period.key]}!`);
-            navigate('/meus-anuncios');
-        }
+            .eq('id', id).eq('user_id', user.id);
+        if (error) { toast.error('Erro ao impulsionar.'); }
+        else { toast.success(`Impulsionado por ${labels[period.key]}!`); navigate('/meus-anuncios'); }
         setBoosting(false);
     };
 
-    // Compute dot left % for a given index
-    const dotLeft = useCallback((idx: number) => {
-        if (periods.length <= 1) return 0;
-        return (idx / (periods.length - 1)) * 100;
+    // ── Drag handlers ──────────────────────────────────────────────────────────
+    // During drag: snap to nearest position in real-time (no free movement)
+    const onPointerDown = useCallback((e: React.PointerEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        isDragging.current = true;
+        setDragging(true);
     }, []);
+
+    const onPointerMove = useCallback((e: React.PointerEvent) => {
+        if (!isDragging.current) return;
+        setSelectedPeriod(xToSnap(e.clientX));
+    }, [xToSnap]);
+
+    const onPointerUp = useCallback((e: React.PointerEvent) => {
+        if (!isDragging.current) return;
+        isDragging.current = false;
+        setDragging(false);
+        setSelectedPeriod(xToSnap(e.clientX));
+    }, [xToSnap]);
 
     if (loading || !car) {
         return (
@@ -104,37 +121,29 @@ export default function Impulsionar() {
     const period = periods[selectedPeriod];
     const periodLabel = labels[period.key];
 
+    // Rail mid-point in px from top of wrapper
+    const railTop = WRAP_H / 2;
+
     return (
         <div className="bg-zinc-950 min-h-screen py-12">
             <div className="max-w-xl mx-auto px-4">
 
                 {/* Header */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-10">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-400/10 border border-brand-400/30 rounded-full mb-4">
                         <Rocket className="w-3.5 h-3.5 text-brand-400" />
-                        <span className="text-xs font-bold text-brand-400 uppercase tracking-widest">
-                            {t.imp_badge}
-                        </span>
+                        <span className="text-xs font-bold text-brand-400 uppercase tracking-widest">{t.imp_badge}</span>
                     </div>
-                    <h1 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">
-                        {t.imp_title}
-                    </h1>
+                    <h1 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">{t.imp_title}</h1>
                     <p className="text-zinc-400 text-sm">
-                        {t.imp_subtitle}{' '}
-                        <span className="text-brand-400 font-bold">{t.imp_subtitle_accent}</span>
-                        {' '}para todos os compradores
+                        {t.imp_subtitle} <span className="text-brand-400 font-bold">{t.imp_subtitle_accent}</span> {t.imp_subtitle_rest}
                     </p>
                 </motion.div>
 
                 {/* Car Preview */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                     className="flex items-center gap-4 p-4 bg-zinc-900 border border-white/8 rounded-2xl mb-6">
-                    {car.imagens[0] && (
-                        <img src={car.imagens[0]} alt=""
-                            className="w-20 h-14 object-cover rounded-xl flex-shrink-0" />
-                    )}
+                    {car.imagens[0] && <img src={car.imagens[0]} alt="" className="w-20 h-14 object-cover rounded-xl flex-shrink-0" />}
                     <div>
                         <h3 className="text-white font-bold">{car.marca} {car.modelo} {car.ano}</h3>
                         <p className="text-brand-400 font-black text-lg">{fmt(car.preco)}</p>
@@ -142,8 +151,7 @@ export default function Impulsionar() {
                 </motion.div>
 
                 {/* Benefits */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
                     className="grid grid-cols-3 gap-3 mb-6">
                     {[
                         { icon: Eye,   title: t.imp_benefit_views_title,    desc: t.imp_benefit_views_desc },
@@ -159,67 +167,94 @@ export default function Impulsionar() {
                 </motion.div>
 
                 {/* Period Selector */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                     className="bg-zinc-900 border border-white/8 rounded-2xl p-6 mb-6">
                     <h3 className="text-center font-black text-white text-lg mb-1">{t.imp_period_title}</h3>
-                    <p className="text-center text-zinc-500 text-xs mb-8">{t.imp_period_sub}</p>
+                    <p className="text-center text-zinc-500 text-xs mb-10">{t.imp_period_sub}</p>
 
-                    {/* ── Custom Snap Slider ── */}
-                    <div className="relative mb-8 px-2" ref={trackRef}>
-                        {/* Track line */}
-                        <div className="relative h-[2px] bg-zinc-700 rounded-full mx-auto">
+                    {/* ── Custom Snap Slider ────────────────────────────────────────────
+                        Layout:
+                          • Horizontal padding = DOT_R so dot never overflows on edges
+                          • Wrapper height = WRAP_H (28 px); rail sits at railTop (14 px)
+                          • Dot (20×20 px): top = railTop - DOT_R  → center == railTop ✓
+                          • Tick marks (2×14 px): top = railTop - 7 → center == railTop ✓
+                    ────────────────────────────────────────────────────────────────── */}
+                    <div className="mb-10" style={{ paddingLeft: DOT_R, paddingRight: DOT_R }}>
 
-                            {/* Filled portion up to selected */}
-                            <motion.div
-                                className="absolute top-0 left-0 h-full bg-brand-400 rounded-full origin-left"
-                                animate={{ width: `${dotLeft(displayPeriod)}%` }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        {/* Clickable track reference div */}
+                        <div
+                            ref={trackRef}
+                            className="relative select-none cursor-pointer"
+                            style={{ height: WRAP_H }}
+                            onClick={(e) => {
+                                // Only handle click if not a drag event
+                                if (!isDragging.current) setSelectedPeriod(xToSnap(e.clientX));
+                            }}
+                        >
+                            {/* Background rail — centered at railTop */}
+                            <div
+                                className="absolute left-0 right-0 rounded-full bg-zinc-700"
+                                style={{ top: railTop - TRACK_H / 2, height: TRACK_H }}
                             />
 
-                            {/* Snap tick marks + invisible click zones */}
-                            {periods.map((p, i) => (
-                                <button
+                            {/* Filled rail — animated width */}
+                            <motion.div
+                                className="absolute left-0 rounded-full bg-brand-400 origin-left"
+                                style={{ top: railTop - TRACK_H / 2, height: TRACK_H }}
+                                animate={{ width: `${dotPct(selectedPeriod)}%` }}
+                                transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                            />
+
+                            {/* Snap tick marks — centered at railTop */}
+                            {periods.map((_, i) => (
+                                <div
                                     key={i}
-                                    onClick={() => setSelectedPeriod(i)}
-                                    aria-label={labels[p.key]}
-                                    style={{ left: `${dotLeft(i)}%` }}
-                                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 flex items-center justify-center group"
-                                >
-                                    {/* Tick line */}
-                                    <span
-                                        className={`block w-[2px] h-3 rounded-full transition-colors duration-200
-                                            ${i <= selectedPeriod ? 'bg-brand-400' : 'bg-zinc-600'}`}
-                                    />
-                                </button>
+                                    className="absolute w-[2px] rounded-full transition-colors duration-200"
+                                    style={{
+                                        left: `${dotPct(i)}%`,
+                                        top: railTop - 7,      // 7 = half of 14px tick height
+                                        height: 14,
+                                        transform: 'translateX(-50%)',
+                                        background: i <= selectedPeriod ? 'rgb(0 212 255)' : 'rgb(82 82 91)',
+                                    }}
+                                />
                             ))}
 
-                            {/* Animated dot */}
+                            {/* Animated dot — center is at railTop */}
                             <motion.div
-                                className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-brand-400 shadow-[0_0_10px_rgba(0,212,255,0.6)] pointer-events-none z-10"
-                                animate={{ left: `${dotLeft(displayPeriod)}%` }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                                style={{ translateX: '-50%' }}
+                                className="absolute rounded-full bg-brand-400 z-10 touch-none"
+                                style={{
+                                    width: DOT_D,
+                                    height: DOT_D,
+                                    top: railTop - DOT_R,     // center of dot == railTop ✓
+                                    boxShadow: dragging
+                                        ? '0 0 18px rgba(0,212,255,0.9)'
+                                        : '0 0 12px rgba(0,212,255,0.6)',
+                                    cursor: dragging ? 'grabbing' : 'grab',
+                                    transform: 'translateX(-50%)',
+                                }}
+                                animate={{ left: `${dotPct(selectedPeriod)}%` }}
+                                transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                                onPointerDown={onPointerDown}
+                                onPointerMove={onPointerMove}
+                                onPointerUp={onPointerUp}
+                                onPointerCancel={onPointerUp}
                             />
                         </div>
 
-                        {/* Labels row — perfectly aligned under each tick */}
-                        <div className="relative mt-5">
+                        {/* Labels row — each label centred under its tick */}
+                        <div className="relative mt-3" style={{ height: 20 }}>
                             {periods.map((p, i) => (
                                 <button
                                     key={i}
                                     onClick={() => setSelectedPeriod(i)}
-                                    style={{ left: `${dotLeft(i)}%` }}
-                                    className={`absolute -translate-x-1/2 text-[11px] font-semibold whitespace-nowrap transition-colors duration-200 leading-tight
-                                        ${selectedPeriod === i
-                                            ? 'text-brand-400 font-bold'
-                                            : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    className={`absolute text-[11px] font-semibold whitespace-nowrap leading-tight transition-colors duration-200
+                                        ${selectedPeriod === i ? 'text-brand-400 font-bold' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    style={{ left: `${dotPct(i)}%`, transform: 'translateX(-50%)' }}
                                 >
                                     {labels[p.key]}
                                 </button>
                             ))}
-                            {/* spacer so the container has height */}
-                            <div className="h-5" />
                         </div>
                     </div>
 
@@ -247,22 +282,16 @@ export default function Impulsionar() {
                         </motion.div>
                     </AnimatePresence>
 
-                    <button
-                        onClick={handleBoost}
-                        disabled={boosting}
-                        className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98] disabled:opacity-60"
-                    >
-                        {boosting
-                            ? <Loader2 className="w-5 h-5 animate-spin" />
-                            : <Rocket className="w-5 h-5" />}
+                    <button onClick={handleBoost} disabled={boosting}
+                        className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98] disabled:opacity-60">
+                        {boosting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Rocket className="w-5 h-5" />}
                         {boosting ? t.imp_btn_boosting : `${t.imp_btn_boost} ${fmt(period.price)}`}
                     </button>
                     <p className="text-center text-xs text-zinc-600 mt-3">{t.imp_disclaimer}</p>
                 </motion.div>
 
                 <div className="text-center">
-                    <Link to="/meus-anuncios"
-                        className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-white text-sm transition-colors">
+                    <Link to="/meus-anuncios" className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-white text-sm transition-colors">
                         <ArrowLeft className="w-4 h-4" />
                         {t.imp_back}
                     </Link>

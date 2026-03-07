@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Loader2, Car, Zap } from 'lucide-react';
+import { Plus, Car, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import CarCard from '../components/CarCard';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import type { Car as CarType } from '../data/mockCars';
 
 export default function MeusAnuncios() {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { t } = useLanguage();
     const [myCars, setMyCars] = useState<CarType[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -30,7 +32,7 @@ export default function MeusAnuncios() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Tem certeza que deseja excluir este anúncio?')) return;
+        if (!confirm(t.mads_confirm_delete)) return;
         try {
             const { error } = await supabase.from('anuncios').delete().eq('id', id);
             if (error) throw error;
@@ -54,16 +56,16 @@ export default function MeusAnuncios() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-10">
                     <div>
-                        <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest mb-2">{myCars.length} anúncios</p>
-                        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Meus Anúncios</h1>
-                        <p className="text-slate-500 dark:text-zinc-500 mt-1 text-sm">Gerencie seus anúncios de veículos</p>
+                        <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest mb-2">{myCars.length} {t.mads_count}</p>
+                        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{t.mads_title}</h1>
+                        <p className="text-slate-500 dark:text-zinc-500 mt-1 text-sm">{t.mads_subtitle}</p>
                     </div>
                     <button
                         onClick={() => navigate('/anunciar')}
                         className="flex items-center gap-2 px-5 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 text-sm font-black rounded-xl transition-all hover:shadow-glow"
                     >
                         <Plus className="w-4 h-4" />
-                        Novo Anúncio
+                        {t.mads_new}
                     </button>
                 </motion.div>
 
@@ -81,14 +83,14 @@ export default function MeusAnuncios() {
                 ) : (
                     <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
                         <Car className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-5" />
-                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Nenhum anúncio ainda</h3>
-                        <p className="text-slate-500 dark:text-zinc-500 text-sm mb-8">Comece anunciando seu primeiro carro gratuitamente!</p>
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">{t.mads_empty_title}</h3>
+                        <p className="text-slate-500 dark:text-zinc-500 text-sm mb-8">{t.mads_empty_sub}</p>
                         <button
                             onClick={() => navigate('/anunciar')}
                             className="flex items-center gap-2 px-6 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all"
                         >
                             <Zap className="w-4 h-4" />
-                            Anunciar Carro
+                            {t.mads_empty_btn}
                         </button>
                     </div>
                 )}

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { brands, fuels, transmissions } from '../data/mockCars';
 import CropModal from '../components/CropModal';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 interface FormData {
     marca: string;
@@ -35,6 +36,7 @@ const labelClass = "block text-xs font-bold text-slate-500 dark:text-zinc-400 up
 export default function AnunciarCarro() {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { t } = useLanguage();
     const [form, setForm] = useState<FormData>(initialForm);
     const [images, setImages] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -151,8 +153,8 @@ export default function AnunciarCarro() {
                         <Car className="w-4 h-4 text-brand-500 dark:text-brand-400" />
                         <span className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest">Novo anúncio</span>
                     </div>
-                    <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Anunciar Meu Carro</h1>
-                    <p className="text-slate-500 dark:text-zinc-500 text-sm">Preencha os dados abaixo para publicar seu anúncio gratuitamente</p>
+                    <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">{t.form_anunciar_title}</h1>
+                    <p className="text-slate-500 dark:text-zinc-500 text-sm">{t.form_anunciar_sub}</p>
                 </motion.div>
 
                 <motion.form
@@ -166,14 +168,14 @@ export default function AnunciarCarro() {
                     <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
                         <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-6 flex items-center gap-2">
                             <span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">1</span>
-                            Dados do veículo
+                            {t.form_vehicle_data}
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label className={labelClass}>Marca *</label>
+                                <label className={labelClass}>{t.form_brand}</label>
                                 <div className="relative">
                                     <select value={form.marca} onChange={(e) => update('marca', e.target.value)} className={selectClass}>
-                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">Selecione a marca</option>
+                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">{t.form_select_brand}</option>
                                         {brands.map((b) => <option key={b} value={b} className="bg-white dark:bg-zinc-800 text-slate-900 dark:text-white">{b}</option>)}
                                     </select>
                                     <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
@@ -182,14 +184,14 @@ export default function AnunciarCarro() {
                                 </div>
                             </div>
                             <div>
-                                <label className={labelClass}>Modelo *</label>
+                                <label className={labelClass}>{t.form_model}</label>
                                 <input type="text" value={form.modelo} onChange={(e) => update('modelo', e.target.value)} placeholder="Ex: Civic EXL" className={inputClass} />
                             </div>
                             <div>
-                                <label className={labelClass}>Ano *</label>
+                                <label className={labelClass}>{t.form_year}</label>
                                 <div className="relative">
                                     <select value={form.ano} onChange={(e) => update('ano', e.target.value)} className={selectClass}>
-                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">Selecione o ano</option>
+                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">{t.form_select_year}</option>
                                         {years.map((y) => <option key={y} value={y} className="bg-white dark:bg-zinc-800 text-slate-900 dark:text-white">{y}</option>)}
                                     </select>
                                     <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
@@ -198,15 +200,15 @@ export default function AnunciarCarro() {
                                 </div>
                             </div>
                             <div>
-                                <label className={labelClass}>Preço (R$) *</label>
+                                <label className={labelClass}>{t.form_price}</label>
                                 <input type="number" value={form.preco} onChange={(e) => update('preco', e.target.value)} placeholder="Ex: 85000" className={inputClass} />
                             </div>
                             <div>
-                                <label className={labelClass}>Quilometragem (km)</label>
+                                <label className={labelClass}>{t.form_km}</label>
                                 <input type="number" value={form.quilometragem} onChange={(e) => update('quilometragem', e.target.value)} placeholder="Ex: 45000" className={inputClass} />
                             </div>
                             <div>
-                                <label className={labelClass}>Telefone *</label>
+                                <label className={labelClass}>{t.form_phone}</label>
                                 <input type="text" value={form.telefone} onChange={(e) => update('telefone', e.target.value)} placeholder="(11) 99999-9999" className={inputClass} />
                             </div>
                         </div>
@@ -216,14 +218,14 @@ export default function AnunciarCarro() {
                     <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
                         <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-6 flex items-center gap-2">
                             <span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">2</span>
-                            Detalhes técnicos
+                            {t.form_details}
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label className={labelClass}>Combustível</label>
+                                <label className={labelClass}>{t.form_fuel}</label>
                                 <div className="relative">
                                     <select value={form.combustivel} onChange={(e) => update('combustivel', e.target.value)} className={selectClass}>
-                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">Selecione</option>
+                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">{t.form_select}</option>
                                         {fuels.map((f) => <option key={f} value={f} className="bg-white dark:bg-zinc-800 text-slate-900 dark:text-white">{f}</option>)}
                                     </select>
                                     <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
@@ -232,11 +234,11 @@ export default function AnunciarCarro() {
                                 </div>
                             </div>
                             <div>
-                                <label className={labelClass}>Câmbio</label>
+                                <label className={labelClass}>{t.form_gearbox}</label>
                                 <div className="relative">
                                     <select value={form.cambio} onChange={(e) => update('cambio', e.target.value)} className={selectClass}>
-                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">Selecione</option>
-                                        {transmissions.map((t) => <option key={t} value={t} className="bg-white dark:bg-zinc-800 text-slate-900 dark:text-white">{t}</option>)}
+                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">{t.form_select}</option>
+                                        {transmissions.map((tr) => <option key={tr} value={tr} className="bg-white dark:bg-zinc-800 text-slate-900 dark:text-white">{tr}</option>)}
                                     </select>
                                     <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -244,11 +246,11 @@ export default function AnunciarCarro() {
                                 </div>
                             </div>
                             <div>
-                                <label className={labelClass}>Cor</label>
+                                <label className={labelClass}>{t.form_color}</label>
                                 <input type="text" value={form.cor} onChange={(e) => update('cor', e.target.value)} placeholder="Ex: Prata" className={inputClass} />
                             </div>
                             <div>
-                                <label className={labelClass}>Cidade</label>
+                                <label className={labelClass}>{t.form_city}</label>
                                 <input type="text" value={form.cidade} onChange={(e) => update('cidade', e.target.value)} placeholder="Ex: São Paulo - SP" className={inputClass} />
                             </div>
                         </div>
@@ -256,7 +258,7 @@ export default function AnunciarCarro() {
                         {/* Aceita troca */}
                         <div className="flex items-center justify-between mt-5 p-4 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/8 rounded-xl hover:border-slate-300 dark:hover:border-white/15 transition-colors">
                             <div>
-                                <p className="text-sm font-bold text-slate-900 dark:text-white">Aceita troca</p>
+                                <p className="text-sm font-bold text-slate-900 dark:text-white">{t.form_trade}</p>
                                 <p className="text-xs text-slate-500 dark:text-zinc-500 mt-0.5">Aceito receber outro veículo como parte do pagamento</p>
                             </div>
                             <button
@@ -273,7 +275,7 @@ export default function AnunciarCarro() {
                     <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
                         <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-6 flex items-center gap-2">
                             <span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">3</span>
-                            Descrição
+                            {t.form_description}
                         </h2>
                         <textarea
                             value={form.descricao}
@@ -288,7 +290,7 @@ export default function AnunciarCarro() {
                     <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5">
                         <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2 flex items-center gap-2">
                             <span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">4</span>
-                            Fotos
+                            {t.form_photos}
                         </h2>
                         <p className="text-xs text-slate-400 dark:text-zinc-500 mb-5">{images.length}/6 fotos adicionadas. Arraste para reordenar.</p>
                         <input type="file" ref={fileInputRef} accept="image/*" onChange={handleFileChange} className="hidden" />
@@ -313,7 +315,7 @@ export default function AnunciarCarro() {
                                     ) : (
                                         <>
                                             <Upload className="w-6 h-6 mb-1.5 group-hover:scale-110 transition-transform" />
-                                            <span className="text-xs font-bold">Adicionar</span>
+                                            <span className="text-xs font-bold">{t.form_add_photo}</span>
                                         </>
                                     )}
                                 </button>
@@ -331,16 +333,16 @@ export default function AnunciarCarro() {
                             {loading ? (
                                 <>
                                     <Loader2 className="w-5 h-5 animate-spin" />
-                                    Publicando...
+                                    {t.form_publishing}
                                 </>
                             ) : (
                                 <>
                                     <Zap className="w-5 h-5" />
-                                    Publicar Anúncio Gratuitamente
+                                    {t.form_publish}
                                 </>
                             )}
                         </button>
-                        <p className="text-center text-xs text-slate-400 dark:text-zinc-600 mt-3">Ao publicar, você concorda com nossos termos de uso</p>
+                        <p className="text-center text-xs text-slate-400 dark:text-zinc-600 mt-3">{t.form_disclaimer}</p>
                     </div>
                 </motion.form>
             </div>

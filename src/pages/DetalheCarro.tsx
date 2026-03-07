@@ -9,12 +9,14 @@ import {
 import { type Car } from '../data/mockCars';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 
 
 export default function DetalheCarro() {
     const { id } = useParams();
     const { user } = useAuth();
+    const { t } = useLanguage();
     const [car, setCar] = useState<Car | null>(null);
     const [loading, setLoading] = useState(true);
     const [imgIndex, setImgIndex] = useState(0);
@@ -75,8 +77,8 @@ export default function DetalheCarro() {
     if (!car) {
         return (
             <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col items-center justify-center">
-                <p className="text-xl text-slate-500 dark:text-zinc-400 mb-4">Veículo não encontrado.</p>
-                <Link to="/estoque" className="text-brand-500 dark:text-brand-400 font-bold hover:underline">Voltar ao estoque</Link>
+                <p className="text-xl text-slate-500 dark:text-zinc-400 mb-4">{t.detail_not_found}</p>
+                <Link to="/estoque" className="text-brand-500 dark:text-brand-400 font-bold hover:underline">{t.detail_back_inventory}</Link>
             </div>
         );
     }
@@ -118,13 +120,13 @@ export default function DetalheCarro() {
     };
 
     const specs = [
-        { icon: Calendar, label: 'Ano', value: String(car.ano) },
-        { icon: Gauge, label: 'Quilometragem', value: formatKm(car.quilometragem) },
-        { icon: Fuel, label: 'Combustível', value: car.combustivel },
-        { icon: Settings2, label: 'Câmbio', value: car.cambio },
-        { icon: Palette, label: 'Cor', value: car.cor },
-        { icon: MapPin, label: 'Cidade', value: car.cidade },
-        { icon: ArrowLeftRight, label: 'Aceita troca', value: car.aceitaTroca ? 'Sim' : 'Não' },
+        { icon: Calendar, label: t.detail_year, value: String(car.ano) },
+        { icon: Gauge, label: t.detail_km, value: formatKm(car.quilometragem) },
+        { icon: Fuel, label: t.detail_fuel, value: car.combustivel },
+        { icon: Settings2, label: t.detail_gearbox, value: car.cambio },
+        { icon: Palette, label: t.detail_color, value: car.cor },
+        { icon: MapPin, label: t.detail_city, value: car.cidade },
+        { icon: ArrowLeftRight, label: t.detail_trade, value: car.aceitaTroca ? t.detail_trade_yes : t.detail_trade_no },
     ];
 
     /* ── slide variants ── */
@@ -276,7 +278,7 @@ export default function DetalheCarro() {
                         className="flex items-center gap-2 px-4 py-2 bg-black/50 backdrop-blur-sm border border-white/15 text-white text-sm font-bold rounded-xl hover:bg-black/70 transition-all"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                        Estoque
+                        {t.detail_back}
                     </Link>
                     <div className="flex items-center gap-2">
                         <button
@@ -368,7 +370,7 @@ export default function DetalheCarro() {
                                     <p className="text-slate-500 dark:text-zinc-500 text-sm">{car.ano} • {formatKm(car.quilometragem)}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-xs text-slate-400 dark:text-zinc-600 mb-1">Preço</p>
+                                    <p className="text-xs text-slate-400 dark:text-zinc-600 mb-1">{t.detail_price}</p>
                                     <p className="text-3xl md:text-4xl font-black text-brand-500 dark:text-brand-400 tracking-tight">
                                         {formatPrice(car.preco)}
                                     </p>
@@ -377,7 +379,7 @@ export default function DetalheCarro() {
 
                             {/* Specs Grid */}
                             <div className="mb-8">
-                                <h3 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-4">Especificações</h3>
+                                <h3 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-4">{t.detail_specs}</h3>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     {specs.map(({ icon: Icon, label, value }) => (
                                         <div
@@ -399,7 +401,7 @@ export default function DetalheCarro() {
                             {/* Description */}
                             {car.descricao && (
                                 <div className="p-6 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-none">
-                                    <h3 className="text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-3">Descrição do vendedor</h3>
+                                    <h3 className="text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-3">{t.detail_description}</h3>
                                     <p className="text-slate-600 dark:text-zinc-300 leading-relaxed text-sm">{car.descricao}</p>
                                 </div>
                             )}
@@ -422,10 +424,10 @@ export default function DetalheCarro() {
                                             V
                                         </div>
                                         <div>
-                                            <p className="font-bold text-slate-900 dark:text-white">Vendedor</p>
+                                            <p className="font-bold text-slate-900 dark:text-white">{t.detail_seller}</p>
                                             <div className="flex items-center gap-1.5">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                                <p className="text-xs text-emerald-500 dark:text-emerald-400 font-medium">Disponível</p>
+                                                <p className="text-xs text-emerald-500 dark:text-emerald-400 font-medium">{t.detail_available}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -438,13 +440,13 @@ export default function DetalheCarro() {
                                 {/* Price summary */}
                                 <div className="p-6 border-b border-slate-100 dark:border-white/5">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-slate-500 dark:text-zinc-500 text-sm">Valor do veículo</span>
+                                        <span className="text-slate-500 dark:text-zinc-500 text-sm">{t.detail_vehicle_value}</span>
                                         <span className="text-2xl font-black text-brand-500 dark:text-brand-400">{formatPrice(car.preco)}</span>
                                     </div>
                                     {car.aceitaTroca && (
                                         <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                                             <ArrowLeftRight className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Aceita troca</span>
+                                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{t.detail_accepts_trade}</span>
                                         </div>
                                     )}
                                 </div>
@@ -458,7 +460,7 @@ export default function DetalheCarro() {
                                         className="flex items-center justify-center gap-2.5 w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-black rounded-xl hover:shadow-lg hover:shadow-emerald-500/20 transition-all"
                                     >
                                         <MessageCircle className="w-5 h-5" />
-                                        Chamar no WhatsApp
+                                        {t.detail_whatsapp}
                                     </a>
                                     <a
                                         href={`tel:${car.telefone}`}
@@ -472,7 +474,7 @@ export default function DetalheCarro() {
                                 {/* Safety note */}
                                 <div className="px-6 pb-6">
                                     <p className="text-xs text-slate-400 dark:text-zinc-600 text-center">
-                                        🔒 Negocie com segurança. Nunca faça pagamentos antecipados.
+                                        {t.detail_safety}
                                     </p>
                                 </div>
                             </div>
@@ -484,7 +486,7 @@ export default function DetalheCarro() {
                                     className="flex-1 flex items-center justify-center gap-2 py-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/8 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white text-sm font-bold rounded-xl transition-all hover:border-slate-300 dark:hover:border-white/20 shadow-sm dark:shadow-none"
                                 >
                                     <ArrowLeft className="w-4 h-4" />
-                                    Ver mais carros
+                                    {t.detail_see_more}
                                 </Link>
                             </div>
                         </motion.div>

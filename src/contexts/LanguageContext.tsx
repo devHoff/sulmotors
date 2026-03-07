@@ -133,6 +133,7 @@ export interface Translations {
     imp_title: string;
     imp_subtitle: string;
     imp_subtitle_accent: string;
+    imp_subtitle_rest: string;
     imp_benefit_views_title: string;
     imp_benefit_views_desc: string;
     imp_benefit_contacts_title: string;
@@ -148,6 +149,99 @@ export interface Translations {
     imp_disclaimer: string;
     imp_back: string;
     imp_economy: string;
+
+    // MeusAnuncios
+    mads_count: string;
+    mads_title: string;
+    mads_subtitle: string;
+    mads_new: string;
+    mads_empty_title: string;
+    mads_empty_sub: string;
+    mads_empty_btn: string;
+    mads_confirm_delete: string;
+
+    // MeusFavoritos
+    mfav_count: string;
+    mfav_title: string;
+    mfav_login_title: string;
+    mfav_login_btn: string;
+    mfav_empty_title: string;
+    mfav_empty_sub: string;
+    mfav_empty_btn: string;
+
+    // SobreNos
+    sobre_badge: string;
+    sobre_title1: string;
+    sobre_title2: string;
+    sobre_subtitle: string;
+    sobre_years: string;
+    sobre_deals: string;
+    sobre_satisfaction: string;
+    sobre_vehicles: string;
+    sobre_who_badge: string;
+    sobre_who_title: string;
+    sobre_who_accent: string;
+    sobre_who_p1: string;
+    sobre_who_p2: string;
+    sobre_mission_title: string;
+    sobre_mission_desc: string;
+    sobre_vision_title: string;
+    sobre_vision_desc: string;
+    sobre_values_title: string;
+    sobre_values_sub: string;
+    sobre_val1_title: string;
+    sobre_val1_desc: string;
+    sobre_val2_title: string;
+    sobre_val2_desc: string;
+    sobre_val3_title: string;
+    sobre_val3_desc: string;
+    sobre_contact_badge: string;
+    sobre_contact_title: string;
+    sobre_contact_sub: string;
+    sobre_contact_btn: string;
+
+    // AnunciarCarro / EditarAnuncio (shared form labels)
+    form_brand: string;
+    form_model: string;
+    form_year: string;
+    form_price: string;
+    form_km: string;
+    form_phone: string;
+    form_fuel: string;
+    form_gearbox: string;
+    form_color: string;
+    form_city: string;
+    form_description: string;
+    form_trade: string;
+    form_select_brand: string;
+    form_select_year: string;
+    form_select: string;
+    form_photos: string;
+    form_photos_sub: string;
+    form_add_photo: string;
+    form_vehicle_data: string;
+    form_details: string;
+    form_publish: string;
+    form_publishing: string;
+    form_disclaimer: string;
+    form_save: string;
+    form_saving: string;
+    form_anunciar_title: string;
+    form_anunciar_sub: string;
+    form_editar_title: string;
+    form_editar_sub: string;
+
+    // MeuPerfil
+    perfil_title: string;
+    perfil_sub: string;
+    perfil_name: string;
+    perfil_phone: string;
+    perfil_email_label: string;
+    perfil_email_readonly: string;
+    perfil_save: string;
+    perfil_saving: string;
+    perfil_back: string;
+    perfil_change_photo: string;
 }
 
 const ptBR: Translations = {
@@ -273,6 +367,7 @@ const ptBR: Translations = {
     imp_title: 'Destaque seu carro',
     imp_subtitle: 'Anúncios impulsionados aparecem',
     imp_subtitle_accent: 'primeiro',
+    imp_subtitle_rest: 'para todos os compradores',
     imp_benefit_views_title: '10x mais views',
     imp_benefit_views_desc: 'Apareça primeiro',
     imp_benefit_contacts_title: 'Mais contatos',
@@ -288,6 +383,94 @@ const ptBR: Translations = {
     imp_disclaimer: 'Destaque ativado imediatamente após a confirmação.',
     imp_back: 'Voltar para Meus Anúncios',
     imp_economy: 'Economia de {pct}% por dia',
+
+    mads_count: 'anúncios',
+    mads_title: 'Meus Anúncios',
+    mads_subtitle: 'Gerencie seus anúncios de veículos',
+    mads_new: 'Novo Anúncio',
+    mads_empty_title: 'Nenhum anúncio ainda',
+    mads_empty_sub: 'Comece anunciando seu primeiro carro gratuitamente!',
+    mads_empty_btn: 'Anunciar Carro',
+    mads_confirm_delete: 'Tem certeza que deseja excluir este anúncio?',
+
+    mfav_count: 'favoritos',
+    mfav_title: 'Meus Favoritos',
+    mfav_login_title: 'Faça login para ver seus favoritos',
+    mfav_login_btn: 'Entrar',
+    mfav_empty_title: 'Nenhum favorito ainda',
+    mfav_empty_sub: 'Explore nosso estoque e clique no coração para salvar os veículos que você gostar.',
+    mfav_empty_btn: 'Ver Estoque',
+
+    sobre_badge: 'Sobre nós',
+    sobre_title1: 'Reinventando o',
+    sobre_title2: 'mercado automotivo',
+    sobre_subtitle: 'Conectamos compradores e vendedores com tecnologia de ponta, segurança e a melhor experiência do Brasil.',
+    sobre_years: 'Anos no mercado',
+    sobre_deals: 'Negócios realizados',
+    sobre_satisfaction: 'Satisfação do cliente',
+    sobre_vehicles: 'Veículos ativos',
+    sobre_who_badge: 'Quem somos',
+    sobre_who_title: 'Uma empresa que',
+    sobre_who_accent: 'transforma',
+    sobre_who_p1: 'A SulMotors nasceu com a missão de transformar o mercado de veículos seminovos no Brasil. Somos um marketplace digital que conecta compradores e vendedores, oferecendo uma experiência moderna, segura e transparente.',
+    sobre_who_p2: 'Utilizamos tecnologia de ponta, incluindo inteligência artificial para aprimoramento de fotos e ferramentas de precificação inteligente, tornando o processo de compra e venda mais eficiente e acessível para todos.',
+    sobre_mission_title: 'Missão',
+    sobre_mission_desc: 'Facilitar a compra e venda de veículos no Brasil, democratizando o acesso a boas ofertas e proporcionando uma experiência segura e transparente para todos os envolvidos.',
+    sobre_vision_title: 'Visão',
+    sobre_vision_desc: 'Ser referência nacional em marketplace automotivo, reconhecida pela inovação tecnológica, excelência no atendimento e compromisso com a transparência nas negociações.',
+    sobre_values_title: 'Nossos valores',
+    sobre_values_sub: 'O que guia cada decisão que tomamos',
+    sobre_val1_title: 'Confiança',
+    sobre_val1_desc: 'Construímos relacionamentos duradouros baseados em transparência e integridade total.',
+    sobre_val2_title: 'Inovação',
+    sobre_val2_desc: 'Investimos continuamente em tecnologia para oferecer a melhor experiência do mercado.',
+    sobre_val3_title: 'Transparência',
+    sobre_val3_desc: 'Todas as informações são apresentadas de forma clara e honesta aos nossos usuários.',
+    sobre_contact_badge: 'Fale conosco',
+    sobre_contact_title: 'Entre em contato',
+    sobre_contact_sub: 'Estamos prontos para ajudar você em qualquer etapa',
+    sobre_contact_btn: 'Começar agora',
+
+    form_brand: 'Marca *',
+    form_model: 'Modelo *',
+    form_year: 'Ano *',
+    form_price: 'Preço (R$) *',
+    form_km: 'Quilometragem',
+    form_phone: 'Telefone *',
+    form_fuel: 'Combustível',
+    form_gearbox: 'Câmbio',
+    form_color: 'Cor',
+    form_city: 'Cidade',
+    form_description: 'Descrição',
+    form_trade: 'Aceita troca',
+    form_select_brand: 'Selecione a marca',
+    form_select_year: 'Selecione o ano',
+    form_select: 'Selecione',
+    form_photos: 'Fotos do veículo',
+    form_photos_sub: 'Adicione até 6 fotos',
+    form_add_photo: 'Adicionar',
+    form_vehicle_data: 'Dados do veículo',
+    form_details: 'Detalhes adicionais',
+    form_publish: 'Publicar Anúncio Gratuitamente',
+    form_publishing: 'Publicando...',
+    form_disclaimer: 'Ao publicar, você concorda com nossos Termos de Uso.',
+    form_save: 'Salvar Alterações',
+    form_saving: 'Salvando...',
+    form_anunciar_title: 'Anunciar Meu Carro',
+    form_anunciar_sub: 'Preencha os dados do seu veículo',
+    form_editar_title: 'Editar Anúncio',
+    form_editar_sub: 'Atualize as informações do seu veículo',
+
+    perfil_title: 'Meu Perfil',
+    perfil_sub: 'Gerencie suas informações pessoais',
+    perfil_name: 'Nome completo',
+    perfil_phone: 'Telefone',
+    perfil_email_label: 'Email',
+    perfil_email_readonly: 'O email não pode ser alterado',
+    perfil_save: 'Salvar alterações',
+    perfil_saving: 'Salvando...',
+    perfil_back: 'Voltar',
+    perfil_change_photo: 'Alterar foto',
 };
 
 const en: Translations = {
@@ -413,6 +596,7 @@ const en: Translations = {
     imp_title: 'Highlight your car',
     imp_subtitle: 'Boosted listings appear',
     imp_subtitle_accent: 'first',
+    imp_subtitle_rest: 'for all buyers',
     imp_benefit_views_title: '10x more views',
     imp_benefit_views_desc: 'Appear at the top',
     imp_benefit_contacts_title: 'More contacts',
@@ -428,6 +612,94 @@ const en: Translations = {
     imp_disclaimer: 'Boost activated immediately after confirmation.',
     imp_back: 'Back to My Listings',
     imp_economy: 'Save {pct}% per day',
+
+    mads_count: 'listings',
+    mads_title: 'My Listings',
+    mads_subtitle: 'Manage your vehicle listings',
+    mads_new: 'New Listing',
+    mads_empty_title: 'No listings yet',
+    mads_empty_sub: 'Start by listing your first car for free!',
+    mads_empty_btn: 'List a Car',
+    mads_confirm_delete: 'Are you sure you want to delete this listing?',
+
+    mfav_count: 'favorites',
+    mfav_title: 'My Favorites',
+    mfav_login_title: 'Sign in to see your favorites',
+    mfav_login_btn: 'Sign In',
+    mfav_empty_title: 'No favorites yet',
+    mfav_empty_sub: 'Browse our inventory and tap the heart to save vehicles you like.',
+    mfav_empty_btn: 'Browse Inventory',
+
+    sobre_badge: 'About us',
+    sobre_title1: 'Reinventing the',
+    sobre_title2: 'automotive market',
+    sobre_subtitle: 'We connect buyers and sellers with cutting-edge technology, security and the best experience in Brazil.',
+    sobre_years: 'Years in market',
+    sobre_deals: 'Deals completed',
+    sobre_satisfaction: 'Customer satisfaction',
+    sobre_vehicles: 'Active vehicles',
+    sobre_who_badge: 'Who we are',
+    sobre_who_title: 'A company that',
+    sobre_who_accent: 'transforms',
+    sobre_who_p1: 'SulMotors was born with the mission to transform the used vehicle market in Brazil. We are a digital marketplace connecting buyers and sellers with a modern, secure and transparent experience.',
+    sobre_who_p2: 'We use cutting-edge technology, including AI for photo enhancement and smart pricing tools, making the buying and selling process more efficient and accessible for everyone.',
+    sobre_mission_title: 'Mission',
+    sobre_mission_desc: 'To facilitate the buying and selling of vehicles in Brazil, democratizing access to great deals and providing a safe, transparent experience for everyone involved.',
+    sobre_vision_title: 'Vision',
+    sobre_vision_desc: 'To be the national reference in automotive marketplaces, recognized for technological innovation, service excellence, and commitment to transparency.',
+    sobre_values_title: 'Our values',
+    sobre_values_sub: 'What guides every decision we make',
+    sobre_val1_title: 'Trust',
+    sobre_val1_desc: 'We build lasting relationships based on total transparency and integrity.',
+    sobre_val2_title: 'Innovation',
+    sobre_val2_desc: 'We continuously invest in technology to offer the best market experience.',
+    sobre_val3_title: 'Transparency',
+    sobre_val3_desc: 'All information is presented clearly and honestly to our users.',
+    sobre_contact_badge: 'Contact us',
+    sobre_contact_title: 'Get in touch',
+    sobre_contact_sub: 'We are ready to help you at every step',
+    sobre_contact_btn: 'Get started',
+
+    form_brand: 'Brand *',
+    form_model: 'Model *',
+    form_year: 'Year *',
+    form_price: 'Price (R$) *',
+    form_km: 'Mileage',
+    form_phone: 'Phone *',
+    form_fuel: 'Fuel',
+    form_gearbox: 'Gearbox',
+    form_color: 'Color',
+    form_city: 'City',
+    form_description: 'Description',
+    form_trade: 'Accepts trade-in',
+    form_select_brand: 'Select brand',
+    form_select_year: 'Select year',
+    form_select: 'Select',
+    form_photos: 'Vehicle photos',
+    form_photos_sub: 'Add up to 6 photos',
+    form_add_photo: 'Add',
+    form_vehicle_data: 'Vehicle data',
+    form_details: 'Additional details',
+    form_publish: 'Publish Listing for Free',
+    form_publishing: 'Publishing...',
+    form_disclaimer: 'By publishing, you agree to our Terms of Use.',
+    form_save: 'Save Changes',
+    form_saving: 'Saving...',
+    form_anunciar_title: 'List My Car',
+    form_anunciar_sub: 'Fill in your vehicle details',
+    form_editar_title: 'Edit Listing',
+    form_editar_sub: 'Update your vehicle information',
+
+    perfil_title: 'My Profile',
+    perfil_sub: 'Manage your personal information',
+    perfil_name: 'Full name',
+    perfil_phone: 'Phone',
+    perfil_email_label: 'Email',
+    perfil_email_readonly: 'Email cannot be changed',
+    perfil_save: 'Save changes',
+    perfil_saving: 'Saving...',
+    perfil_back: 'Back',
+    perfil_change_photo: 'Change photo',
 };
 
 const es: Translations = {
@@ -553,6 +825,7 @@ const es: Translations = {
     imp_title: 'Destaca tu auto',
     imp_subtitle: 'Los anuncios impulsados aparecen',
     imp_subtitle_accent: 'primero',
+    imp_subtitle_rest: 'para todos los compradores',
     imp_benefit_views_title: '10x más vistas',
     imp_benefit_views_desc: 'Aparece primero',
     imp_benefit_contacts_title: 'Más contactos',
@@ -568,6 +841,94 @@ const es: Translations = {
     imp_disclaimer: 'Destacado activado inmediatamente tras la confirmación.',
     imp_back: 'Volver a Mis Anuncios',
     imp_economy: 'Ahorra {pct}% por día',
+
+    mads_count: 'anuncios',
+    mads_title: 'Mis Anuncios',
+    mads_subtitle: 'Administra tus anuncios de vehículos',
+    mads_new: 'Nuevo Anuncio',
+    mads_empty_title: 'Aún no hay anuncios',
+    mads_empty_sub: '¡Comienza publicando tu primer auto gratis!',
+    mads_empty_btn: 'Publicar Auto',
+    mads_confirm_delete: '¿Estás seguro de que deseas eliminar este anuncio?',
+
+    mfav_count: 'favoritos',
+    mfav_title: 'Mis Favoritos',
+    mfav_login_title: 'Inicia sesión para ver tus favoritos',
+    mfav_login_btn: 'Ingresar',
+    mfav_empty_title: 'Aún no hay favoritos',
+    mfav_empty_sub: 'Explora nuestro inventario y toca el corazón para guardar los vehículos que te gusten.',
+    mfav_empty_btn: 'Ver Inventario',
+
+    sobre_badge: 'Sobre nosotros',
+    sobre_title1: 'Reinventando el',
+    sobre_title2: 'mercado automotriz',
+    sobre_subtitle: 'Conectamos compradores y vendedores con tecnología de punta, seguridad y la mejor experiencia de Brasil.',
+    sobre_years: 'Años en el mercado',
+    sobre_deals: 'Negocios realizados',
+    sobre_satisfaction: 'Satisfacción del cliente',
+    sobre_vehicles: 'Vehículos activos',
+    sobre_who_badge: 'Quiénes somos',
+    sobre_who_title: 'Una empresa que',
+    sobre_who_accent: 'transforma',
+    sobre_who_p1: 'SulMotors nació con la misión de transformar el mercado de vehículos usados en Brasil. Somos un marketplace digital que conecta compradores y vendedores con una experiencia moderna, segura y transparente.',
+    sobre_who_p2: 'Utilizamos tecnología de punta, incluyendo inteligencia artificial para mejorar fotos y herramientas de precios inteligentes, haciendo el proceso de compra y venta más eficiente y accesible para todos.',
+    sobre_mission_title: 'Misión',
+    sobre_mission_desc: 'Facilitar la compra y venta de vehículos en Brasil, democratizando el acceso a buenas ofertas y brindando una experiencia segura y transparente para todos.',
+    sobre_vision_title: 'Visión',
+    sobre_vision_desc: 'Ser referente nacional en marketplace automotriz, reconocida por la innovación tecnológica, excelencia en el servicio y compromiso con la transparencia.',
+    sobre_values_title: 'Nuestros valores',
+    sobre_values_sub: 'Lo que guía cada decisión que tomamos',
+    sobre_val1_title: 'Confianza',
+    sobre_val1_desc: 'Construimos relaciones duraderas basadas en transparencia e integridad total.',
+    sobre_val2_title: 'Innovación',
+    sobre_val2_desc: 'Invertimos continuamente en tecnología para ofrecer la mejor experiencia del mercado.',
+    sobre_val3_title: 'Transparencia',
+    sobre_val3_desc: 'Toda la información se presenta de forma clara y honesta a nuestros usuarios.',
+    sobre_contact_badge: 'Contáctanos',
+    sobre_contact_title: 'Ponte en contacto',
+    sobre_contact_sub: 'Estamos listos para ayudarte en cada etapa',
+    sobre_contact_btn: 'Empezar ahora',
+
+    form_brand: 'Marca *',
+    form_model: 'Modelo *',
+    form_year: 'Año *',
+    form_price: 'Precio (R$) *',
+    form_km: 'Kilometraje',
+    form_phone: 'Teléfono *',
+    form_fuel: 'Combustible',
+    form_gearbox: 'Transmisión',
+    form_color: 'Color',
+    form_city: 'Ciudad',
+    form_description: 'Descripción',
+    form_trade: 'Acepta cambio',
+    form_select_brand: 'Selecciona la marca',
+    form_select_year: 'Selecciona el año',
+    form_select: 'Selecciona',
+    form_photos: 'Fotos del vehículo',
+    form_photos_sub: 'Agrega hasta 6 fotos',
+    form_add_photo: 'Agregar',
+    form_vehicle_data: 'Datos del vehículo',
+    form_details: 'Detalles adicionales',
+    form_publish: 'Publicar Anuncio Gratis',
+    form_publishing: 'Publicando...',
+    form_disclaimer: 'Al publicar, aceptas nuestros Términos de Uso.',
+    form_save: 'Guardar cambios',
+    form_saving: 'Guardando...',
+    form_anunciar_title: 'Publicar Mi Auto',
+    form_anunciar_sub: 'Completa los datos de tu vehículo',
+    form_editar_title: 'Editar Anuncio',
+    form_editar_sub: 'Actualiza la información de tu vehículo',
+
+    perfil_title: 'Mi Perfil',
+    perfil_sub: 'Administra tu información personal',
+    perfil_name: 'Nombre completo',
+    perfil_phone: 'Teléfono',
+    perfil_email_label: 'Email',
+    perfil_email_readonly: 'El email no puede cambiarse',
+    perfil_save: 'Guardar cambios',
+    perfil_saving: 'Guardando...',
+    perfil_back: 'Volver',
+    perfil_change_photo: 'Cambiar foto',
 };
 
 const allTranslations: Record<Language, Translations> = { 'pt-BR': ptBR, en, es };

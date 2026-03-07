@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, Loader2, ArrowLeft } from 'lucide-react';
+import { Heart, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import CarCard from '../components/CarCard';
 import type { Car } from '../data/mockCars';
 
 export default function MeusFavoritos() {
     const { user } = useAuth();
+    const { t } = useLanguage();
     const [favorites, setFavorites] = useState<Car[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -49,9 +51,9 @@ export default function MeusFavoritos() {
         return (
             <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col items-center justify-center">
                 <Heart className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-4" />
-                <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">Faça login para ver seus favoritos</h2>
+                <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">{t.mfav_login_title}</h2>
                 <Link to="/login" className="mt-4 px-6 py-3 bg-brand-400 text-zinc-950 font-black rounded-xl hover:bg-brand-300 transition">
-                    Entrar
+                    {t.mfav_login_btn}
                 </Link>
             </div>
         );
@@ -65,8 +67,8 @@ export default function MeusFavoritos() {
                         <Heart className="w-6 h-6 text-red-400 fill-red-400" />
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest mb-1">{favorites.length} favoritos</p>
-                        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Meus Favoritos</h1>
+                        <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest mb-1">{favorites.length} {t.mfav_count}</p>
+                        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{t.mfav_title}</h1>
                     </div>
                 </motion.div>
 
@@ -77,16 +79,14 @@ export default function MeusFavoritos() {
                 ) : (
                     <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
                         <Heart className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-5" />
-                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Nenhum favorito ainda</h3>
-                        <p className="text-slate-500 dark:text-zinc-500 text-sm max-w-sm text-center mb-8">
-                            Explore nosso estoque e clique no coração para salvar os veículos que você gostar.
-                        </p>
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">{t.mfav_empty_title}</h3>
+                        <p className="text-slate-500 dark:text-zinc-500 text-sm max-w-sm text-center mb-8">{t.mfav_empty_sub}</p>
                         <Link
                             to="/estoque"
                             className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 transition"
                         >
                             <ArrowLeft className="w-4 h-4" />
-                            Ver Estoque
+                            {t.mfav_empty_btn}
                         </Link>
                     </div>
                 )}
