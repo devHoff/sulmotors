@@ -102,7 +102,6 @@ export default function Estoque() {
                                     placeholder="Buscar marca ou modelo..."
                                     className="w-full pl-10 pr-4 py-3 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all" />
                             </div>
-                            </div>
                             <button onClick={() => setShowFilters(!showFilters)}
                                 className={`md:hidden flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${showFilters
                                     ? 'bg-brand-400/15 border-brand-400/40 text-brand-500 dark:text-brand-400'
