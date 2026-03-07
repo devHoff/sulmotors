@@ -79,7 +79,7 @@ export default function Estoque() {
     return (
         <div className="bg-slate-50 dark:bg-zinc-950 min-h-screen transition-colors duration-300">
             {/* Header */}
-            <div className="border-b border-slate-200 dark:border-white/5 bg-white dark:bg-zinc-900/50 backdrop-blur-sm transition-colors">
+            <div className="relative z-10 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-zinc-900/50 backdrop-blur-sm transition-colors">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div>
@@ -116,7 +116,7 @@ export default function Estoque() {
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: -6, scale: 0.97 }}
                                             transition={{ duration: 0.15 }}
-                                            className="absolute left-0 top-full mt-1 z-50 min-w-[160px] rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-lg dark:shadow-black/40 overflow-hidden">
+                                            className="absolute left-0 top-full mt-1 z-[999] min-w-[160px] rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-lg dark:shadow-black/40 overflow-hidden">
                                             {(['default', 'asc', 'desc'] as const).map((val) => (
                                                 <button
                                                     key={val}
