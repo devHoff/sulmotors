@@ -1,21 +1,75 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Car, LogOut, User as UserIcon, ChevronDown, Zap, Sun, Moon } from 'lucide-react';
+import { Menu, X, LogOut, User as UserIcon, ChevronDown, Zap, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage, type Language } from '../contexts/LanguageContext';
+
+/* ── Flag SVGs as inline components ───────────────────── */
+function FlagBR() {
+    return (
+        <svg viewBox="0 0 20 14" width="20" height="14" className="rounded-sm flex-shrink-0">
+            <rect width="20" height="14" fill="#009B3A" />
+            <polygon points="10,1.5 19,7 10,12.5 1,7" fill="#FEDF00" />
+            <circle cx="10" cy="7" r="3.2" fill="#002776" />
+            <path d="M7.2 6.5 Q10 5.5 12.8 6.5" stroke="white" strokeWidth="0.6" fill="none" />
+        </svg>
+    );
+}
+function FlagUK() {
+    return (
+        <svg viewBox="0 0 20 14" width="20" height="14" className="rounded-sm flex-shrink-0">
+            <rect width="20" height="14" fill="#012169" />
+            <path d="M0,0 L20,14 M20,0 L0,14" stroke="white" strokeWidth="3" />
+            <path d="M0,0 L20,14 M20,0 L0,14" stroke="#C8102E" strokeWidth="1.8" />
+            <path d="M10,0 V14 M0,7 H20" stroke="white" strokeWidth="4.5" />
+            <path d="M10,0 V14 M0,7 H20" stroke="#C8102E" strokeWidth="3" />
+        </svg>
+    );
+}
+function FlagES() {
+    return (
+        <svg viewBox="0 0 20 14" width="20" height="14" className="rounded-sm flex-shrink-0">
+            <rect width="20" height="14" fill="#AA151B" />
+            <rect y="3.5" width="20" height="7" fill="#F1BF00" />
+        </svg>
+    );
+}
+
+const flagMap: Record<Language, { flag: React.ReactNode; label: string }> = {
+    'pt-BR': { flag: <FlagBR />, label: 'PT' },
+    'en':    { flag: <FlagUK />, label: 'EN' },
+    'es':    { flag: <FlagES />, label: 'ES' },
+};
+
+const languageOptions: Language[] = ['pt-BR', 'en', 'es'];
 
 export default function Navbar() {
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [langMenuOpen, setLangMenuOpen] = useState(false);
     const location = useLocation();
     const { user, signOut } = useAuth();
-    const [userMenuOpen, setUserMenuOpen] = useState(false);
     const { toggleTheme, isDark } = useTheme();
+    const { language, setLanguage, t } = useLanguage();
+    const langRef = useRef<HTMLDivElement>(null);
+
+    // Close lang dropdown on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (langRef.current && !langRef.current.contains(e.target as Node)) {
+                setLangMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     const links = [
-        { to: '/', label: 'Início' },
-        { to: '/estoque', label: 'Estoque' },
-        { to: '/sobre-nos', label: 'Sobre Nós' },
+        { to: '/', label: t.nav_home },
+        { to: '/estoque', label: t.nav_inventory },
+        { to: '/sobre-nos', label: t.nav_about },
     ];
 
     const isActive = (path: string) => location.pathname === path;
@@ -32,30 +86,27 @@ export default function Navbar() {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
-                    {/* Logo */}
-                    <Link to="/" className="flex items-center gap-2.5 group">
-                        <div className="relative w-9 h-9">
-                            <div className="absolute inset-0 bg-brand-400/20 rounded-xl blur-sm group-hover:bg-brand-400/30 transition-all" />
-                            <div className="relative w-9 h-9 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center shadow-glow">
-                                <Car className="w-5 h-5 text-zinc-950" />
-                            </div>
-                        </div>
-                        <span className="text-xl font-black tracking-tight">
-                            <span className="text-brand-400">Sul</span>
-                            <span className="text-zinc-900 dark:text-white">Motors</span>
-                        </span>
+
+                    {/* ── Logo (theme-aware) ── */}
+                    <Link to="/" className="flex items-center group">
+                        <img
+                            src={isDark ? '/logo-dark.png' : '/logo-light.png'}
+                            alt="SulMotors"
+                            className="h-9 w-auto object-contain transition-opacity duration-300 group-hover:opacity-85"
+                        />
                     </Link>
 
-                    {/* Desktop links */}
+                    {/* ── Desktop nav links ── */}
                     <div className="hidden md:flex items-center gap-1">
                         {links.map((link) => (
                             <Link
                                 key={link.to}
                                 to={link.to}
-                                className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive(link.to)
-                                    ? 'text-brand-400'
-                                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
-                                    }`}
+                                className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                                    isActive(link.to)
+                                        ? 'text-brand-400'
+                                        : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                                }`}
                             >
                                 {isActive(link.to) && (
                                     <motion.div
@@ -68,8 +119,50 @@ export default function Navbar() {
                         ))}
                     </div>
 
-                    {/* Desktop right */}
-                    <div className="hidden md:flex items-center gap-3">
+                    {/* ── Desktop right controls ── */}
+                    <div className="hidden md:flex items-center gap-2">
+
+                        {/* Language selector */}
+                        <div className="relative" ref={langRef}>
+                            <button
+                                onClick={() => setLangMenuOpen(!langMenuOpen)}
+                                className="flex items-center gap-1.5 h-9 px-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:border-brand-400/40 transition-all"
+                                aria-label="Change language"
+                            >
+                                {flagMap[language].flag}
+                                <span className="text-xs font-bold text-slate-600 dark:text-zinc-400">{flagMap[language].label}</span>
+                                <ChevronDown className={`w-3 h-3 text-slate-400 dark:text-zinc-500 transition-transform ${langMenuOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            <AnimatePresence>
+                                {langMenuOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                                        transition={{ duration: 0.12 }}
+                                        className="absolute right-0 mt-2 w-36 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-white/10 py-1.5 overflow-hidden"
+                                    >
+                                        {languageOptions.map((lang) => (
+                                            <button
+                                                key={lang}
+                                                onClick={() => { setLanguage(lang); setLangMenuOpen(false); }}
+                                                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors ${
+                                                    language === lang
+                                                        ? 'text-brand-500 dark:text-brand-400 bg-brand-400/5'
+                                                        : 'text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-white/5'
+                                                }`}
+                                            >
+                                                {flagMap[lang].flag}
+                                                <span>{flagMap[lang].label === 'PT' ? 'Português' : flagMap[lang].label === 'EN' ? 'English' : 'Español'}</span>
+                                                {language === lang && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-400" />}
+                                            </button>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
                         {/* Theme toggle */}
                         <button
                             onClick={toggleTheme}
@@ -79,15 +172,17 @@ export default function Navbar() {
                             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                         </button>
 
+                        {/* Advertise CTA */}
                         <Link
                             to="/anunciar"
                             className="group relative flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl overflow-hidden transition-all hover:shadow-glow"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-brand-500 to-brand-400 transition-all group-hover:opacity-90" />
                             <Zap className="relative w-4 h-4 text-zinc-950" />
-                            <span className="relative text-zinc-950">Anunciar Carro</span>
+                            <span className="relative text-zinc-950">{t.nav_advertise}</span>
                         </Link>
 
+                        {/* User menu */}
                         {user ? (
                             <div className="relative">
                                 <button
@@ -119,13 +214,13 @@ export default function Navbar() {
                                             className="absolute right-0 mt-2 w-52 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 py-2 overflow-hidden"
                                         >
                                             <div className="px-4 py-2 border-b border-slate-100 dark:border-white/5 mb-1">
-                                                <p className="text-xs text-slate-400 dark:text-zinc-500">Conta</p>
+                                                <p className="text-xs text-slate-400 dark:text-zinc-500">{t.nav_account}</p>
                                                 <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{user.email}</p>
                                             </div>
                                             {[
-                                                { to: '/meu-perfil', label: 'Meu Perfil' },
-                                                { to: '/favoritos', label: 'Meus Favoritos' },
-                                                { to: '/meus-anuncios', label: 'Meus Anúncios' },
+                                                { to: '/meu-perfil', label: t.nav_profile },
+                                                { to: '/favoritos', label: t.nav_favorites },
+                                                { to: '/meus-anuncios', label: t.nav_my_ads },
                                             ].map((item) => (
                                                 <Link
                                                     key={item.to}
@@ -142,7 +237,7 @@ export default function Navbar() {
                                                     className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
                                                 >
                                                     <LogOut className="w-4 h-4" />
-                                                    Sair
+                                                    {t.nav_sign_out}
                                                 </button>
                                             </div>
                                         </motion.div>
@@ -154,13 +249,50 @@ export default function Navbar() {
                                 to="/login"
                                 className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all border border-slate-200 dark:border-white/10"
                             >
-                                Entrar
+                                {t.nav_enter}
                             </Link>
                         )}
                     </div>
 
-                    {/* Mobile: theme toggle + hamburger */}
-                    <div className="md:hidden flex items-center gap-2">
+                    {/* ── Mobile: language + theme + hamburger ── */}
+                    <div className="md:hidden flex items-center gap-1.5">
+                        {/* Language mini button (flag only) */}
+                        <div className="relative" ref={undefined}>
+                            <button
+                                onClick={() => setLangMenuOpen(!langMenuOpen)}
+                                className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 transition-all"
+                                aria-label="Change language"
+                            >
+                                {flagMap[language].flag}
+                            </button>
+                            <AnimatePresence>
+                                {langMenuOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 6, scale: 0.96 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                                        transition={{ duration: 0.12 }}
+                                        className="absolute right-0 mt-2 w-36 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-white/10 py-1.5 overflow-hidden z-50"
+                                    >
+                                        {languageOptions.map((lang) => (
+                                            <button
+                                                key={lang}
+                                                onClick={() => { setLanguage(lang); setLangMenuOpen(false); }}
+                                                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors ${
+                                                    language === lang
+                                                        ? 'text-brand-500 dark:text-brand-400 bg-brand-400/5'
+                                                        : 'text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-white/5'
+                                                }`}
+                                            >
+                                                {flagMap[lang].flag}
+                                                <span>{flagMap[lang].label === 'PT' ? 'Português' : flagMap[lang].label === 'EN' ? 'English' : 'Español'}</span>
+                                            </button>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
                         <button
                             onClick={toggleTheme}
                             className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-zinc-400 hover:text-brand-400 transition-all"
@@ -177,7 +309,7 @@ export default function Navbar() {
                 </div>
             </div>
 
-            {/* Mobile menu */}
+            {/* ── Mobile menu ── */}
             <AnimatePresence>
                 {mobileOpen && (
                     <motion.div
@@ -192,10 +324,11 @@ export default function Navbar() {
                                     key={link.to}
                                     to={link.to}
                                     onClick={() => setMobileOpen(false)}
-                                    className={`block px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive(link.to)
-                                        ? 'text-brand-400 bg-brand-400/10 border border-brand-400/20'
-                                        : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5'
-                                        }`}
+                                    className={`block px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                                        isActive(link.to)
+                                            ? 'text-brand-400 bg-brand-400/10 border border-brand-400/20'
+                                            : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5'
+                                    }`}
                                 >
                                     {link.label}
                                 </Link>
@@ -207,15 +340,15 @@ export default function Navbar() {
                                     className="flex items-center gap-2 px-4 py-3 text-sm font-bold text-zinc-950 bg-gradient-to-r from-brand-500 to-brand-400 rounded-xl"
                                 >
                                     <Zap className="w-4 h-4" />
-                                    Anunciar Carro
+                                    {t.nav_advertise}
                                 </Link>
                             </div>
                             {user ? (
                                 <>
                                     {[
-                                        { to: '/meu-perfil', label: 'Meu Perfil' },
-                                        { to: '/favoritos', label: 'Meus Favoritos' },
-                                        { to: '/meus-anuncios', label: 'Meus Anúncios' },
+                                        { to: '/meu-perfil', label: t.nav_profile },
+                                        { to: '/favoritos', label: t.nav_favorites },
+                                        { to: '/meus-anuncios', label: t.nav_my_ads },
                                     ].map((item) => (
                                         <Link
                                             key={item.to}
@@ -230,7 +363,7 @@ export default function Navbar() {
                                         onClick={() => { handleSignOut(); setMobileOpen(false); }}
                                         className="w-full text-left px-4 py-3 text-sm font-medium text-red-500 dark:text-red-400"
                                     >
-                                        Sair
+                                        {t.nav_sign_out}
                                     </button>
                                 </>
                             ) : (
@@ -239,7 +372,7 @@ export default function Navbar() {
                                     onClick={() => setMobileOpen(false)}
                                     className="block px-4 py-3 text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
                                 >
-                                    Entrar
+                                    {t.nav_enter}
                                 </Link>
                             )}
                         </div>

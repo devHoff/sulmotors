@@ -4,11 +4,13 @@ import { motion } from 'framer-motion';
 import {
     Search, ArrowRight, ShieldCheck, BadgePercent, Landmark,
     Award, Car, Headset, Zap, ChevronRight, Star, TrendingUp,
-    Fuel, Settings2,
+    Fuel, Settings2, Plus,
 } from 'lucide-react';
 import CarCard from '../components/CarCard';
+import AddStoreModal from '../components/AddStoreModal';
 import { type Car as CarType } from '../data/mockCars';
 import { supabase } from '../lib/supabase';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const heroImages = [
     'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1400&q=80',
@@ -27,10 +29,12 @@ const brands = [
 
 export default function Home() {
     const navigate = useNavigate();
+    const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
     const [heroIndex, setHeroIndex] = useState(0);
     const [featuredCars, setFeaturedCars] = useState<CarType[]>([]);
     const [loadingFeatured, setLoadingFeatured] = useState(true);
+    const [addStoreOpen, setAddStoreOpen] = useState(false);
     const heroTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
@@ -68,18 +72,10 @@ export default function Home() {
     const handleSearch = () => navigate(`/estoque?q=${encodeURIComponent(searchTerm)}`);
 
     const stats = [
-        { value: '2.400+', label: 'Veículos disponíveis' },
-        { value: '98%', label: 'Clientes satisfeitos' },
-        { value: '150+', label: 'Lojas parceiras' },
-        { value: '8 anos', label: 'No mercado' },
-    ];
-
-    const stores = [
-        { name: 'AlexMegaMotors', bg: 'bg-black', logo: 'https://imkzkvlktrixaxougqie.supabase.co/storage/v1/object/public/brands/alexmegamotors.png' },
-        { name: 'MoloCars', bg: 'bg-gradient-to-br from-orange-500 to-red-600', text: 'text-white' },
-        { name: 'NiggaMotors', bg: 'bg-zinc-800', text: 'text-white' },
-        { name: 'DriveCu', bg: 'bg-gradient-to-br from-blue-600 to-purple-700', text: 'text-white' },
-        { name: 'VrumVrum', bg: 'bg-gradient-to-br from-zinc-900 to-zinc-800', text: 'text-white' },
+        { value: '2.400+', label: t.home_stats_vehicles },
+        { value: '98%', label: t.home_stats_clients },
+        { value: '150+', label: t.home_stats_stores },
+        { value: '8 anos', label: t.home_stats_market },
     ];
 
     return (
@@ -209,28 +205,43 @@ export default function Home() {
                         <div>
                             <div className="flex items-center gap-2 mb-3">
                                 <TrendingUp className="w-4 h-4 text-brand-500 dark:text-brand-400" />
-                                <span className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest">Parceiros verificados</span>
+                                <span className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest">{t.home_partners_label}</span>
                             </div>
-                            <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">Lojas em destaque</h2>
+                            <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">{t.home_partners_title}</h2>
                         </div>
                         <Link to="/estoque" className="text-xs font-bold text-slate-400 dark:text-zinc-500 hover:text-brand-500 dark:hover:text-brand-400 flex items-center gap-1 uppercase tracking-wider transition-colors">
-                            Ver todas <ChevronRight className="w-3.5 h-3.5" />
+                            {t.stores_see_all} <ChevronRight className="w-3.5 h-3.5" />
                         </Link>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        {stores.map((store) => (
-                            <Link key={store.name} to={`/estoque?loja=${store.name}`}
-                                className={`${store.bg} h-28 rounded-2xl flex items-center justify-center p-4 border border-white/5 hover:border-brand-400/30 transition-all hover:scale-[1.02] active:scale-[0.98] overflow-hidden group`}>
-                                {store.logo ? (
-                                    <img src={store.logo} alt={store.name} className="w-full h-full object-contain scale-150" />
-                                ) : (
-                                    <span className={`text-sm font-black tracking-tight ${store.text} group-hover:scale-105 transition-transform`}>{store.name}</span>
-                                )}
-                            </Link>
-                        ))}
+                    <div className="grid grid-cols-2 md:grid-cols-2 gap-4 max-w-2xl">
+                        {/* AlexMegaMotors – the only real partner store */}
+                        <Link to="/estoque?loja=AlexMegaMotors"
+                            className="bg-black h-28 rounded-2xl flex items-center justify-center p-4 border border-white/5 hover:border-brand-400/30 transition-all hover:scale-[1.02] active:scale-[0.98] overflow-hidden group">
+                            <img
+                                src="https://imkzkvlktrixaxougqie.supabase.co/storage/v1/object/public/brands/alexmegamotors.png"
+                                alt="AlexMegaMotors"
+                                className="w-full h-full object-contain scale-150"
+                            />
+                        </Link>
+
+                        {/* Add your store placeholder */}
+                        <button
+                            onClick={() => setAddStoreOpen(true)}
+                            className="h-28 rounded-2xl flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-white/15 hover:border-brand-400/60 bg-slate-50 dark:bg-white/[0.02] hover:bg-brand-400/5 transition-all group"
+                        >
+                            <div className="w-9 h-9 rounded-full border-2 border-dashed border-slate-300 dark:border-white/20 group-hover:border-brand-400/60 flex items-center justify-center transition-colors">
+                                <Plus className="w-4 h-4 text-slate-400 dark:text-zinc-500 group-hover:text-brand-400 transition-colors" />
+                            </div>
+                            <span className="text-xs font-semibold text-slate-400 dark:text-zinc-500 group-hover:text-brand-400 transition-colors text-center leading-tight">
+                                {t.home_add_store}
+                            </span>
+                        </button>
                     </div>
                 </div>
             </section>
+
+            {/* Add Store Modal */}
+            <AddStoreModal isOpen={addStoreOpen} onClose={() => setAddStoreOpen(false)} />
 
             {/* ── WHY CHOOSE US ── */}
             <section className="max-w-6xl mx-auto px-4 py-20">

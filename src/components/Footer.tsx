@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Car, Instagram, Twitter, Youtube, Mail, Phone, MapPin, ArrowUpRight } from 'lucide-react';
+import { Instagram, Twitter, Youtube, Mail, Phone, MapPin, ArrowUpRight } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Footer() {
+    const { isDark } = useTheme();
     return (
         <footer className="bg-slate-100 dark:bg-zinc-950 border-t border-slate-200 dark:border-white/5 transition-colors duration-300">
             <div className="h-px bg-gradient-to-r from-transparent via-brand-400/40 to-transparent" />
@@ -10,14 +12,12 @@ export default function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-10 mb-16">
                     {/* Brand */}
                     <div className="md:col-span-4">
-                        <Link to="/" className="flex items-center gap-2.5 mb-5">
-                            <div className="w-9 h-9 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center">
-                                <Car className="w-5 h-5 text-zinc-950" />
-                            </div>
-                            <span className="text-xl font-black tracking-tight">
-                                <span className="text-brand-400">Sul</span>
-                                <span className="text-slate-900 dark:text-white">Motors</span>
-                            </span>
+                        <Link to="/" className="flex items-center mb-5">
+                            <img
+                                src={isDark ? '/logo-dark.png' : '/logo-light.png'}
+                                alt="SulMotors"
+                                className="h-9 w-auto object-contain transition-opacity duration-300 hover:opacity-85"
+                            />
                         </Link>
                         <p className="text-sm text-slate-500 dark:text-zinc-500 leading-relaxed max-w-xs">
                             O marketplace automotivo mais moderno do Brasil. Compre e venda veículos com segurança, tecnologia e confiança.
