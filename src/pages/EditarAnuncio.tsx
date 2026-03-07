@@ -7,8 +7,6 @@ import { mockCars, brands, fuels, transmissions, type Car } from '../data/mockCa
 import AIPhotoModal from '../components/AIPhotoModal';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import CropModal from '../components/CropModal';
-import { AnimatePresence } from 'framer-motion';
 
 // Helper interface for the form state
 interface FormState {
@@ -42,8 +40,6 @@ export default function EditarAnuncio() {
     });
     const [images, setImages] = useState<string[]>([]);
     const [aiModal, setAiModal] = useState<{ open: boolean; url: string }>({ open: false, url: '' });
-    const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const [showCropModal, setShowCropModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -145,36 +141,18 @@ export default function EditarAnuncio() {
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = () => {
-            setSelectedImage(reader.result as string);
-            setShowCropModal(true);
-        };
-        reader.readAsDataURL(file);
         if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-
-    const handleCropComplete = async (croppedBlob: Blob) => {
-        setShowCropModal(false);
-        if (!user) return;
 
         try {
             setUploading(true);
-            const fileName = `${Math.random()}.jpg`;
-            const filePath = `${user.id}/${fileName}`;
-
+            const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+            const mime = file.type || 'image/jpeg';
+            const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
             const { error: uploadError } = await supabase.storage
                 .from('car-images')
-                .upload(filePath, croppedBlob, {
-                    contentType: 'image/jpeg'
-                });
-
+                .upload(fileName, file, { contentType: mime, upsert: false });
             if (uploadError) throw uploadError;
-
-            const { data } = supabase.storage
-                .from('car-images')
-                .getPublicUrl(filePath);
-
+            const { data } = supabase.storage.from('car-images').getPublicUrl(fileName);
             setImages((imgs) => [...imgs, data.publicUrl]);
             toast.success('Foto enviada!');
         } catch (error) {
@@ -182,7 +160,6 @@ export default function EditarAnuncio() {
             toast.error('Erro ao enviar imagem.');
         } finally {
             setUploading(false);
-            setSelectedImage(null);
         }
     };
 
@@ -329,21 +306,6 @@ export default function EditarAnuncio() {
 
             </div>
             <AIPhotoModal isOpen={aiModal.open} onClose={() => setAiModal({ open: false, url: '' })} imageUrl={aiModal.url} carBrand={form.marca} />
-
-            <AnimatePresence>
-                {showCropModal && selectedImage && (
-                    <CropModal
-                        image={selectedImage}
-                        onCropComplete={handleCropComplete}
-                        onCancel={() => {
-                            setShowCropModal(false);
-                            setSelectedImage(null);
-                        }}
-                        aspectRatio={4 / 3}
-                        cropShape="rect"
-                    />
-                )}
-            </AnimatePresence>
         </>
     );
 }

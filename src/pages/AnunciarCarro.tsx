@@ -1,14 +1,12 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Upload, X, Sparkles, Loader2, Zap, Car } from 'lucide-react';
 import { toast } from 'sonner';
 import { brands, fuels, transmissions } from '../data/mockCars';
 import AIPhotoModal from '../components/AIPhotoModal';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import CropModal from '../components/CropModal';
-
 interface FormData {
     marca: string;
     modelo: string;
@@ -42,8 +40,6 @@ export default function AnunciarCarro() {
     const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(false);
     const [aiModal, setAiModal] = useState<{ open: boolean; url: string }>({ open: false, url: '' });
-    const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const [showCropModal, setShowCropModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const currentYear = new Date().getFullYear();
@@ -61,29 +57,23 @@ export default function AnunciarCarro() {
         const file = event.target.files?.[0];
         if (!file) return;
         if (!user) { toast.error('Você precisa estar logado para fazer upload.'); return; }
-        const reader = new FileReader();
-        reader.onload = () => { setSelectedImage(reader.result as string); setShowCropModal(true); };
-        reader.readAsDataURL(file);
         if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-
-    const handleCropComplete = async (croppedBlob: Blob) => {
-        setShowCropModal(false);
-        if (!user) return;
         try {
             setUploading(true);
-            const fileName = `${Math.random()}.jpg`;
-            const filePath = `${user.id}/${fileName}`;
-            const { error: uploadError } = await supabase.storage.from('car-images').upload(filePath, croppedBlob, { contentType: 'image/jpeg' });
+            const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+            const mime = file.type || 'image/jpeg';
+            const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+            const { error: uploadError } = await supabase.storage
+                .from('car-images')
+                .upload(fileName, file, { contentType: mime, upsert: false });
             if (uploadError) throw uploadError;
-            const { data } = supabase.storage.from('car-images').getPublicUrl(filePath);
+            const { data } = supabase.storage.from('car-images').getPublicUrl(fileName);
             setImages((imgs) => [...imgs, data.publicUrl]);
             toast.success('Foto enviada com sucesso!');
         } catch (error) {
             toast.error('Erro ao enviar imagem. Tente novamente.');
         } finally {
             setUploading(false);
-            setSelectedImage(null);
         }
     };
 
@@ -332,18 +322,6 @@ export default function AnunciarCarro() {
                 imageUrl={aiModal.url}
                 carBrand={form.marca}
             />
-
-            <AnimatePresence>
-                {showCropModal && selectedImage && (
-                    <CropModal
-                        image={selectedImage}
-                        onCropComplete={handleCropComplete}
-                        onCancel={() => { setShowCropModal(false); setSelectedImage(null); }}
-                        aspectRatio={4 / 3}
-                        cropShape="rect"
-                    />
-                )}
-            </AnimatePresence>
         </div>
     );
 }
