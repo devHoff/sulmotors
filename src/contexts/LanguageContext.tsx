@@ -127,6 +127,27 @@ export interface Translations {
     stores_email: string;
     stores_close: string;
     stores_see_all: string;
+
+    // Impulsionar
+    imp_badge: string;
+    imp_title: string;
+    imp_subtitle: string;
+    imp_subtitle_accent: string;
+    imp_benefit_views_title: string;
+    imp_benefit_views_desc: string;
+    imp_benefit_contacts_title: string;
+    imp_benefit_contacts_desc: string;
+    imp_benefit_instant_title: string;
+    imp_benefit_instant_desc: string;
+    imp_period_title: string;
+    imp_period_sub: string;
+    imp_per_day: string;
+    imp_savings: string;
+    imp_btn_boosting: string;
+    imp_btn_boost: string;
+    imp_disclaimer: string;
+    imp_back: string;
+    imp_economy: string;
 }
 
 const ptBR: Translations = {
@@ -247,6 +268,26 @@ const ptBR: Translations = {
     stores_email: 'Enviar e-mail',
     stores_close: 'Fechar',
     stores_see_all: 'Ver todas',
+
+    imp_badge: 'Impulsionar Anúncio',
+    imp_title: 'Destaque seu carro',
+    imp_subtitle: 'Anúncios impulsionados aparecem',
+    imp_subtitle_accent: 'primeiro',
+    imp_benefit_views_title: '10x mais views',
+    imp_benefit_views_desc: 'Apareça primeiro',
+    imp_benefit_contacts_title: 'Mais contatos',
+    imp_benefit_contacts_desc: 'Venda mais rápido',
+    imp_benefit_instant_title: 'Imediato',
+    imp_benefit_instant_desc: 'Ativo na hora',
+    imp_period_title: 'Escolha o período',
+    imp_period_sub: 'Toque em um período para selecionar',
+    imp_per_day: '/dia',
+    imp_savings: 'Economia de {pct}% por dia',
+    imp_btn_boosting: 'Impulsionando...',
+    imp_btn_boost: 'Impulsionar por',
+    imp_disclaimer: 'Destaque ativado imediatamente após a confirmação.',
+    imp_back: 'Voltar para Meus Anúncios',
+    imp_economy: 'Economia de {pct}% por dia',
 };
 
 const en: Translations = {
@@ -367,6 +408,26 @@ const en: Translations = {
     stores_email: 'Send email',
     stores_close: 'Close',
     stores_see_all: 'See all',
+
+    imp_badge: 'Boost Listing',
+    imp_title: 'Highlight your car',
+    imp_subtitle: 'Boosted listings appear',
+    imp_subtitle_accent: 'first',
+    imp_benefit_views_title: '10x more views',
+    imp_benefit_views_desc: 'Appear at the top',
+    imp_benefit_contacts_title: 'More contacts',
+    imp_benefit_contacts_desc: 'Sell faster',
+    imp_benefit_instant_title: 'Instant',
+    imp_benefit_instant_desc: 'Active immediately',
+    imp_period_title: 'Choose a period',
+    imp_period_sub: 'Tap a period to select',
+    imp_per_day: '/day',
+    imp_savings: 'Save {pct}% per day',
+    imp_btn_boosting: 'Boosting...',
+    imp_btn_boost: 'Boost for',
+    imp_disclaimer: 'Boost activated immediately after confirmation.',
+    imp_back: 'Back to My Listings',
+    imp_economy: 'Save {pct}% per day',
 };
 
 const es: Translations = {
@@ -487,6 +548,26 @@ const es: Translations = {
     stores_email: 'Enviar email',
     stores_close: 'Cerrar',
     stores_see_all: 'Ver todas',
+
+    imp_badge: 'Impulsar Anuncio',
+    imp_title: 'Destaca tu auto',
+    imp_subtitle: 'Los anuncios impulsados aparecen',
+    imp_subtitle_accent: 'primero',
+    imp_benefit_views_title: '10x más vistas',
+    imp_benefit_views_desc: 'Aparece primero',
+    imp_benefit_contacts_title: 'Más contactos',
+    imp_benefit_contacts_desc: 'Vende más rápido',
+    imp_benefit_instant_title: 'Inmediato',
+    imp_benefit_instant_desc: 'Activo al instante',
+    imp_period_title: 'Elige el período',
+    imp_period_sub: 'Toca un período para seleccionar',
+    imp_per_day: '/día',
+    imp_savings: 'Ahorra {pct}% por día',
+    imp_btn_boosting: 'Impulsando...',
+    imp_btn_boost: 'Impulsar por',
+    imp_disclaimer: 'Destacado activado inmediatamente tras la confirmación.',
+    imp_back: 'Volver a Mis Anuncios',
+    imp_economy: 'Ahorra {pct}% por día',
 };
 
 const allTranslations: Record<Language, Translations> = { 'pt-BR': ptBR, en, es };
