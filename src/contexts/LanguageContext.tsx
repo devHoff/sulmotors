@@ -55,6 +55,13 @@ export interface Translations {
     home_cta_explore: string;
     home_add_store: string;
 
+    // Home categories
+    home_cat_sedans: string;
+    home_cat_suvs: string;
+    home_cat_sports: string;
+    home_cat_pickups: string;
+    home_cat_see_more: string;
+
     // Estoque
     estoque_vehicles_found: string;
     estoque_title: string;
@@ -173,6 +180,12 @@ const ptBR: Translations = {
     home_cta_explore: 'Explorar estoque',
     home_add_store: 'Adicione sua loja aqui',
 
+    home_cat_sedans: 'Sedans',
+    home_cat_suvs: 'SUVs',
+    home_cat_sports: 'Esportivos',
+    home_cat_pickups: 'Picapes',
+    home_cat_see_more: 'Ver mais',
+
     estoque_vehicles_found: 'veículos encontrados',
     estoque_title: 'Estoque completo',
     estoque_subtitle: 'Encontre o carro ideal para você',
@@ -287,6 +300,12 @@ const en: Translations = {
     home_cta_explore: 'Browse inventory',
     home_add_store: 'Add your store here',
 
+    home_cat_sedans: 'Sedans',
+    home_cat_suvs: 'SUVs',
+    home_cat_sports: 'Sports',
+    home_cat_pickups: 'Pickups',
+    home_cat_see_more: 'See more',
+
     estoque_vehicles_found: 'vehicles found',
     estoque_title: 'Full inventory',
     estoque_subtitle: 'Find the ideal car for you',
@@ -400,6 +419,12 @@ const es: Translations = {
     home_cta_btn: 'Publicar Ahora — Gratis',
     home_cta_explore: 'Explorar inventario',
     home_add_store: 'Agrega tu tienda aquí',
+
+    home_cat_sedans: 'Sedanes',
+    home_cat_suvs: 'SUVs',
+    home_cat_sports: 'Deportivos',
+    home_cat_pickups: 'Pickups',
+    home_cat_see_more: 'Ver más',
 
     estoque_vehicles_found: 'vehículos encontrados',
     estoque_title: 'Inventario completo',
