@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, Loader2, X, Car, ArrowUpDown } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2, X, Car, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CarCard from '../components/CarCard';
 import { brands, type Car as CarType } from '../data/mockCars';
@@ -19,6 +19,19 @@ export default function Estoque() {
     const [yearRange, setYearRange] = useState<[number, number]>([2010, 2025]);
     const [showFilters, setShowFilters] = useState(false);
     const [sortOrder, setSortOrder] = useState<'default' | 'asc' | 'desc'>('default');
+    const [sortOpen, setSortOpen] = useState(false);
+    const sortRef = useRef<HTMLDivElement>(null);
+
+    // Close sort dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+                setSortOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         const fetchCars = async () => {
@@ -81,20 +94,43 @@ export default function Estoque() {
                             </p>
                         </div>
                         <div className="flex gap-3 flex-wrap">
-                            {/* Sort Dropdown */}
-                            <div className="relative">
-                                <select
-                                    value={sortOrder}
-                                    onChange={(e) => setSortOrder(e.target.value as 'default' | 'asc' | 'desc')}
-                                    className={`pl-3 pr-8 py-3 rounded-xl border text-sm font-bold transition-all appearance-none cursor-pointer outline-none
+                            {/* Sort Dropdown – fully custom for theme compatibility */}
+                            <div className="relative" ref={sortRef}>
+                                <button
+                                    onClick={() => setSortOpen(o => !o)}
+                                    className={`flex items-center gap-2 pl-3 pr-3 py-3 rounded-xl border text-sm font-bold transition-all whitespace-nowrap
                                         ${sortOrder !== 'default'
                                             ? 'bg-brand-400/15 border-brand-400/40 text-brand-500 dark:text-brand-400'
                                             : 'bg-slate-100 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}>
-                                    <option value="default">Ordenar por</option>
-                                    <option value="asc">Menor preço</option>
-                                    <option value="desc">Maior preço</option>
-                                </select>
-                                <ArrowUpDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />
+                                    <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
+                                    <span>
+                                        {sortOrder === 'asc' ? 'Menor preço' : sortOrder === 'desc' ? 'Maior preço' : 'Ordenar por'}
+                                    </span>
+                                    <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${sortOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                <AnimatePresence>
+                                    {sortOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute left-0 top-full mt-1 z-50 min-w-[160px] rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-lg dark:shadow-black/40 overflow-hidden">
+                                            {(['default', 'asc', 'desc'] as const).map((val) => (
+                                                <button
+                                                    key={val}
+                                                    onClick={() => { setSortOrder(val); setSortOpen(false); }}
+                                                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors
+                                                        ${ sortOrder === val
+                                                            ? 'bg-brand-400/10 text-brand-500 dark:text-brand-400'
+                                                            : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/8'}`}>
+                                                    {val === 'default' ? 'Ordenar por' : val === 'asc' ? 'Menor preço' : 'Maior preço'}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                             <div className="relative flex-1 md:w-80">
                                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" />
