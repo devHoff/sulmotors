@@ -1,6 +1,5 @@
 # Supabase configuration
 [api]
-project_id = "imkzkvlktrixaxougqie"
 
 [functions.create-mp-preference]
 verify_jwt = true   # requires user to be logged in
