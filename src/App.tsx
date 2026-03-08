@@ -9,6 +9,7 @@ import MeusAnuncios from './pages/MeusAnuncios';
 import MeusFavoritos from './pages/MeusFavoritos';
 import MeuPerfil from './pages/MeuPerfil';
 import Impulsionar from './pages/Impulsionar';
+import ImpulsionarSucesso from './pages/ImpulsionarSucesso';
 import DetalheCarro from './pages/DetalheCarro';
 import SobreNos from './pages/SobreNos';
 import Login from './pages/Login';
@@ -27,6 +28,7 @@ export default function App() {
                     <Route path="/favoritos" element={<MeusFavoritos />} />
                     <Route path="/meu-perfil" element={<MeuPerfil />} />
                     <Route path="/impulsionar/:id" element={<Impulsionar />} />
+                    <Route path="/impulsionar/sucesso" element={<ImpulsionarSucesso />} />
                     <Route path="/carro/:id" element={<DetalheCarro />} />
                     <Route path="/sobre-nos" element={<SobreNos />} />
                     <Route path="/login" element={<Login />} />

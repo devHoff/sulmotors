@@ -1,0 +1,9 @@
+# Supabase configuration
+[api]
+project_id = "imkzkvlktrixaxougqie"
+
+[functions.create-mp-preference]
+verify_jwt = true   # requires user to be logged in
+
+[functions.mp-webhook]
+verify_jwt = false  # Mercado Pago calls this without a JWT

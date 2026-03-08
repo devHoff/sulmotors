@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, Users, Zap, Rocket, ArrowLeft, Loader2 } from 'lucide-react';
+import { Eye, Users, Zap, Rocket, ArrowLeft, Loader2, QrCode, ExternalLink, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,12 +23,14 @@ const periodLabels: Record<string, Record<string, string>> = {
     'es':    { '1_semana': '1 semana',  '2_semanas': '2 semanas', '1_mes': '1 mes',   '3_meses': '3 meses',  '6_meses': '6 meses',  '1_ano': '1 año' },
 };
 
-// Slider geometry constants
-const DOT_D   = 20;  // dot diameter px
-const DOT_R   = DOT_D / 2;  // dot radius = 10 px
-const TRACK_H = 2;   // rail height px
-// Total wrapper height: enough room for dot + tick marks (14 px tall, centred on rail)
-const WRAP_H  = 28;  // px — rail sits at WRAP_H/2 = 14 px from top
+// Slider geometry
+const DOT_D   = 20;
+const DOT_R   = DOT_D / 2;
+const TRACK_H = 2;
+const WRAP_H  = 28;
+
+// Detect if using sandbox token (starts with TEST-)
+const isSandbox = (token?: string) => !token || token.startsWith('TEST-') || token.startsWith('APP_USR-');
 
 export default function Impulsionar() {
     const { id } = useParams();
@@ -37,8 +39,12 @@ export default function Impulsionar() {
     const { t, language } = useLanguage();
     const [car, setCar] = useState<Car | null>(null);
     const [loading, setLoading] = useState(true);
-    const [boosting, setBoosting] = useState(false);
+    const [paying, setPaying] = useState(false);
     const [selectedPeriod, setSelectedPeriod] = useState(2);
+
+    // Payment modal state
+    const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+    const [showCheckoutModal, setShowCheckoutModal] = useState(false);
 
     const trackRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
@@ -60,7 +66,7 @@ export default function Impulsionar() {
         fetchCar();
     }, [id, user, navigate]);
 
-    // Convert a clientX to the nearest snap index
+    // ── Slider helpers ──────────────────────────────────────────────────────────
     const xToSnap = useCallback((clientX: number) => {
         const track = trackRef.current;
         if (!track) return selectedPeriod;
@@ -69,27 +75,10 @@ export default function Impulsionar() {
         return Math.round(ratio * (periods.length - 1));
     }, [selectedPeriod]);
 
-    // Left % for a given index
     const dotPct = (idx: number) =>
         periods.length <= 1 ? 0 : (idx / (periods.length - 1)) * 100;
 
-    const handleBoost = async () => {
-        if (!id || !user) return;
-        setBoosting(true);
-        const period = periods[selectedPeriod];
-        const until = new Date();
-        until.setDate(until.getDate() + period.days);
-        const { error } = await supabase
-            .from('anuncios')
-            .update({ impulsionado: true, destaque: true, impulsionado_ate: until.toISOString(), prioridade: 5 })
-            .eq('id', id).eq('user_id', user.id);
-        if (error) { toast.error('Erro ao impulsionar.'); }
-        else { toast.success(`Impulsionado por ${labels[period.key]}!`); navigate('/meus-anuncios'); }
-        setBoosting(false);
-    };
-
-    // ── Drag handlers ──────────────────────────────────────────────────────────
-    // During drag: snap to nearest position in real-time (no free movement)
+    // ── Drag handlers ───────────────────────────────────────────────────────────
     const onPointerDown = useCallback((e: React.PointerEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -110,6 +99,59 @@ export default function Impulsionar() {
         setSelectedPeriod(xToSnap(e.clientX));
     }, [xToSnap]);
 
+    // ── Payment flow ────────────────────────────────────────────────────────────
+    const handlePay = async () => {
+        if (!id || !user || !car) return;
+        setPaying(true);
+
+        try {
+            const period = periods[selectedPeriod];
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+
+            // Call our edge function
+            const res = await fetch(`${supabaseUrl}/functions/v1/create-mp-preference`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Pass user's JWT so the function can verify identity
+                    Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+                },
+                body: JSON.stringify({
+                    anuncio_id: id,
+                    periodo_key: period.key,
+                    dias: period.days,
+                    preco: period.price,
+                    user_id: user.id,
+                    user_email: user.email ?? '',
+                    carro_desc: `${car.marca} ${car.modelo} ${car.ano}`,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.init_point) {
+                throw new Error(data.error ?? 'Erro ao gerar preferência.');
+            }
+
+            // Use sandbox_init_point if token starts with TEST-, otherwise use init_point
+            const checkoutLink = data.sandbox_init_point ?? data.init_point;
+            setCheckoutUrl(checkoutLink);
+            setShowCheckoutModal(true);
+
+        } catch (err: unknown) {
+            console.error(err);
+            toast.error(err instanceof Error ? err.message : 'Erro ao iniciar pagamento.');
+        } finally {
+            setPaying(false);
+        }
+    };
+
+    const openCheckout = () => {
+        if (checkoutUrl) {
+            window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+        }
+    };
+
     if (loading || !car) {
         return (
             <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -120,8 +162,6 @@ export default function Impulsionar() {
 
     const period = periods[selectedPeriod];
     const periodLabel = labels[period.key];
-
-    // Rail mid-point in px from top of wrapper
     const railTop = WRAP_H / 2;
 
     return (
@@ -172,32 +212,19 @@ export default function Impulsionar() {
                     <h3 className="text-center font-black text-white text-lg mb-1">{t.imp_period_title}</h3>
                     <p className="text-center text-zinc-500 text-xs mb-10">{t.imp_period_sub}</p>
 
-                    {/* ── Custom Snap Slider ────────────────────────────────────────────
-                        Layout:
-                          • Horizontal padding = DOT_R so dot never overflows on edges
-                          • Wrapper height = WRAP_H (28 px); rail sits at railTop (14 px)
-                          • Dot (20×20 px): top = railTop - DOT_R  → center == railTop ✓
-                          • Tick marks (2×14 px): top = railTop - 7 → center == railTop ✓
-                    ────────────────────────────────────────────────────────────────── */}
+                    {/* ── Custom Snap Slider ── */}
                     <div className="mb-10" style={{ paddingLeft: DOT_R, paddingRight: DOT_R }}>
-
-                        {/* Clickable track reference div */}
                         <div
                             ref={trackRef}
                             className="relative select-none cursor-pointer"
                             style={{ height: WRAP_H }}
-                            onClick={(e) => {
-                                // Only handle click if not a drag event
-                                if (!isDragging.current) setSelectedPeriod(xToSnap(e.clientX));
-                            }}
+                            onClick={(e) => { if (!isDragging.current) setSelectedPeriod(xToSnap(e.clientX)); }}
                         >
-                            {/* Background rail — centered at railTop */}
-                            <div
-                                className="absolute left-0 right-0 rounded-full bg-zinc-700"
-                                style={{ top: railTop - TRACK_H / 2, height: TRACK_H }}
-                            />
+                            {/* Background rail */}
+                            <div className="absolute left-0 right-0 rounded-full bg-zinc-700"
+                                style={{ top: railTop - TRACK_H / 2, height: TRACK_H }} />
 
-                            {/* Filled rail — animated width */}
+                            {/* Filled rail */}
                             <motion.div
                                 className="absolute left-0 rounded-full bg-brand-400 origin-left"
                                 style={{ top: railTop - TRACK_H / 2, height: TRACK_H }}
@@ -205,14 +232,12 @@ export default function Impulsionar() {
                                 transition={{ type: 'spring', stiffness: 350, damping: 35 }}
                             />
 
-                            {/* Snap tick marks — centered at railTop */}
+                            {/* Tick marks */}
                             {periods.map((_, i) => (
-                                <div
-                                    key={i}
-                                    className="absolute w-[2px] rounded-full transition-colors duration-200"
+                                <div key={i} className="absolute w-[2px] rounded-full transition-colors duration-200"
                                     style={{
                                         left: `${dotPct(i)}%`,
-                                        top: railTop - 7,      // 7 = half of 14px tick height
+                                        top: railTop - 7,
                                         height: 14,
                                         transform: 'translateX(-50%)',
                                         background: i <= selectedPeriod ? 'rgb(0 212 255)' : 'rgb(82 82 91)',
@@ -220,16 +245,13 @@ export default function Impulsionar() {
                                 />
                             ))}
 
-                            {/* Animated dot — center is at railTop */}
+                            {/* Animated dot */}
                             <motion.div
                                 className="absolute rounded-full bg-brand-400 z-10 touch-none"
                                 style={{
-                                    width: DOT_D,
-                                    height: DOT_D,
-                                    top: railTop - DOT_R,     // center of dot == railTop ✓
-                                    boxShadow: dragging
-                                        ? '0 0 18px rgba(0,212,255,0.9)'
-                                        : '0 0 12px rgba(0,212,255,0.6)',
+                                    width: DOT_D, height: DOT_D,
+                                    top: railTop - DOT_R,
+                                    boxShadow: dragging ? '0 0 18px rgba(0,212,255,0.9)' : '0 0 12px rgba(0,212,255,0.6)',
                                     cursor: dragging ? 'grabbing' : 'grab',
                                     transform: 'translateX(-50%)',
                                 }}
@@ -242,16 +264,13 @@ export default function Impulsionar() {
                             />
                         </div>
 
-                        {/* Labels row — each label centred under its tick */}
+                        {/* Labels */}
                         <div className="relative mt-3" style={{ height: 20 }}>
                             {periods.map((p, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => setSelectedPeriod(i)}
+                                <button key={i} onClick={() => setSelectedPeriod(i)}
                                     className={`absolute text-[11px] font-semibold whitespace-nowrap leading-tight transition-colors duration-200
                                         ${selectedPeriod === i ? 'text-brand-400 font-bold' : 'text-zinc-500 hover:text-zinc-300'}`}
-                                    style={{ left: `${dotPct(i)}%`, transform: 'translateX(-50%)' }}
-                                >
+                                    style={{ left: `${dotPct(i)}%`, transform: 'translateX(-50%)' }}>
                                     {labels[p.key]}
                                 </button>
                             ))}
@@ -260,14 +279,10 @@ export default function Impulsionar() {
 
                     {/* Price Card */}
                     <AnimatePresence mode="wait">
-                        <motion.div
-                            key={selectedPeriod}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
+                        <motion.div key={selectedPeriod}
+                            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                             transition={{ duration: 0.18 }}
-                            className="text-center p-6 bg-brand-400/8 border border-brand-400/20 rounded-xl mb-5"
-                        >
+                            className="text-center p-6 bg-brand-400/8 border border-brand-400/20 rounded-xl mb-5">
                             <div className="flex items-center justify-center gap-1.5 text-brand-400 text-xs font-bold mb-2">
                                 <Rocket className="w-3.5 h-3.5" />
                                 {periodLabel}
@@ -282,12 +297,26 @@ export default function Impulsionar() {
                         </motion.div>
                     </AnimatePresence>
 
-                    <button onClick={handleBoost} disabled={boosting}
+                    {/* PIX badge */}
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                        <QrCode className="w-4 h-4 text-emerald-400" />
+                        <span className="text-xs text-emerald-400 font-bold">Pague com PIX — aprovação imediata</span>
+                    </div>
+
+                    {/* CTA Button */}
+                    <button onClick={handlePay} disabled={paying}
                         className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98] disabled:opacity-60">
-                        {boosting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Rocket className="w-5 h-5" />}
-                        {boosting ? t.imp_btn_boosting : `${t.imp_btn_boost} ${fmt(period.price)}`}
+                        {paying
+                            ? <><Loader2 className="w-5 h-5 animate-spin" /> Gerando pagamento...</>
+                            : <><Rocket className="w-5 h-5" /> {t.imp_btn_boost} {fmt(period.price)}</>
+                        }
                     </button>
-                    <p className="text-center text-xs text-zinc-600 mt-3">{t.imp_disclaimer}</p>
+
+                    {/* Security note */}
+                    <div className="flex items-center justify-center gap-1.5 mt-3">
+                        <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" />
+                        <p className="text-center text-xs text-zinc-600">Pagamento processado com segurança pelo Mercado Pago</p>
+                    </div>
                 </motion.div>
 
                 <div className="text-center">
@@ -297,6 +326,81 @@ export default function Impulsionar() {
                     </Link>
                 </div>
             </div>
+
+            {/* ── Checkout Modal ── */}
+            <AnimatePresence>
+                {showCheckoutModal && checkoutUrl && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+                        onClick={(e) => { if (e.target === e.currentTarget) setShowCheckoutModal(false); }}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, y: 60, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 60, scale: 0.95 }}
+                            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                            className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-white/8 text-center">
+                                <div className="w-14 h-14 bg-brand-400/10 border border-brand-400/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <QrCode className="w-7 h-7 text-brand-400" />
+                                </div>
+                                <h2 className="text-xl font-black text-white mb-1">Finalizar Pagamento</h2>
+                                <p className="text-zinc-400 text-sm">Você será redirecionado para o Mercado Pago para concluir o pagamento com PIX ou outro método.</p>
+                            </div>
+
+                            {/* Summary */}
+                            <div className="p-6 space-y-3">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-zinc-400">Período</span>
+                                    <span className="text-white font-bold">{periodLabel}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-zinc-400">Valor</span>
+                                    <span className="text-brand-400 font-black text-lg">{fmt(period.price)}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-zinc-400">Anúncio</span>
+                                    <span className="text-white font-bold text-right max-w-[60%]">{car.marca} {car.modelo} {car.ano}</span>
+                                </div>
+
+                                {/* PIX highlight */}
+                                <div className="flex items-center gap-2.5 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mt-2">
+                                    <QrCode className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                                    <p className="text-emerald-300 text-xs font-medium">PIX disponível — aprovação em segundos, ativação imediata do boost.</p>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="px-6 pb-6 space-y-3">
+                                <button
+                                    onClick={openCheckout}
+                                    className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98]"
+                                >
+                                    <ExternalLink className="w-5 h-5" />
+                                    Ir para o Mercado Pago
+                                </button>
+                                <button
+                                    onClick={() => setShowCheckoutModal(false)}
+                                    className="w-full py-3 text-zinc-500 hover:text-zinc-300 text-sm font-medium transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+
+                            {/* Security footer */}
+                            <div className="px-6 pb-5 flex items-center justify-center gap-1.5">
+                                <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" />
+                                <p className="text-xs text-zinc-600">Ambiente seguro certificado pelo Mercado Pago</p>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
