@@ -106,44 +106,43 @@ export default function Impulsionar() {
 
         try {
             const period = periods[selectedPeriod];
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-            // Get the user's JWT access token
-            const { data: sessionData } = await supabase.auth.getSession();
-            const accessToken = sessionData.session?.access_token ?? supabaseAnonKey;
-
-            // Call our edge function
-            const res = await fetch(`${supabaseUrl}/functions/v1/create-mp-preference`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': supabaseAnonKey,
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify({
-                    anuncio_id: id,
-                    periodo_key: period.key,
-                    dias: period.days,
-                    preco: period.price,
-                    user_id: user.id,
-                    user_email: user.email ?? '',
-                    carro_desc: `${car.marca} ${car.modelo} ${car.ano}`,
-                }),
+            // Call via Supabase RPC (PostgreSQL SECURITY DEFINER function)
+            // This bypasses Edge Function deployment entirely
+            const { data, error } = await supabase.rpc('create_mp_preference', {
+                p_anuncio_id:  id,
+                p_user_id:     user.id,
+                p_periodo_key: period.key,
+                p_dias:        period.days,
+                p_preco:       period.price,
+                p_user_email:  user.email ?? 'comprador@sulmotors.com.br',
+                p_carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
             });
 
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error ?? 'Erro ao gerar preferência de pagamento.');
+            if (error) {
+                console.error('RPC error:', error);
+                throw new Error(error.message ?? 'Erro ao gerar preferência de pagamento.');
             }
 
-            if (!data.init_point && !data.sandbox_init_point) {
+            const result = data as {
+                preference_id?: string;
+                init_point?: string;
+                sandbox_init_point?: string;
+                pagamento_id?: string;
+                error?: string;
+                _mock?: boolean;
+            };
+
+            if (result?.error) {
+                throw new Error(result.error);
+            }
+
+            if (!result?.init_point && !result?.sandbox_init_point) {
                 throw new Error('URL de pagamento não retornada pelo servidor.');
             }
 
-            // Prefer sandbox_init_point for TEST- tokens, otherwise use init_point
-            const checkoutLink = data.sandbox_init_point ?? data.init_point;
+            // Use sandbox_init_point for TEST- tokens, otherwise use init_point
+            const checkoutLink = result.sandbox_init_point ?? result.init_point!;
             setCheckoutUrl(checkoutLink);
             setShowCheckoutModal(true);
 
