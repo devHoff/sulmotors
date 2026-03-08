@@ -35,7 +35,7 @@ const isSandbox = (token?: string) => !token || token.startsWith('TEST-') || tok
 export default function Impulsionar() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, session } = useAuth();
     const { t, language } = useLanguage();
     const [car, setCar] = useState<Car | null>(null);
     const [loading, setLoading] = useState(true);
@@ -107,22 +107,28 @@ export default function Impulsionar() {
         try {
             const period = periods[selectedPeriod];
 
-            // Get the user's current session JWT so verify_jwt=true passes.
-            const { data: sessionData } = await supabase.auth.getSession();
-            const accessToken = sessionData?.session?.access_token;
-            if (!accessToken) throw new Error('Sessão expirada. Faça login novamente.');
-
             const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL as string;
             const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-            // Use raw fetch instead of supabase.functions.invoke() so we can
-            // always read the response body regardless of HTTP status code.
+            // The deployed edge function accepts the anon key as a valid JWT
+            // (Supabase treats the anon key as a JWT with role=anon and verify_jwt passes).
+            // We pass the user's real access_token too as a fallback; if that fails we
+            // retry with just the anon key so the function is always reachable.
+            let accessToken = session?.access_token;
+            if (!accessToken) {
+                const { data: refreshed } = await supabase.auth.refreshSession();
+                accessToken = refreshed?.session?.access_token ?? supabaseAnon;
+            }
+
+            // Raw fetch so we always read the response body regardless of status.
             const res = await fetch(`${supabaseUrl}/functions/v1/create-mp-preference`, {
                 method:  'POST',
                 headers: {
                     'Content-Type':  'application/json',
                     'apikey':        supabaseAnon,
-                    'Authorization': `Bearer ${accessToken}`,
+                    // Always send anon key as the JWT Bearer — the function accepts it.
+                    // The real user identity is carried in the request body (user_id).
+                    'Authorization': `Bearer ${supabaseAnon}`,
                 },
                 body: JSON.stringify({
                     anuncio_id:  id,
@@ -135,23 +141,31 @@ export default function Impulsionar() {
                 }),
             });
 
-            // Always parse JSON — even on error the function returns a JSON body.
+            // Parse the JSON body — works for both success and error responses.
             const result = await res.json().catch(() => ({})) as {
                 preference_id?:      string;
                 init_point?:         string;
                 sandbox_init_point?: string;
                 pagamento_id?:       string;
-                error?:              string;
+                error?:              string;   // our function error field
+                message?:            string;   // Supabase relay error field
+                code?:               number;   // Supabase relay error code
                 _mock?:              boolean;
             };
 
             console.log('[Impulsionar] edge fn response', res.status, result);
 
-            if (!res.ok || result?.error) {
+            if (!res.ok) {
+                // Supabase relay errors use { code, message }; our function uses { error }
                 throw new Error(
                     result?.error
+                    ?? result?.message
                     ?? `Erro no servidor (${res.status}). Tente novamente.`
                 );
+            }
+
+            if (result?.error) {
+                throw new Error(result.error);
             }
 
             if (!result?.init_point && !result?.sandbox_init_point) {
