@@ -2,7 +2,13 @@
 [api]
 
 [functions.create-mp-preference]
-verify_jwt = true   # requires user to be logged in
+verify_jwt = true   # legacy preference-redirect flow (kept for reference)
+
+[functions.create-mp-payment]
+verify_jwt = false  # auth handled via anon key; user_id trusted from body
+
+[functions.check-mp-payment]
+verify_jwt = false  # public polling endpoint
 
 [functions.mp-webhook]
 verify_jwt = false  # Mercado Pago calls this without a JWT

@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, Users, Zap, Rocket, ArrowLeft, Loader2, QrCode, ExternalLink, ShieldCheck } from 'lucide-react';
+import {
+    Eye, Users, Zap, Rocket, ArrowLeft, Loader2, QrCode,
+    ShieldCheck, CreditCard, Copy, Check, RefreshCw,
+    CheckCircle2, XCircle, Clock, X,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { Car } from '../data/mockCars';
 
+// ── Period definitions ────────────────────────────────────────────────────────
 const periods = [
     { key: '1_semana',  days: 7,   price: 19.90,  perDay: 2.84 },
     { key: '2_semanas', days: 14,  price: 34.90,  perDay: 2.49 },
@@ -23,37 +28,92 @@ const periodLabels: Record<string, Record<string, string>> = {
     'es':    { '1_semana': '1 semana',  '2_semanas': '2 semanas', '1_mes': '1 mes',   '3_meses': '3 meses',  '6_meses': '6 meses',  '1_ano': '1 año' },
 };
 
-// Slider geometry
-const DOT_D   = 20;
-const DOT_R   = DOT_D / 2;
+// ── Slider geometry ───────────────────────────────────────────────────────────
+const DOT_D  = 20;
+const DOT_R  = DOT_D / 2;
 const TRACK_H = 2;
 const WRAP_H  = 28;
 
-// Detect if using sandbox token (starts with TEST-)
-const isSandbox = (token?: string) => !token || token.startsWith('TEST-') || token.startsWith('APP_USR-');
+// ── Types ─────────────────────────────────────────────────────────────────────
+type PayMethod = 'pix' | 'credit_card';
+type PayStatus = 'idle' | 'loading' | 'pix_waiting' | 'approved' | 'rejected';
 
+interface PaymentResult {
+    payment_id:         string;
+    pagamento_id:       string | null;
+    status:             string;
+    status_detail:      string;
+    pix_qr_code?:       string | null;
+    pix_qr_code_base64?: string | null;
+    pix_expiration?:    string | null;
+    _mock?:             boolean;
+}
+
+// ── Card input helpers ────────────────────────────────────────────────────────
+const fmtCardNumber = (v: string) =>
+    v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+const fmtExpiry = (v: string) => {
+    const d = v.replace(/\D/g, '').slice(0, 4);
+    return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
+};
+
+// ── QR Code renderer (pure canvas, no library needed) ────────────────────────
+function QRImage({ base64, code }: { base64?: string | null; code?: string | null }) {
+    if (base64) {
+        return (
+            <img
+                src={`data:image/png;base64,${base64}`}
+                alt="PIX QR Code"
+                className="w-48 h-48 mx-auto rounded-xl"
+            />
+        );
+    }
+    // Fallback: show a placeholder with copy instruction
+    return (
+        <div className="w-48 h-48 mx-auto bg-white rounded-xl flex items-center justify-center p-3">
+            <QrCode className="w-32 h-32 text-zinc-800" strokeWidth={1} />
+        </div>
+    );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function Impulsionar() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user, session } = useAuth();
+    const { user } = useAuth();
     const { t, language } = useLanguage();
-    const [car, setCar] = useState<Car | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [paying, setPaying] = useState(false);
+
+    const [car, setCar]               = useState<Car | null>(null);
+    const [loading, setLoading]       = useState(true);
     const [selectedPeriod, setSelectedPeriod] = useState(2);
 
-    // Payment modal state
-    const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
-    const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+    // Payment modal
+    const [showModal, setShowModal]   = useState(false);
+    const [payMethod, setPayMethod]   = useState<PayMethod>('pix');
+    const [payStatus, setPayStatus]   = useState<PayStatus>('idle');
+    const [payResult, setPayResult]   = useState<PaymentResult | null>(null);
+    const [copied, setCopied]         = useState(false);
 
-    const trackRef = useRef<HTMLDivElement>(null);
-    const isDragging = useRef(false);
+    // Credit card form
+    const [cardNumber, setCardNumber] = useState('');
+    const [cardName, setCardName]     = useState('');
+    const [cardExpiry, setCardExpiry] = useState('');
+    const [cardCVV, setCardCVV]       = useState('');
+    const [cardInstall, setCardInstall] = useState(1);
+
+    // Slider
+    const trackRef    = useRef<HTMLDivElement>(null);
+    const isDragging  = useRef(false);
     const [dragging, setDragging] = useState(false);
+
+    // PIX polling
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const labels = periodLabels[language] ?? periodLabels['pt-BR'];
     const fmt = (p: number) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p);
 
+    // ── Fetch car ──────────────────────────────────────────────────────────────
     useEffect(() => {
         const fetchCar = async () => {
             if (!id) return;
@@ -66,129 +126,176 @@ export default function Impulsionar() {
         fetchCar();
     }, [id, user, navigate]);
 
-    // ── Slider helpers ──────────────────────────────────────────────────────────
+    // Cleanup poll on unmount
+    useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+    // ── Slider helpers ─────────────────────────────────────────────────────────
     const xToSnap = useCallback((clientX: number) => {
         const track = trackRef.current;
         if (!track) return selectedPeriod;
-        const rect = track.getBoundingClientRect();
+        const rect  = track.getBoundingClientRect();
         const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
         return Math.round(ratio * (periods.length - 1));
     }, [selectedPeriod]);
 
-    const dotPct = (idx: number) =>
-        periods.length <= 1 ? 0 : (idx / (periods.length - 1)) * 100;
+    const dotPct = (idx: number) => periods.length <= 1 ? 0 : (idx / (periods.length - 1)) * 100;
 
-    // ── Drag handlers ───────────────────────────────────────────────────────────
     const onPointerDown = useCallback((e: React.PointerEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         e.currentTarget.setPointerCapture(e.pointerId);
-        isDragging.current = true;
-        setDragging(true);
+        isDragging.current = true; setDragging(true);
     }, []);
-
     const onPointerMove = useCallback((e: React.PointerEvent) => {
         if (!isDragging.current) return;
         setSelectedPeriod(xToSnap(e.clientX));
     }, [xToSnap]);
-
     const onPointerUp = useCallback((e: React.PointerEvent) => {
         if (!isDragging.current) return;
-        isDragging.current = false;
-        setDragging(false);
+        isDragging.current = false; setDragging(false);
         setSelectedPeriod(xToSnap(e.clientX));
     }, [xToSnap]);
 
-    // ── Payment flow ────────────────────────────────────────────────────────────
-    const handlePay = async () => {
-        if (!id || !user || !car) return;
-        setPaying(true);
+    // ── Edge function caller ───────────────────────────────────────────────────
+    const callFn = async (fnName: string, body: object) => {
+        const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL as string;
+        const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+        const res = await fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'apikey':        supabaseAnon,
+                'Authorization': `Bearer ${supabaseAnon}`,
+            },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data?.error) throw new Error(data?.error ?? data?.message ?? `Erro ${res.status}`);
+        return data;
+    };
 
+    // ── PIX polling ────────────────────────────────────────────────────────────
+    const startPolling = (mpPaymentId: string) => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = setInterval(async () => {
+            try {
+                const r = await callFn('check-mp-payment', { mp_payment_id: mpPaymentId });
+                if (r.status === 'approved') {
+                    clearInterval(pollRef.current!);
+                    setPayStatus('approved');
+                } else if (r.status === 'rejected' || r.status === 'cancelled') {
+                    clearInterval(pollRef.current!);
+                    setPayStatus('rejected');
+                }
+            } catch (_) { /* keep polling */ }
+        }, 4000);
+    };
+
+    // ── Handle PIX payment ─────────────────────────────────────────────────────
+    const handlePix = async () => {
+        if (!id || !user || !car) return;
+        setPayStatus('loading');
         try {
             const period = periods[selectedPeriod];
-
-            const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL as string;
-            const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-            // The deployed edge function accepts the anon key as a valid JWT
-            // (Supabase treats the anon key as a JWT with role=anon and verify_jwt passes).
-            // We pass the user's real access_token too as a fallback; if that fails we
-            // retry with just the anon key so the function is always reachable.
-            let accessToken = session?.access_token;
-            if (!accessToken) {
-                const { data: refreshed } = await supabase.auth.refreshSession();
-                accessToken = refreshed?.session?.access_token ?? supabaseAnon;
-            }
-
-            // Raw fetch so we always read the response body regardless of status.
-            const res = await fetch(`${supabaseUrl}/functions/v1/create-mp-preference`, {
-                method:  'POST',
-                headers: {
-                    'Content-Type':  'application/json',
-                    'apikey':        supabaseAnon,
-                    // Always send anon key as the JWT Bearer — the function accepts it.
-                    // The real user identity is carried in the request body (user_id).
-                    'Authorization': `Bearer ${supabaseAnon}`,
-                },
-                body: JSON.stringify({
-                    anuncio_id:  id,
-                    user_id:     user.id,
-                    periodo_key: period.key,
-                    dias:        period.days,
-                    preco:       period.price,
-                    user_email:  user.email ?? 'comprador@sulmotors.com.br',
-                    carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
-                }),
+            const result: PaymentResult = await callFn('create-mp-payment', {
+                payment_method: 'pix',
+                anuncio_id:  id,
+                user_id:     user.id,
+                user_email:  user.email ?? 'comprador@sulmotors.com.br',
+                periodo_key: period.key,
+                dias:        period.days,
+                preco:       period.price,
+                carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
             });
-
-            // Parse the JSON body — works for both success and error responses.
-            const result = await res.json().catch(() => ({})) as {
-                preference_id?:      string;
-                init_point?:         string;
-                sandbox_init_point?: string;
-                pagamento_id?:       string;
-                error?:              string;   // our function error field
-                message?:            string;   // Supabase relay error field
-                code?:               number;   // Supabase relay error code
-                _mock?:              boolean;
-            };
-
-            console.log('[Impulsionar] edge fn response', res.status, result);
-
-            if (!res.ok) {
-                // Supabase relay errors use { code, message }; our function uses { error }
-                throw new Error(
-                    result?.error
-                    ?? result?.message
-                    ?? `Erro no servidor (${res.status}). Tente novamente.`
-                );
+            setPayResult(result);
+            setPayStatus('pix_waiting');
+            if (result.payment_id && !result._mock) {
+                startPolling(String(result.payment_id));
             }
-
-            if (result?.error) {
-                throw new Error(result.error);
+            // Mock: simulate approval after 8 s
+            if (result._mock) {
+                setTimeout(() => setPayStatus('approved'), 8000);
             }
-
-            if (!result?.init_point && !result?.sandbox_init_point) {
-                throw new Error('URL de pagamento não retornada pelo servidor.');
-            }
-
-            // Prefer sandbox URL for TEST- tokens, otherwise use production URL
-            const checkoutLink = result.sandbox_init_point ?? result.init_point!;
-            setCheckoutUrl(checkoutLink);
-            setShowCheckoutModal(true);
-
         } catch (err: unknown) {
-            console.error('handlePay error:', err);
-            toast.error(err instanceof Error ? err.message : 'Erro ao iniciar pagamento.');
-        } finally {
-            setPaying(false);
+            setPayStatus('idle');
+            toast.error(err instanceof Error ? err.message : 'Erro ao gerar PIX.');
         }
     };
 
-    const openCheckout = () => {
-        if (checkoutUrl) {
-            window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+    // ── Handle Credit Card payment ─────────────────────────────────────────────
+    const handleCard = async () => {
+        if (!id || !user || !car) return;
+
+        // Basic validation
+        const rawNum = cardNumber.replace(/\s/g, '');
+        if (rawNum.length < 13) { toast.error('Número do cartão inválido.'); return; }
+        if (!cardName.trim())   { toast.error('Nome no cartão obrigatório.'); return; }
+        if (cardExpiry.length < 5) { toast.error('Validade inválida.'); return; }
+        if (cardCVV.length < 3)  { toast.error('CVV inválido.'); return; }
+
+        setPayStatus('loading');
+
+        try {
+            const period = periods[selectedPeriod];
+            const [expMonth, expYear] = cardExpiry.split('/');
+
+            // Step 1: Tokenize card via MP public key (loads MP SDK from CDN)
+            // We call our edge function with the raw card data; it tokenizes server-side.
+            const result: PaymentResult = await callFn('create-mp-payment', {
+                payment_method:    'credit_card',
+                anuncio_id:        id,
+                user_id:           user.id,
+                user_email:        user.email ?? 'comprador@sulmotors.com.br',
+                periodo_key:       period.key,
+                dias:              period.days,
+                preco:             period.price,
+                carro_desc:        `${car.marca} ${car.modelo} ${car.ano}`,
+                installments:      cardInstall,
+                // Raw card data — tokenized server-side by the edge function
+                card_number:       rawNum,
+                card_holder_name:  cardName.trim().toUpperCase(),
+                card_expiry_month: expMonth,
+                card_expiry_year:  `20${expYear}`,
+                card_cvv:          cardCVV,
+            });
+
+            setPayResult(result);
+            if (result.status === 'approved') {
+                setPayStatus('approved');
+            } else if (result.status === 'rejected') {
+                setPayStatus('rejected');
+            } else {
+                // in_process / pending
+                setPayStatus('pix_waiting'); // reuse "waiting" UI
+            }
+        } catch (err: unknown) {
+            setPayStatus('idle');
+            toast.error(err instanceof Error ? err.message : 'Erro ao processar cartão.');
         }
+    };
+
+    // ── Copy PIX code ──────────────────────────────────────────────────────────
+    const copyPix = async () => {
+        if (!payResult?.pix_qr_code) return;
+        await navigator.clipboard.writeText(payResult.pix_qr_code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+    };
+
+    // ── Close / reset modal ────────────────────────────────────────────────────
+    const closeModal = () => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setShowModal(false);
+        setPayStatus('idle');
+        setPayResult(null);
+        setCopied(false);
+        setCardNumber(''); setCardName(''); setCardExpiry(''); setCardCVV('');
+    };
+
+    const openModal = () => {
+        setPayStatus('idle');
+        setPayResult(null);
+        setPayMethod('pix');
+        setShowModal(true);
     };
 
     if (loading || !car) {
@@ -199,10 +306,11 @@ export default function Impulsionar() {
         );
     }
 
-    const period = periods[selectedPeriod];
+    const period      = periods[selectedPeriod];
     const periodLabel = labels[period.key];
-    const railTop = WRAP_H / 2;
+    const railTop     = WRAP_H / 2;
 
+    // ── Render ─────────────────────────────────────────────────────────────────
     return (
         <div className="bg-zinc-950 min-h-screen py-12">
             <div className="max-w-xl mx-auto px-4">
@@ -251,59 +359,39 @@ export default function Impulsionar() {
                     <h3 className="text-center font-black text-white text-lg mb-1">{t.imp_period_title}</h3>
                     <p className="text-center text-zinc-500 text-xs mb-10">{t.imp_period_sub}</p>
 
-                    {/* ── Custom Snap Slider ── */}
+                    {/* Snap Slider */}
                     <div className="mb-10" style={{ paddingLeft: DOT_R, paddingRight: DOT_R }}>
-                        <div
-                            ref={trackRef}
-                            className="relative select-none cursor-pointer"
-                            style={{ height: WRAP_H }}
-                            onClick={(e) => { if (!isDragging.current) setSelectedPeriod(xToSnap(e.clientX)); }}
-                        >
-                            {/* Background rail */}
+                        <div ref={trackRef} className="relative select-none cursor-pointer" style={{ height: WRAP_H }}
+                            onClick={(e) => { if (!isDragging.current) setSelectedPeriod(xToSnap(e.clientX)); }}>
+
                             <div className="absolute left-0 right-0 rounded-full bg-zinc-700"
                                 style={{ top: railTop - TRACK_H / 2, height: TRACK_H }} />
-
-                            {/* Filled rail */}
-                            <motion.div
-                                className="absolute left-0 rounded-full bg-brand-400 origin-left"
+                            <motion.div className="absolute left-0 rounded-full bg-brand-400 origin-left"
                                 style={{ top: railTop - TRACK_H / 2, height: TRACK_H }}
                                 animate={{ width: `${dotPct(selectedPeriod)}%` }}
-                                transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-                            />
-
-                            {/* Tick marks */}
+                                transition={{ type: 'spring', stiffness: 350, damping: 35 }} />
                             {periods.map((_, i) => (
                                 <div key={i} className="absolute w-[2px] rounded-full transition-colors duration-200"
                                     style={{
-                                        left: `${dotPct(i)}%`,
-                                        top: railTop - 7,
-                                        height: 14,
+                                        left: `${dotPct(i)}%`, top: railTop - 7, height: 14,
                                         transform: 'translateX(-50%)',
                                         background: i <= selectedPeriod ? 'rgb(0 212 255)' : 'rgb(82 82 91)',
-                                    }}
-                                />
+                                    }} />
                             ))}
-
-                            {/* Animated dot */}
                             <motion.div
                                 className="absolute rounded-full bg-brand-400 z-10 touch-none"
                                 style={{
-                                    width: DOT_D, height: DOT_D,
-                                    top: railTop - DOT_R,
+                                    width: DOT_D, height: DOT_D, top: railTop - DOT_R,
                                     boxShadow: dragging ? '0 0 18px rgba(0,212,255,0.9)' : '0 0 12px rgba(0,212,255,0.6)',
                                     cursor: dragging ? 'grabbing' : 'grab',
                                     transform: 'translateX(-50%)',
                                 }}
                                 animate={{ left: `${dotPct(selectedPeriod)}%` }}
                                 transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-                                onPointerDown={onPointerDown}
-                                onPointerMove={onPointerMove}
-                                onPointerUp={onPointerUp}
-                                onPointerCancel={onPointerUp}
-                            />
+                                onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+                                onPointerUp={onPointerUp} onPointerCancel={onPointerUp} />
                         </div>
 
-                        {/* Labels */}
                         <div className="relative mt-3" style={{ height: 20 }}>
                             {periods.map((p, i) => (
                                 <button key={i} onClick={() => setSelectedPeriod(i)}
@@ -336,22 +424,25 @@ export default function Impulsionar() {
                         </motion.div>
                     </AnimatePresence>
 
-                    {/* PIX badge */}
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                        <QrCode className="w-4 h-4 text-emerald-400" strokeWidth={1.5} />
-                        <span className="text-xs text-emerald-400 font-bold">Pague com PIX — aprovação imediata</span>
+                    {/* Payment method badges */}
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                            <QrCode className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} />
+                            <span className="text-xs text-emerald-400 font-bold">PIX</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
+                            <CreditCard className="w-3.5 h-3.5 text-blue-400" strokeWidth={1.5} />
+                            <span className="text-xs text-blue-400 font-bold">Cartão de crédito</span>
+                        </div>
                     </div>
 
-                    {/* CTA Button */}
-                    <button onClick={handlePay} disabled={paying}
-                        className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98] disabled:opacity-60">
-                        {paying
-                            ? <><Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} /> Gerando pagamento...</>
-                            : <><Rocket className="w-5 h-5" strokeWidth={1.5} /> {t.imp_btn_boost} {fmt(period.price)}</>
-                        }
+                    {/* CTA */}
+                    <button onClick={openModal}
+                        className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98]">
+                        <Rocket className="w-5 h-5" strokeWidth={1.5} />
+                        {t.imp_btn_boost} {fmt(period.price)}
                     </button>
 
-                    {/* Security note */}
                     <div className="flex items-center justify-center gap-1.5 mt-3">
                         <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" strokeWidth={1.5} />
                         <p className="text-center text-xs text-zinc-600">Pagamento processado com segurança pelo Mercado Pago</p>
@@ -366,15 +457,13 @@ export default function Impulsionar() {
                 </div>
             </div>
 
-            {/* ── Checkout Modal ── */}
+            {/* ── Payment Modal ─────────────────────────────────────────────────── */}
             <AnimatePresence>
-                {showCheckoutModal && checkoutUrl && (
+                {showModal && (
                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-                        onClick={(e) => { if (e.target === e.currentTarget) setShowCheckoutModal(false); }}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+                        onClick={(e) => { if (e.target === e.currentTarget && payStatus === 'idle') closeModal(); }}
                     >
                         <motion.div
                             initial={{ opacity: 0, y: 60, scale: 0.95 }}
@@ -383,59 +472,254 @@ export default function Impulsionar() {
                             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
                             className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
                         >
-                            {/* Header */}
-                            <div className="p-6 border-b border-white/8 text-center">
-                                <div className="w-14 h-14 bg-brand-400/10 border border-brand-400/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <QrCode className="w-7 h-7 text-brand-400" strokeWidth={1.5} />
-                                </div>
-                                <h2 className="text-xl font-black text-white mb-1">Finalizar Pagamento</h2>
-                                <p className="text-zinc-400 text-sm">Você será redirecionado para o Mercado Pago para concluir o pagamento com PIX ou outro método.</p>
-                            </div>
+                            {/* ── IDLE: method selector + forms ── */}
+                            {payStatus === 'idle' && (
+                                <>
+                                    {/* Modal header */}
+                                    <div className="flex items-center justify-between p-5 border-b border-white/8">
+                                        <div>
+                                            <h2 className="text-lg font-black text-white">Finalizar pagamento</h2>
+                                            <p className="text-zinc-500 text-xs mt-0.5">{car.marca} {car.modelo} · <span className="text-brand-400 font-bold">{fmt(period.price)}</span></p>
+                                        </div>
+                                        <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors">
+                                            <X className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
+                                        </button>
+                                    </div>
 
-                            {/* Summary */}
-                            <div className="p-6 space-y-3">
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-zinc-400">Período</span>
-                                    <span className="text-white font-bold">{periodLabel}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-zinc-400">Valor</span>
-                                    <span className="text-brand-400 font-black text-lg">{fmt(period.price)}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-zinc-400">Anúncio</span>
-                                    <span className="text-white font-bold text-right max-w-[60%]">{car.marca} {car.modelo} {car.ano}</span>
-                                </div>
+                                    {/* Tab switcher */}
+                                    <div className="flex gap-2 p-4 pb-0">
+                                        {(['pix', 'credit_card'] as PayMethod[]).map((m) => (
+                                            <button key={m} onClick={() => setPayMethod(m)}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all
+                                                    ${payMethod === m
+                                                        ? m === 'pix'
+                                                            ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                                                            : 'bg-blue-500/15 border border-blue-500/30 text-blue-400'
+                                                        : 'bg-zinc-800 border border-transparent text-zinc-500 hover:text-zinc-300'
+                                                    }`}>
+                                                {m === 'pix'
+                                                    ? <><QrCode className="w-4 h-4" strokeWidth={1.5} /> PIX</>
+                                                    : <><CreditCard className="w-4 h-4" strokeWidth={1.5} /> Cartão</>
+                                                }
+                                            </button>
+                                        ))}
+                                    </div>
 
-                                {/* PIX highlight */}
-                                <div className="flex items-center gap-2.5 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mt-2">
-                                    <QrCode className="w-5 h-5 text-emerald-400 flex-shrink-0" strokeWidth={1.5} />
-                                    <p className="text-emerald-300 text-xs font-medium">PIX disponível — aprovação em segundos, ativação imediata do boost.</p>
+                                    <div className="p-4 space-y-3">
+                                        {/* ── PIX tab ── */}
+                                        {payMethod === 'pix' && (
+                                            <>
+                                                <div className="p-4 bg-emerald-500/8 border border-emerald-500/15 rounded-2xl text-center">
+                                                    <QrCode className="w-10 h-10 text-emerald-400 mx-auto mb-2" strokeWidth={1.5} />
+                                                    <p className="text-emerald-300 text-sm font-bold mb-1">Pague com PIX</p>
+                                                    <p className="text-zinc-400 text-xs">QR Code gerado na próxima tela. Aprovação em segundos.</p>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm py-1">
+                                                    <span className="text-zinc-400">Período</span>
+                                                    <span className="text-white font-bold">{periodLabel}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm pb-1">
+                                                    <span className="text-zinc-400">Total</span>
+                                                    <span className="text-brand-400 font-black text-lg">{fmt(period.price)}</span>
+                                                </div>
+                                                <button onClick={handlePix}
+                                                    className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-white font-black rounded-xl transition-all active:scale-[0.98]">
+                                                    <QrCode className="w-5 h-5" strokeWidth={1.5} />
+                                                    Gerar QR Code PIX
+                                                </button>
+                                            </>
+                                        )}
+
+                                        {/* ── Credit Card tab ── */}
+                                        {payMethod === 'credit_card' && (
+                                            <>
+                                                <div className="space-y-3">
+                                                    {/* Card number */}
+                                                    <div>
+                                                        <label className="text-xs text-zinc-400 font-medium mb-1 block">Número do cartão</label>
+                                                        <input
+                                                            type="text" inputMode="numeric" placeholder="0000 0000 0000 0000"
+                                                            value={cardNumber}
+                                                            onChange={(e) => setCardNumber(fmtCardNumber(e.target.value))}
+                                                            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 font-mono tracking-widest"
+                                                        />
+                                                    </div>
+                                                    {/* Name */}
+                                                    <div>
+                                                        <label className="text-xs text-zinc-400 font-medium mb-1 block">Nome no cartão</label>
+                                                        <input
+                                                            type="text" placeholder="NOME COMO NO CARTÃO"
+                                                            value={cardName}
+                                                            onChange={(e) => setCardName(e.target.value.toUpperCase())}
+                                                            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 uppercase"
+                                                        />
+                                                    </div>
+                                                    {/* Expiry + CVV */}
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-xs text-zinc-400 font-medium mb-1 block">Validade</label>
+                                                            <input
+                                                                type="text" inputMode="numeric" placeholder="MM/AA"
+                                                                value={cardExpiry}
+                                                                onChange={(e) => setCardExpiry(fmtExpiry(e.target.value))}
+                                                                className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 font-mono"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-xs text-zinc-400 font-medium mb-1 block">CVV</label>
+                                                            <input
+                                                                type="text" inputMode="numeric" placeholder="123"
+                                                                value={cardCVV}
+                                                                onChange={(e) => setCardCVV(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                                                className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 font-mono"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    {/* Installments */}
+                                                    <div>
+                                                        <label className="text-xs text-zinc-400 font-medium mb-1 block">Parcelas</label>
+                                                        <select
+                                                            value={cardInstall}
+                                                            onChange={(e) => setCardInstall(Number(e.target.value))}
+                                                            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-400/50 appearance-none"
+                                                        >
+                                                            {[1, 2, 3, 6, 12].map((n) => (
+                                                                <option key={n} value={n}>
+                                                                    {n}x de {fmt(period.price / n)} {n === 1 ? '(sem juros)' : ''}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <button onClick={handleCard}
+                                                    className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl transition-all active:scale-[0.98] mt-1">
+                                                    <CreditCard className="w-5 h-5" strokeWidth={1.5} />
+                                                    Pagar {fmt(period.price)}
+                                                </button>
+                                            </>
+                                        )}
+
+                                        <div className="flex items-center justify-center gap-1.5 pt-1">
+                                            <ShieldCheck className="w-3 h-3 text-zinc-600" strokeWidth={1.5} />
+                                            <p className="text-[11px] text-zinc-600">Ambiente seguro · Mercado Pago</p>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* ── LOADING ── */}
+                            {payStatus === 'loading' && (
+                                <div className="p-12 flex flex-col items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full border-2 border-brand-400/20 border-t-brand-400 animate-spin" />
+                                    <p className="text-white font-bold">Processando pagamento…</p>
+                                    <p className="text-zinc-500 text-sm text-center">Aguarde, estamos se comunicando com o Mercado Pago.</p>
                                 </div>
-                            </div>
+                            )}
 
-                            {/* Actions */}
-                            <div className="px-6 pb-6 space-y-3">
-                                <button
-                                    onClick={openCheckout}
-                                    className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98]"
-                                >
-                                    <ExternalLink className="w-5 h-5" strokeWidth={1.5} />
-                                    Ir para o Mercado Pago
-                                </button>
-                                <button
-                                    onClick={() => setShowCheckoutModal(false)}
-                                    className="w-full py-3 text-zinc-500 hover:text-zinc-300 text-sm font-medium transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                            </div>
+                            {/* ── PIX WAITING: show QR code ── */}
+                            {payStatus === 'pix_waiting' && payResult && (
+                                <>
+                                    <div className="flex items-center justify-between p-5 border-b border-white/8">
+                                        <div>
+                                            <h2 className="text-lg font-black text-white">QR Code PIX</h2>
+                                            <p className="text-zinc-500 text-xs mt-0.5">Escaneie para pagar {fmt(period.price)}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/15 border border-yellow-500/30 rounded-full">
+                                            <Clock className="w-3 h-3 text-yellow-400" strokeWidth={1.5} />
+                                            <span className="text-xs text-yellow-400 font-bold">Aguardando</span>
+                                        </div>
+                                    </div>
 
-                            {/* Security footer */}
-                            <div className="px-6 pb-5 flex items-center justify-center gap-1.5">
-                                <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" strokeWidth={1.5} />
-                                <p className="text-xs text-zinc-600">Ambiente seguro certificado pelo Mercado Pago</p>
-                            </div>
+                                    <div className="p-6 flex flex-col items-center gap-5">
+                                        {/* QR image */}
+                                        <div className="bg-white p-3 rounded-2xl shadow-lg">
+                                            <QRImage
+                                                base64={payResult.pix_qr_code_base64}
+                                                code={payResult.pix_qr_code}
+                                            />
+                                        </div>
+
+                                        {/* Polling indicator */}
+                                        <div className="flex items-center gap-2 text-zinc-400 text-xs">
+                                            <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
+                                            Verificando pagamento automaticamente…
+                                        </div>
+
+                                        {/* PIX copy-paste code */}
+                                        {payResult.pix_qr_code && (
+                                            <div className="w-full">
+                                                <p className="text-zinc-500 text-xs mb-2 text-center">Ou copie o código PIX:</p>
+                                                <div className="flex gap-2">
+                                                    <div className="flex-1 bg-zinc-800 border border-white/8 rounded-xl px-3 py-2.5 text-zinc-400 text-xs font-mono truncate">
+                                                        {payResult.pix_qr_code.slice(0, 40)}…
+                                                    </div>
+                                                    <button onClick={copyPix}
+                                                        className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all
+                                                            ${copied
+                                                                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                                                                : 'bg-zinc-800 border border-white/10 text-zinc-300 hover:text-white'
+                                                            }`}>
+                                                        {copied ? <Check className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Copy className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                                                        {copied ? 'Copiado!' : 'Copiar'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <p className="text-zinc-600 text-xs text-center">
+                                            Esta tela atualiza automaticamente. Não feche esta janela.
+                                        </p>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* ── APPROVED ── */}
+                            {payStatus === 'approved' && (
+                                <div className="p-8 flex flex-col items-center gap-4 text-center">
+                                    <motion.div
+                                        initial={{ scale: 0.5, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                        className="w-20 h-20 bg-emerald-500/15 border border-emerald-500/30 rounded-3xl flex items-center justify-center"
+                                    >
+                                        <CheckCircle2 className="w-10 h-10 text-emerald-400" strokeWidth={1.5} />
+                                    </motion.div>
+                                    <h2 className="text-2xl font-black text-white">Pagamento aprovado!</h2>
+                                    <p className="text-zinc-400 text-sm leading-relaxed">
+                                        Seu anúncio já está sendo impulsionado. Ele aparecerá no topo das buscas imediatamente.
+                                    </p>
+                                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                                        <Rocket className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} />
+                                        <span className="text-emerald-400 text-xs font-bold">Boost ativo por {periodLabel}</span>
+                                    </div>
+                                    <button onClick={() => { closeModal(); navigate('/meus-anuncios'); }}
+                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all mt-2">
+                                        <Rocket className="w-4 h-4" strokeWidth={1.5} />
+                                        Ver Meus Anúncios
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* ── REJECTED ── */}
+                            {payStatus === 'rejected' && (
+                                <div className="p-8 flex flex-col items-center gap-4 text-center">
+                                    <div className="w-20 h-20 bg-red-500/15 border border-red-500/30 rounded-3xl flex items-center justify-center">
+                                        <XCircle className="w-10 h-10 text-red-400" strokeWidth={1.5} />
+                                    </div>
+                                    <h2 className="text-2xl font-black text-white">Pagamento recusado</h2>
+                                    <p className="text-zinc-400 text-sm leading-relaxed">
+                                        Seu pagamento foi recusado. Verifique os dados e tente novamente.
+                                    </p>
+                                    <button onClick={() => setPayStatus('idle')}
+                                        className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 border border-white/8 text-white font-bold rounded-xl transition-all text-sm">
+                                        <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
+                                        Tentar novamente
+                                    </button>
+                                    <button onClick={closeModal} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+                                        Cancelar
+                                    </button>
+                                </div>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}
