@@ -107,11 +107,24 @@ export default function Impulsionar() {
         try {
             const period = periods[selectedPeriod];
 
-            // Call the deployed Supabase Edge Function.
-            // supabase.functions.invoke() automatically attaches the user's
-            // Authorization: Bearer <access_token> header so verify_jwt passes.
-            const { data, error } = await supabase.functions.invoke('create-mp-preference', {
-                body: {
+            // Get the user's current session JWT so verify_jwt=true passes.
+            const { data: sessionData } = await supabase.auth.getSession();
+            const accessToken = sessionData?.session?.access_token;
+            if (!accessToken) throw new Error('Sessão expirada. Faça login novamente.');
+
+            const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL as string;
+            const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+            // Use raw fetch instead of supabase.functions.invoke() so we can
+            // always read the response body regardless of HTTP status code.
+            const res = await fetch(`${supabaseUrl}/functions/v1/create-mp-preference`, {
+                method:  'POST',
+                headers: {
+                    'Content-Type':  'application/json',
+                    'apikey':        supabaseAnon,
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({
                     anuncio_id:  id,
                     user_id:     user.id,
                     periodo_key: period.key,
@@ -119,28 +132,26 @@ export default function Impulsionar() {
                     preco:       period.price,
                     user_email:  user.email ?? 'comprador@sulmotors.com.br',
                     carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
-                },
+                }),
             });
 
-            if (error) {
-                console.error('Edge function error:', error);
-                // FunctionsHttpError carries a JSON body – try to extract message
-                const msg = (error as { message?: string }).message
-                    ?? 'Erro ao gerar preferência de pagamento.';
-                throw new Error(msg);
-            }
-
-            const result = data as {
-                preference_id?: string;
-                init_point?: string;
+            // Always parse JSON — even on error the function returns a JSON body.
+            const result = await res.json().catch(() => ({})) as {
+                preference_id?:      string;
+                init_point?:         string;
                 sandbox_init_point?: string;
-                pagamento_id?: string;
-                error?: string;
-                _mock?: boolean;
+                pagamento_id?:       string;
+                error?:              string;
+                _mock?:              boolean;
             };
 
-            if (result?.error) {
-                throw new Error(result.error);
+            console.log('[Impulsionar] edge fn response', res.status, result);
+
+            if (!res.ok || result?.error) {
+                throw new Error(
+                    result?.error
+                    ?? `Erro no servidor (${res.status}). Tente novamente.`
+                );
             }
 
             if (!result?.init_point && !result?.sandbox_init_point) {
