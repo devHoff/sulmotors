@@ -107,14 +107,19 @@ export default function Impulsionar() {
         try {
             const period = periods[selectedPeriod];
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+            // Get the user's JWT access token
+            const { data: sessionData } = await supabase.auth.getSession();
+            const accessToken = sessionData.session?.access_token ?? supabaseAnonKey;
 
             // Call our edge function
             const res = await fetch(`${supabaseUrl}/functions/v1/create-mp-preference`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // Pass user's JWT so the function can verify identity
-                    Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+                    'apikey': supabaseAnonKey,
+                    'Authorization': `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify({
                     anuncio_id: id,
@@ -129,17 +134,21 @@ export default function Impulsionar() {
 
             const data = await res.json();
 
-            if (!res.ok || !data.init_point) {
-                throw new Error(data.error ?? 'Erro ao gerar preferência.');
+            if (!res.ok) {
+                throw new Error(data.error ?? 'Erro ao gerar preferência de pagamento.');
             }
 
-            // Use sandbox_init_point if token starts with TEST-, otherwise use init_point
+            if (!data.init_point && !data.sandbox_init_point) {
+                throw new Error('URL de pagamento não retornada pelo servidor.');
+            }
+
+            // Prefer sandbox_init_point for TEST- tokens, otherwise use init_point
             const checkoutLink = data.sandbox_init_point ?? data.init_point;
             setCheckoutUrl(checkoutLink);
             setShowCheckoutModal(true);
 
         } catch (err: unknown) {
-            console.error(err);
+            console.error('handlePay error:', err);
             toast.error(err instanceof Error ? err.message : 'Erro ao iniciar pagamento.');
         } finally {
             setPaying(false);
