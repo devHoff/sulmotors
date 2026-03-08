@@ -107,21 +107,27 @@ export default function Impulsionar() {
         try {
             const period = periods[selectedPeriod];
 
-            // Call via Supabase RPC (PostgreSQL SECURITY DEFINER function)
-            // This bypasses Edge Function deployment entirely
-            const { data, error } = await supabase.rpc('create_mp_preference', {
-                p_anuncio_id:  id,
-                p_user_id:     user.id,
-                p_periodo_key: period.key,
-                p_dias:        period.days,
-                p_preco:       period.price,
-                p_user_email:  user.email ?? 'comprador@sulmotors.com.br',
-                p_carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
+            // Call the deployed Supabase Edge Function.
+            // supabase.functions.invoke() automatically attaches the user's
+            // Authorization: Bearer <access_token> header so verify_jwt passes.
+            const { data, error } = await supabase.functions.invoke('create-mp-preference', {
+                body: {
+                    anuncio_id:  id,
+                    user_id:     user.id,
+                    periodo_key: period.key,
+                    dias:        period.days,
+                    preco:       period.price,
+                    user_email:  user.email ?? 'comprador@sulmotors.com.br',
+                    carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
+                },
             });
 
             if (error) {
-                console.error('RPC error:', error);
-                throw new Error(error.message ?? 'Erro ao gerar preferência de pagamento.');
+                console.error('Edge function error:', error);
+                // FunctionsHttpError carries a JSON body – try to extract message
+                const msg = (error as { message?: string }).message
+                    ?? 'Erro ao gerar preferência de pagamento.';
+                throw new Error(msg);
             }
 
             const result = data as {
@@ -141,7 +147,7 @@ export default function Impulsionar() {
                 throw new Error('URL de pagamento não retornada pelo servidor.');
             }
 
-            // Use sandbox_init_point for TEST- tokens, otherwise use init_point
+            // Prefer sandbox URL for TEST- tokens, otherwise use production URL
             const checkoutLink = result.sandbox_init_point ?? result.init_point!;
             setCheckoutUrl(checkoutLink);
             setShowCheckoutModal(true);

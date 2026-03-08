@@ -4,18 +4,17 @@
  * Receives a POST from the frontend with:
  *   { anuncio_id, periodo_key, dias, preco, user_id, user_email, carro_desc }
  *
- * Calls Mercado Pago POST /checkout/preferences and returns the checkout URL.
- * The pagamentos row is created AFTER payment is confirmed (via mp-webhook),
- * avoiding RLS/FK issues in the edge function environment.
+ * Flow:
+ *   1. (Optional) Insert a `pagamentos` row with status = 'pendente'
+ *   2. If MERCADOPAGO_ACCESS_TOKEN is set → call MP Preferences API
+ *      Else → return a mock checkout URL (development mode)
+ *   3. Return { preference_id, init_point, sandbox_init_point, pagamento_id }
  *
- * If MERCADOPAGO_ACCESS_TOKEN is not set, returns a mock response so the
- * UI can still be tested end-to-end.
- *
- * Env vars:
- *   MERCADOPAGO_ACCESS_TOKEN  — MP access token (prod APP_USR-... or sandbox TEST-...)
- *   SUPABASE_URL              — injected automatically
- *   SUPABASE_SERVICE_ROLE_KEY — injected automatically
- *   APP_URL                   — public URL of the app (e.g. https://sulmotors.com.br)
+ * Env vars (set via Supabase Dashboard → Project Settings → Edge Functions → Secrets):
+ *   MERCADOPAGO_ACCESS_TOKEN  — MP access token (TEST-... or APP_USR-...)
+ *   APP_URL                   — public app URL (default: https://sulmotors.com.br)
+ *   SUPABASE_URL              — auto-injected by Supabase runtime
+ *   SUPABASE_SERVICE_ROLE_KEY — auto-injected by Supabase runtime
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -51,57 +50,54 @@ Deno.serve(async (req) => {
             );
         }
 
-        const mpToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
-        const baseUrl = Deno.env.get('APP_URL') ?? 'https://sulmotors.com.br';
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+        const mpToken   = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
+        const baseUrl   = Deno.env.get('APP_URL') ?? 'https://sulmotors.com.br';
+        const sbUrl     = Deno.env.get('SUPABASE_URL') ?? '';
+        const sbSvcKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-        // ── 1. Create pagamentos row using service role ────────────────────────
-        // Use service role to bypass RLS completely
+        // ── 1. Create pagamentos row (best-effort – does not block payment flow) ──
         let pagamentoId: string | null = null;
 
-        if (supabaseUrl && serviceKey) {
+        if (sbUrl && sbSvcKey) {
             try {
-                const adminClient = createClient(supabaseUrl, serviceKey, {
+                const admin = createClient(sbUrl, sbSvcKey, {
                     auth: { persistSession: false },
                 });
-
-                const { data: pag, error: pagErr } = await adminClient
+                const { data: pag, error: pagErr } = await admin
                     .from('pagamentos')
                     .insert({
                         anuncio_id,
                         user_id,
                         periodo_key,
-                        dias: Number(dias),
-                        valor: Number(preco),
+                        dias:   Number(dias),
+                        valor:  Number(preco),
                         status: 'pendente',
                     })
                     .select('id')
                     .single();
 
                 if (pagErr) {
-                    console.error('pagamentos insert error:', JSON.stringify(pagErr));
-                    // Don't block the flow — proceed without pagamentoId
+                    // Log but don't block — the webhook will reconcile later
+                    console.warn('pagamentos insert warning:', pagErr.message);
                 } else {
                     pagamentoId = pag?.id ?? null;
                 }
             } catch (dbErr) {
-                console.error('DB client error:', dbErr);
-                // Continue without DB record
+                console.warn('DB client warning:', dbErr);
             }
         }
 
-        // ── 2. If no MP token, return mock checkout for development ───────────
+        // ── 2. Development mode: return mock checkout when token is missing ───
         if (!mpToken) {
-            console.warn('MERCADOPAGO_ACCESS_TOKEN not set — returning mock response');
-            const mockId = pagamentoId ?? crypto.randomUUID();
+            console.info('MERCADOPAGO_ACCESS_TOKEN not configured — returning mock checkout URL');
+            const mockPagId = pagamentoId ?? crypto.randomUUID();
             return new Response(
                 JSON.stringify({
-                    preference_id: 'mock-preference-id',
-                    init_point: `${baseUrl}/impulsionar/sucesso?pagamento_id=${mockId}&anuncio_id=${anuncio_id}&status=pendente`,
-                    sandbox_init_point: `${baseUrl}/impulsionar/sucesso?pagamento_id=${mockId}&anuncio_id=${anuncio_id}&status=pendente`,
-                    pagamento_id: mockId,
-                    _mock: true,
+                    preference_id:      'mock-preference-id',
+                    init_point:         `${baseUrl}/impulsionar/sucesso?pagamento_id=${mockPagId}&anuncio_id=${anuncio_id}&status=pendente`,
+                    sandbox_init_point: `${baseUrl}/impulsionar/sucesso?pagamento_id=${mockPagId}&anuncio_id=${anuncio_id}&status=pendente`,
+                    pagamento_id:       mockPagId,
+                    _mock:              true,
                 }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
             );
@@ -109,21 +105,18 @@ Deno.serve(async (req) => {
 
         // ── 3. Create Mercado Pago preference ─────────────────────────────────
         const preferenceBody = {
-            items: [
-                {
-                    id: `boost-${anuncio_id}`,
-                    title: `Impulsionar Anúncio — ${carro_desc ?? 'Veículo'} (${String(periodo_key).replace(/_/g, ' ')})`,
-                    quantity: 1,
-                    unit_price: Number(preco),
-                    currency_id: 'BRL',
-                    category_id: 'services',
-                },
-            ],
+            items: [{
+                id:          `boost-${anuncio_id}`,
+                title:       `Impulsionar Anúncio — ${carro_desc ?? 'Veículo'} (${String(periodo_key).replace(/_/g, ' ')})`,
+                quantity:    1,
+                unit_price:  Number(preco),
+                currency_id: 'BRL',
+                category_id: 'services',
+            }],
             payer: {
                 email: user_email || 'comprador@sulmotors.com.br',
             },
             payment_methods: {
-                // Allow PIX only — exclude cards and boleto
                 excluded_payment_types: [
                     { id: 'credit_card' },
                     { id: 'debit_card' },
@@ -137,10 +130,10 @@ Deno.serve(async (req) => {
                 failure: `${baseUrl}/impulsionar/${anuncio_id}?erro=pagamento_falhou`,
                 pending: `${baseUrl}/impulsionar/sucesso?pagamento_id=${pagamentoId ?? ''}&anuncio_id=${anuncio_id}&status=pendente`,
             },
-            auto_return: 'approved',
+            auto_return:        'approved',
             external_reference: pagamentoId ?? anuncio_id,
-            notification_url: `${supabaseUrl}/functions/v1/mp-webhook`,
-            expires: false,
+            notification_url:   sbUrl ? `${sbUrl}/functions/v1/mp-webhook` : undefined,
+            expires:            false,
             metadata: {
                 pagamento_id: pagamentoId ?? '',
                 anuncio_id,
@@ -150,11 +143,11 @@ Deno.serve(async (req) => {
             },
         };
 
-        const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
-            method: 'POST',
+        const mpRes  = await fetch('https://api.mercadopago.com/checkout/preferences', {
+            method:  'POST',
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${mpToken}`,
+                Authorization:  `Bearer ${mpToken}`,
             },
             body: JSON.stringify(preferenceBody),
         });
@@ -164,40 +157,38 @@ Deno.serve(async (req) => {
         if (!mpRes.ok) {
             console.error('MP API error:', JSON.stringify(mpData));
 
-            // Cleanup pending row if created
-            if (pagamentoId && supabaseUrl && serviceKey) {
-                const adminClient = createClient(supabaseUrl, serviceKey, {
-                    auth: { persistSession: false },
-                });
-                await adminClient.from('pagamentos').delete().eq('id', pagamentoId);
+            // Clean up pending DB row on MP failure
+            if (pagamentoId && sbUrl && sbSvcKey) {
+                try {
+                    const admin = createClient(sbUrl, sbSvcKey, { auth: { persistSession: false } });
+                    await admin.from('pagamentos').delete().eq('id', pagamentoId);
+                } catch (_) { /* ignore cleanup errors */ }
             }
 
             return new Response(
                 JSON.stringify({
-                    error: 'Erro ao criar preferência de pagamento no Mercado Pago.',
+                    error:   'Erro ao criar preferência no Mercado Pago.',
                     details: mpData,
                 }),
                 { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
             );
         }
 
-        // Save preference_id to DB
-        if (pagamentoId && supabaseUrl && serviceKey) {
-            const adminClient = createClient(supabaseUrl, serviceKey, {
-                auth: { persistSession: false },
-            });
-            await adminClient
-                .from('pagamentos')
-                .update({ preference_id: mpData.id })
-                .eq('id', pagamentoId);
+        // ── 4. Save preference_id to DB ────────────────────────────────────────
+        if (pagamentoId && sbUrl && sbSvcKey) {
+            try {
+                const admin = createClient(sbUrl, sbSvcKey, { auth: { persistSession: false } });
+                await admin.from('pagamentos').update({ preference_id: mpData.id }).eq('id', pagamentoId);
+            } catch (_) { /* non-fatal */ }
         }
 
+        // ── 5. Return checkout URLs ────────────────────────────────────────────
         return new Response(
             JSON.stringify({
-                preference_id: mpData.id,
-                init_point: mpData.init_point,
+                preference_id:      mpData.id,
+                init_point:         mpData.init_point,
                 sandbox_init_point: mpData.sandbox_init_point,
-                pagamento_id: pagamentoId,
+                pagamento_id:       pagamentoId,
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
