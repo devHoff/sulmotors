@@ -106,7 +106,7 @@ export default function CarCard({ car, showActions, onEdit, onDelete, onBoost }:
                 }`}
                 onClick={toggleLike}
             >
-                <Heart className={`w-4 h-4 transition-all ${liked ? 'fill-red-400' : ''}`} />
+                <Heart className={`w-4 h-4 transition-all ${liked ? 'fill-red-400' : ''}`} strokeWidth={1.5} />
             </button>
 
             {/* Info */}
@@ -119,23 +119,23 @@ export default function CarCard({ car, showActions, onEdit, onDelete, onBoost }:
                             </h3>
                             <p className="text-slate-500 dark:text-zinc-500 text-xs mt-0.5 truncate">{car.descricao || `${car.combustivel} • ${car.cambio}`}</p>
                         </div>
-                        <ArrowUpRight className="w-4 h-4 text-slate-400 dark:text-zinc-600 group-hover:text-brand-500 dark:group-hover:text-brand-400 transition-colors flex-shrink-0 mt-0.5" />
+                        <ArrowUpRight className="w-4 h-4 text-slate-400 dark:text-zinc-600 group-hover:text-brand-500 dark:group-hover:text-brand-400 transition-colors flex-shrink-0 mt-0.5" strokeWidth={1.5} />
                     </div>
 
                     {/* Stats row */}
                     <div className="flex items-center gap-3 mb-4 overflow-hidden">
                         <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-500 whitespace-nowrap flex-shrink-0">
-                            <Gauge className="w-3 h-3 flex-shrink-0" />
+                            <Gauge className="w-3 h-3 flex-shrink-0" strokeWidth={1.5} />
                             <span>{formatKm(car.quilometragem)}</span>
                         </div>
                         <div className="w-px h-3 bg-slate-200 dark:bg-zinc-700 flex-shrink-0" />
                         <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-500 whitespace-nowrap flex-shrink-0">
-                            <Calendar className="w-3 h-3 flex-shrink-0" />
+                            <Calendar className="w-3 h-3 flex-shrink-0" strokeWidth={1.5} />
                             <span>{car.ano}</span>
                         </div>
                         <div className="w-px h-3 bg-slate-200 dark:bg-zinc-700 flex-shrink-0" />
                         <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-500 whitespace-nowrap flex-shrink-0">
-                            <Fuel className="w-3 h-3 flex-shrink-0" />
+                            <Fuel className="w-3 h-3 flex-shrink-0" strokeWidth={1.5} />
                             <span>{car.combustivel}</span>
                         </div>
                     </div>
@@ -149,7 +149,7 @@ export default function CarCard({ car, showActions, onEdit, onDelete, onBoost }:
                             </p>
                         </div>
                         <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-600">
-                            <MapPin className="w-3 h-3" />
+                            <MapPin className="w-3 h-3" strokeWidth={1.5} />
                             <span className="truncate max-w-[80px]">{car.cidade}</span>
                         </div>
                     </div>

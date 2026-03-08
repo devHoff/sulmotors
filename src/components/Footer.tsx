@@ -38,12 +38,12 @@ export default function Footer() {
         {
             label: 'Instagram',
             href: 'https://instagram.com/sulmotors',
-            icon: <Instagram className="w-4 h-4" />,
+            icon: <Instagram className="w-4 h-4" strokeWidth={1.5} />,
         },
         {
             label: 'Email',
             href: 'mailto:contato@sulmotors.com.br',
-            icon: <Mail className="w-4 h-4" />,
+            icon: <Mail className="w-4 h-4" strokeWidth={1.5} />,
         },
     ];
 
@@ -97,7 +97,7 @@ export default function Footer() {
                                         className="text-sm text-slate-500 dark:text-zinc-500 hover:text-brand-400 transition-colors flex items-center gap-1 group"
                                     >
                                         {label}
-                                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
                                     </Link>
                                 </li>
                             ))}
@@ -117,7 +117,7 @@ export default function Footer() {
                                         className="text-sm text-slate-500 dark:text-zinc-500 hover:text-brand-400 transition-colors flex items-center gap-1 group"
                                     >
                                         {label}
-                                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
                                     </Link>
                                 </li>
                             ))}
@@ -132,13 +132,13 @@ export default function Footer() {
                         <ul className="space-y-4">
                             <li className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-brand-400/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <MapPin className="w-4 h-4 text-brand-400" />
+                                    <MapPin className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
                                 </div>
                                 <span className="text-sm text-slate-600 dark:text-zinc-400">{t.footer_city}</span>
                             </li>
                             <li className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-brand-400/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <Phone className="w-4 h-4 text-brand-400" />
+                                    <Phone className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
                                 </div>
                                 <a
                                     href={`tel:+55${t.footer_phone.replace(/\D/g, '')}`}
@@ -149,7 +149,7 @@ export default function Footer() {
                             </li>
                             <li className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-brand-400/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <Mail className="w-4 h-4 text-brand-400" />
+                                    <Mail className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
                                 </div>
                                 <a
                                     href="mailto:contato@sulmotors.com.br"

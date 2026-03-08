@@ -64,7 +64,7 @@ export default function MeusAnuncios() {
                         onClick={() => navigate('/anunciar')}
                         className="flex items-center gap-2 px-5 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 text-sm font-black rounded-xl transition-all hover:shadow-glow"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-4 h-4" strokeWidth={1.5} />
                         {t.mads_new}
                     </button>
                 </motion.div>
@@ -82,14 +82,14 @@ export default function MeusAnuncios() {
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
-                        <Car className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-5" />
+                        <Car className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-5" strokeWidth={1.5} />
                         <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">{t.mads_empty_title}</h3>
                         <p className="text-slate-500 dark:text-zinc-500 text-sm mb-8">{t.mads_empty_sub}</p>
                         <button
                             onClick={() => navigate('/anunciar')}
                             className="flex items-center gap-2 px-6 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all"
                         >
-                            <Zap className="w-4 h-4" />
+                            <Zap className="w-4 h-4" strokeWidth={1.5} />
                             {t.mads_empty_btn}
                         </button>
                     </div>

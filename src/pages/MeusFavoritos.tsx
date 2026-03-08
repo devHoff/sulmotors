@@ -50,7 +50,7 @@ export default function MeusFavoritos() {
     if (!user) {
         return (
             <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col items-center justify-center">
-                <Heart className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-4" />
+                <Heart className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-4" strokeWidth={1.5} />
                 <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">{t.mfav_login_title}</h2>
                 <Link to="/login" className="mt-4 px-6 py-3 bg-brand-400 text-zinc-950 font-black rounded-xl hover:bg-brand-300 transition">
                     {t.mfav_login_btn}
@@ -64,7 +64,7 @@ export default function MeusFavoritos() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-10">
                     <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center">
-                        <Heart className="w-6 h-6 text-red-400 fill-red-400" />
+                        <Heart className="w-6 h-6 text-red-400 fill-red-400" strokeWidth={1.5} />
                     </div>
                     <div>
                         <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest mb-1">{favorites.length} {t.mfav_count}</p>
@@ -78,14 +78,14 @@ export default function MeusFavoritos() {
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
-                        <Heart className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-5" />
+                        <Heart className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-5" strokeWidth={1.5} />
                         <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">{t.mfav_empty_title}</h3>
                         <p className="text-slate-500 dark:text-zinc-500 text-sm max-w-sm text-center mb-8">{t.mfav_empty_sub}</p>
                         <Link
                             to="/estoque"
                             className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 transition"
                         >
-                            <ArrowLeft className="w-4 h-4" />
+                            <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
                             {t.mfav_empty_btn}
                         </Link>
                     </div>

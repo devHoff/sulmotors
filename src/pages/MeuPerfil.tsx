@@ -77,7 +77,7 @@ export default function MeuPerfil() {
             <div className="max-w-2xl mx-auto px-4 sm:px-6">
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
                     <Link to="/" className="inline-flex items-center gap-2 text-zinc-500 hover:text-brand-400 mb-8 transition-colors text-sm">
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
                         Voltar para o início
                     </Link>
                     <h1 className="text-4xl font-black text-white tracking-tight mb-1">Meu Perfil</h1>
@@ -93,10 +93,10 @@ export default function MeuPerfil() {
                                 <div className="w-28 h-28 rounded-full border-4 border-slate-200 dark:border-zinc-700 overflow-hidden bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
                                     {profile.avatar_url
                                         ? <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                                        : <User className="w-12 h-12 text-slate-300 dark:text-zinc-600" />
+                                        : <User className="w-12 h-12 text-slate-300 dark:text-zinc-600" strokeWidth={1.5} />
                                     }
                                     <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Camera className="w-7 h-7 text-white" />
+                                        <Camera className="w-7 h-7 text-white" strokeWidth={1.5} />
                                     </div>
                                 </div>
                                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarChange} />
@@ -111,7 +111,7 @@ export default function MeuPerfil() {
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Nome Completo</label>
                                 <div className="relative">
-                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-600" />
+                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-600" strokeWidth={1.5} />
                                     <input type="text" value={profile.full_name} onChange={e => setProfile({ ...profile, full_name: e.target.value })} className={inputClass} placeholder="Seu nome" />
                                 </div>
                             </div>
@@ -119,14 +119,14 @@ export default function MeuPerfil() {
                                 <div>
                                     <label className="block text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Telefone</label>
                                     <div className="relative">
-                                        <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-600" />
+                                        <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-600" strokeWidth={1.5} />
                                         <input type="tel" value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} className={inputClass} placeholder="(00) 00000-0000" />
                                     </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Email <span className="text-slate-300 dark:text-zinc-700 normal-case font-normal">(não editável)</span></label>
                                     <div className="relative">
-                                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-zinc-700" />
+                                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-zinc-700" strokeWidth={1.5} />
                                         <input type="email" value={profile.email} disabled className="w-full pl-10 pr-4 py-3.5 bg-slate-100 dark:bg-zinc-800/50 border border-slate-200 dark:border-white/5 rounded-xl text-sm text-slate-400 dark:text-zinc-600 outline-none cursor-not-allowed" />
                                     </div>
                                 </div>
@@ -136,7 +136,7 @@ export default function MeuPerfil() {
                         <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-white/5">
                             <button type="submit" disabled={saving}
                                 className="flex items-center gap-2.5 px-6 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow disabled:opacity-50">
-                                {saving ? <><Loader2 className="w-5 h-5 animate-spin" />Salvando...</> : <><Save className="w-5 h-5" />Salvar Alterações</>}
+                                {saving ? <><Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />Salvando...</> : <><Save className="w-5 h-5" strokeWidth={1.5} />Salvar Alterações</>}
                             </button>
                         </div>
                     </form>

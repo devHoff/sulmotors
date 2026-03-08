@@ -69,7 +69,7 @@ export default function SeusDireitos() {
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center relative z-10">
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-400/10 border border-brand-400/30 rounded-full mb-5">
-                            <UserCheck className="w-3.5 h-3.5 text-brand-400" />
+                            <UserCheck className="w-3.5 h-3.5 text-brand-400" strokeWidth={1.5} />
                             <span className="text-xs font-bold text-brand-400 uppercase tracking-widest">LGPD — Art. 18</span>
                         </div>
                         <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight mb-4">
@@ -118,7 +118,7 @@ export default function SeusDireitos() {
                     className="mt-12 p-8 bg-zinc-900 dark:bg-zinc-900 border border-white/8 rounded-2xl text-center"
                 >
                     <div className="w-14 h-14 bg-brand-400/10 border border-brand-400/20 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                        <Mail className="w-7 h-7 text-brand-400" />
+                        <Mail className="w-7 h-7 text-brand-400" strokeWidth={1.5} />
                     </div>
                     <h3 className="text-xl font-black text-white mb-2">Exercer um direito?</h3>
                     <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
@@ -129,7 +129,7 @@ export default function SeusDireitos() {
                         href="mailto:suporte@sulmotors.com.br?subject=Exercer%20direito%20LGPD"
                         className="inline-flex items-center gap-2.5 px-8 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow"
                     >
-                        <Mail className="w-4 h-4" />
+                        <Mail className="w-4 h-4" strokeWidth={1.5} />
                         suporte@sulmotors.com.br
                     </a>
                     <p className="text-zinc-600 text-xs mt-4">Você também pode peticionar à ANPD: gov.br/anpd</p>
@@ -138,7 +138,7 @@ export default function SeusDireitos() {
                 {/* Bottom nav */}
                 <div className="mt-12 pt-8 border-t border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <Link to="/" className="inline-flex items-center gap-1.5 text-slate-500 dark:text-zinc-500 hover:text-brand-400 text-sm transition-colors">
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
                         Voltar ao início
                     </Link>
                     <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-zinc-600">

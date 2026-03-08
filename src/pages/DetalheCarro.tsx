@@ -217,7 +217,7 @@ export default function DetalheCarro() {
                             {/* left arrow centred on peek */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 <div className="w-10 h-10 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
-                                    <ChevronLeft className="w-5 h-5 text-white" />
+                                    <ChevronLeft className="w-5 h-5 text-white" strokeWidth={1.5} />
                                 </div>
                             </div>
                         </button>
@@ -264,7 +264,7 @@ export default function DetalheCarro() {
                             />
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 <div className="w-10 h-10 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
-                                    <ChevronRight className="w-5 h-5 text-white" />
+                                    <ChevronRight className="w-5 h-5 text-white" strokeWidth={1.5} />
                                 </div>
                             </div>
                         </button>
@@ -277,7 +277,7 @@ export default function DetalheCarro() {
                         to="/estoque"
                         className="flex items-center gap-2 px-4 py-2 bg-black/50 backdrop-blur-sm border border-white/15 text-white text-sm font-bold rounded-xl hover:bg-black/70 transition-all"
                     >
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
                         {t.detail_back}
                     </Link>
                     <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ export default function DetalheCarro() {
                             className="flex items-center gap-2 px-3 py-2 bg-black/50 backdrop-blur-sm border border-white/15 text-white/70 text-sm rounded-xl hover:text-white transition-all"
                             onClick={() => navigator.share?.({ title: `${car.marca} ${car.modelo}`, url: window.location.href })}
                         >
-                            <Share2 className="w-4 h-4" />
+                            <Share2 className="w-4 h-4" strokeWidth={1.5} />
                         </button>
                         {user && (
                             <button
@@ -296,7 +296,7 @@ export default function DetalheCarro() {
                                         : 'bg-black/50 border-white/15 text-white/70 hover:text-red-400'
                                 }`}
                             >
-                                <Heart className={`w-4 h-4 ${liked ? 'fill-red-400' : ''}`} />
+                                <Heart className={`w-4 h-4 ${liked ? 'fill-red-400' : ''}`} strokeWidth={1.5} />
                                 {likeCount > 0 && likeCount}
                             </button>
                         )}
@@ -308,11 +308,11 @@ export default function DetalheCarro() {
                     <>
                         <button onClick={prevImg}
                             className="md:hidden absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white border border-white/10">
-                            <ChevronLeft className="w-5 h-5" />
+                            <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
                         </button>
                         <button onClick={nextImg}
                             className="md:hidden absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white border border-white/10">
-                            <ChevronRight className="w-5 h-5" />
+                            <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
                         </button>
                     </>
                 )}
@@ -387,7 +387,7 @@ export default function DetalheCarro() {
                                             className="flex items-center gap-3 p-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/5 rounded-xl hover:border-brand-400/20 transition-colors shadow-sm dark:shadow-none"
                                         >
                                             <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
-                                                <Icon className="w-4 h-4 text-brand-500 dark:text-brand-400" />
+                                                <Icon className="w-4 h-4 text-brand-500 dark:text-brand-400" strokeWidth={1.5} />
                                             </div>
                                             <div>
                                                 <p className="text-xs text-slate-400 dark:text-zinc-600">{label}</p>
@@ -432,7 +432,7 @@ export default function DetalheCarro() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-zinc-400">
-                                        <MapPin className="w-4 h-4" />
+                                        <MapPin className="w-4 h-4" strokeWidth={1.5} />
                                         {car.cidade}
                                     </div>
                                 </div>
@@ -445,7 +445,7 @@ export default function DetalheCarro() {
                                     </div>
                                     {car.aceitaTroca && (
                                         <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                                            <ArrowLeftRight className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+                                            <ArrowLeftRight className="w-4 h-4 text-emerald-500 dark:text-emerald-400" strokeWidth={1.5} />
                                             <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{t.detail_accepts_trade}</span>
                                         </div>
                                     )}
@@ -459,14 +459,14 @@ export default function DetalheCarro() {
                                         rel="noopener noreferrer"
                                         className="flex items-center justify-center gap-2.5 w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-black rounded-xl hover:shadow-lg hover:shadow-emerald-500/20 transition-all"
                                     >
-                                        <MessageCircle className="w-5 h-5" />
+                                        <MessageCircle className="w-5 h-5" strokeWidth={1.5} />
                                         {t.detail_whatsapp}
                                     </a>
                                     <a
                                         href={`tel:${car.telefone}`}
                                         className="flex items-center justify-center gap-2.5 w-full py-4 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 text-slate-700 dark:text-white font-bold rounded-xl transition-all"
                                     >
-                                        <Phone className="w-5 h-5" />
+                                        <Phone className="w-5 h-5" strokeWidth={1.5} />
                                         {car.telefone}
                                     </a>
                                 </div>
@@ -485,7 +485,7 @@ export default function DetalheCarro() {
                                     to="/estoque"
                                     className="flex-1 flex items-center justify-center gap-2 py-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/8 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white text-sm font-bold rounded-xl transition-all hover:border-slate-300 dark:hover:border-white/20 shadow-sm dark:shadow-none"
                                 >
-                                    <ArrowLeft className="w-4 h-4" />
+                                    <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
                                     {t.detail_see_more}
                                 </Link>
                             </div>

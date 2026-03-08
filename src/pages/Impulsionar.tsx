@@ -171,7 +171,7 @@ export default function Impulsionar() {
                 {/* Header */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-400/10 border border-brand-400/30 rounded-full mb-4">
-                        <Rocket className="w-3.5 h-3.5 text-brand-400" />
+                        <Rocket className="w-3.5 h-3.5 text-brand-400" strokeWidth={1.5} />
                         <span className="text-xs font-bold text-brand-400 uppercase tracking-widest">{t.imp_badge}</span>
                     </div>
                     <h1 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">{t.imp_title}</h1>
@@ -199,7 +199,7 @@ export default function Impulsionar() {
                         { icon: Zap,   title: t.imp_benefit_instant_title,  desc: t.imp_benefit_instant_desc },
                     ].map(({ icon: Icon, title, desc }) => (
                         <div key={title} className="text-center p-4 bg-zinc-900 border border-brand-400/15 rounded-2xl">
-                            <Icon className="w-6 h-6 text-brand-400 mx-auto mb-2" />
+                            <Icon className="w-6 h-6 text-brand-400 mx-auto mb-2" strokeWidth={1.5} />
                             <h4 className="text-white text-xs font-bold">{title}</h4>
                             <p className="text-zinc-500 text-xs mt-0.5">{desc}</p>
                         </div>
@@ -284,7 +284,7 @@ export default function Impulsionar() {
                             transition={{ duration: 0.18 }}
                             className="text-center p-6 bg-brand-400/8 border border-brand-400/20 rounded-xl mb-5">
                             <div className="flex items-center justify-center gap-1.5 text-brand-400 text-xs font-bold mb-2">
-                                <Rocket className="w-3.5 h-3.5" />
+                                <Rocket className="w-3.5 h-3.5" strokeWidth={1.5} />
                                 {periodLabel}
                             </div>
                             <p className="text-4xl font-black text-white">{fmt(period.price)}</p>
@@ -299,7 +299,7 @@ export default function Impulsionar() {
 
                     {/* PIX badge */}
                     <div className="flex items-center justify-center gap-2 mb-4">
-                        <QrCode className="w-4 h-4 text-emerald-400" />
+                        <QrCode className="w-4 h-4 text-emerald-400" strokeWidth={1.5} />
                         <span className="text-xs text-emerald-400 font-bold">Pague com PIX — aprovação imediata</span>
                     </div>
 
@@ -307,21 +307,21 @@ export default function Impulsionar() {
                     <button onClick={handlePay} disabled={paying}
                         className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98] disabled:opacity-60">
                         {paying
-                            ? <><Loader2 className="w-5 h-5 animate-spin" /> Gerando pagamento...</>
-                            : <><Rocket className="w-5 h-5" /> {t.imp_btn_boost} {fmt(period.price)}</>
+                            ? <><Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} /> Gerando pagamento...</>
+                            : <><Rocket className="w-5 h-5" strokeWidth={1.5} /> {t.imp_btn_boost} {fmt(period.price)}</>
                         }
                     </button>
 
                     {/* Security note */}
                     <div className="flex items-center justify-center gap-1.5 mt-3">
-                        <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" />
+                        <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" strokeWidth={1.5} />
                         <p className="text-center text-xs text-zinc-600">Pagamento processado com segurança pelo Mercado Pago</p>
                     </div>
                 </motion.div>
 
                 <div className="text-center">
                     <Link to="/meus-anuncios" className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-white text-sm transition-colors">
-                        <ArrowLeft className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
                         {t.imp_back}
                     </Link>
                 </div>
@@ -347,7 +347,7 @@ export default function Impulsionar() {
                             {/* Header */}
                             <div className="p-6 border-b border-white/8 text-center">
                                 <div className="w-14 h-14 bg-brand-400/10 border border-brand-400/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <QrCode className="w-7 h-7 text-brand-400" />
+                                    <QrCode className="w-7 h-7 text-brand-400" strokeWidth={1.5} />
                                 </div>
                                 <h2 className="text-xl font-black text-white mb-1">Finalizar Pagamento</h2>
                                 <p className="text-zinc-400 text-sm">Você será redirecionado para o Mercado Pago para concluir o pagamento com PIX ou outro método.</p>
@@ -370,7 +370,7 @@ export default function Impulsionar() {
 
                                 {/* PIX highlight */}
                                 <div className="flex items-center gap-2.5 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mt-2">
-                                    <QrCode className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                                    <QrCode className="w-5 h-5 text-emerald-400 flex-shrink-0" strokeWidth={1.5} />
                                     <p className="text-emerald-300 text-xs font-medium">PIX disponível — aprovação em segundos, ativação imediata do boost.</p>
                                 </div>
                             </div>
@@ -381,7 +381,7 @@ export default function Impulsionar() {
                                     onClick={openCheckout}
                                     className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98]"
                                 >
-                                    <ExternalLink className="w-5 h-5" />
+                                    <ExternalLink className="w-5 h-5" strokeWidth={1.5} />
                                     Ir para o Mercado Pago
                                 </button>
                                 <button
@@ -394,7 +394,7 @@ export default function Impulsionar() {
 
                             {/* Security footer */}
                             <div className="px-6 pb-5 flex items-center justify-center gap-1.5">
-                                <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" />
+                                <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" strokeWidth={1.5} />
                                 <p className="text-xs text-zinc-600">Ambiente seguro certificado pelo Mercado Pago</p>
                             </div>
                         </motion.div>

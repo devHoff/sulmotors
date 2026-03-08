@@ -52,13 +52,13 @@ export default function AddStoreModal({ isOpen, onClose }: AddStoreModalProps) {
                                 {/* Close */}
                                 <div className="flex items-start justify-between mb-5">
                                     <div className="w-12 h-12 bg-brand-400/10 border border-brand-400/20 rounded-xl flex items-center justify-center">
-                                        <Store className="w-6 h-6 text-brand-500 dark:text-brand-400" />
+                                        <Store className="w-6 h-6 text-brand-500 dark:text-brand-400" strokeWidth={1.5} />
                                     </div>
                                     <button
                                         onClick={onClose}
                                         className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
                                     >
-                                        <X className="w-4 h-4" />
+                                        <X className="w-4 h-4" strokeWidth={1.5} />
                                     </button>
                                 </div>
 
@@ -75,14 +75,14 @@ export default function AddStoreModal({ isOpen, onClose }: AddStoreModalProps) {
                                         onClick={handleWhatsApp}
                                         className="flex-1 flex items-center justify-center gap-2.5 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-all hover:shadow-lg hover:shadow-emerald-500/25"
                                     >
-                                        <MessageCircle className="w-5 h-5" />
+                                        <MessageCircle className="w-5 h-5" strokeWidth={1.5} />
                                         {t.stores_whatsapp}
                                     </button>
                                     <button
                                         onClick={handleEmail}
                                         className="flex-1 flex items-center justify-center gap-2.5 py-3.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold rounded-xl transition-all"
                                     >
-                                        <Mail className="w-5 h-5" />
+                                        <Mail className="w-5 h-5" strokeWidth={1.5} />
                                         {t.stores_email}
                                     </button>
                                 </div>

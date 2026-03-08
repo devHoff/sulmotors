@@ -63,7 +63,7 @@ export default function SobreNos() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
                     <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
                         <div className="flex items-center gap-2 mb-4">
-                            <Users className="w-4 h-4 text-brand-500 dark:text-brand-400" />
+                            <Users className="w-4 h-4 text-brand-500 dark:text-brand-400" strokeWidth={1.5} />
                             <span className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest">{t.sobre_who_badge}</span>
                         </div>
                         <h2 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-6 tracking-tight">
@@ -96,7 +96,7 @@ export default function SobreNos() {
                                 <div className={`absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b ${glow}`} />
                                 <div className="relative">
                                     <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center mb-5">
-                                        <Icon className={`w-6 h-6 ${color}`} />
+                                        <Icon className={`w-6 h-6 ${color}`} strokeWidth={1.5} />
                                     </div>
                                     <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3">{title}</h3>
                                     <p className="text-slate-600 dark:text-zinc-400 leading-relaxed text-sm">{desc}</p>
@@ -118,7 +118,7 @@ export default function SobreNos() {
                         <motion.div key={title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
                             className="text-center p-8 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all shadow-sm dark:shadow-none">
                             <div className={`w-14 h-14 ${bg} rounded-2xl flex items-center justify-center mx-auto mb-5 border`}>
-                                <Icon className={`w-7 h-7 ${color}`} />
+                                <Icon className={`w-7 h-7 ${color}`} strokeWidth={1.5} />
                             </div>
                             <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">{title}</h3>
                             <p className="text-slate-500 dark:text-zinc-500 text-sm leading-relaxed">{desc}</p>
@@ -133,7 +133,7 @@ export default function SobreNos() {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[200px] bg-brand-400/10 blur-[80px] rounded-full" />
                 <div className="relative z-10 max-w-3xl mx-auto px-4 text-center">
                     <div className="flex items-center justify-center gap-2 mb-4">
-                        <Shield className="w-4 h-4 text-brand-400" />
+                        <Shield className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
                         <span className="text-xs font-bold text-brand-400 uppercase tracking-widest">{t.sobre_contact_badge}</span>
                     </div>
                     <h2 className="text-3xl md:text-4xl font-black text-white mb-6 tracking-tight">{t.sobre_contact_title}</h2>
@@ -142,14 +142,14 @@ export default function SobreNos() {
                         {[{ icon: MapPin, text: 'Porto Alegre, RS' }, { icon: Phone, text: '(51) 99999-9999' }, { icon: Mail, text: 'contato@sulmotors.com.br' }].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-2.5 text-zinc-300 text-sm">
                                 <div className="w-8 h-8 bg-brand-400/10 border border-brand-400/20 rounded-lg flex items-center justify-center">
-                                    <Icon className="w-4 h-4 text-brand-400" />
+                                    <Icon className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
                                 </div>
                                 {text}
                             </div>
                         ))}
                     </div>
                     <Link to="/anunciar" className="inline-flex items-center gap-2.5 px-8 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow">
-                        {t.sobre_contact_btn} <ArrowRight className="w-5 h-5" />
+                        {t.sobre_contact_btn} <ArrowRight className="w-5 h-5" strokeWidth={1.5} />
                     </Link>
                 </div>
             </section>

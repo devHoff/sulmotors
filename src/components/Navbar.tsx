@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogOut, User as UserIcon, ChevronDown, Zap, Sun, Moon } from 'lucide-react';
+import { Menu, X, LogOut, User as UserIcon, ChevronDown, Sun, Moon, Home, Car, Building2, PlusCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -70,10 +70,10 @@ export default function Navbar() {
     }, []);
 
     const links = [
-        { to: '/', label: t.nav_home },
-        { to: '/estoque', label: t.nav_inventory },
-        { to: '/sobre-nos', label: t.nav_about },
-        { to: '/anunciar', label: t.nav_advertise },
+        { to: '/',          label: t.nav_home,      icon: Home       },
+        { to: '/estoque',   label: t.nav_inventory, icon: Car        },
+        { to: '/sobre-nos', label: t.nav_about,     icon: Building2  },
+        { to: '/anunciar',  label: t.nav_advertise, icon: PlusCircle },
     ];
 
     const isActive = (path: string) => location.pathname === path;
@@ -106,7 +106,7 @@ export default function Navbar() {
                             <Link
                                 key={link.to}
                                 to={link.to}
-                                className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                                className={`relative flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                                     isActive(link.to)
                                         ? 'text-brand-400'
                                         : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
@@ -118,6 +118,7 @@ export default function Navbar() {
                                         className="absolute inset-0 bg-brand-400/10 rounded-lg border border-brand-400/20"
                                     />
                                 )}
+                                <link.icon className="relative w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
                                 <span className="relative">{link.label}</span>
                             </Link>
                         ))}
@@ -182,7 +183,7 @@ export default function Navbar() {
                             className="group relative flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl overflow-hidden transition-all hover:shadow-glow"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-brand-500 to-brand-400 transition-all group-hover:opacity-90" />
-                            <Zap className="relative w-4 h-4 text-zinc-950" />
+                            <PlusCircle className="relative w-4 h-4 text-zinc-950" strokeWidth={1.5} />
                             <span className="relative text-zinc-950">{t.nav_advertise}</span>
                         </Link>
 
@@ -328,12 +329,13 @@ export default function Navbar() {
                                     key={link.to}
                                     to={link.to}
                                     onClick={() => setMobileOpen(false)}
-                                    className={`block px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                                    className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                                         isActive(link.to)
                                             ? 'text-brand-400 bg-brand-400/10 border border-brand-400/20'
                                             : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5'
                                     }`}
                                 >
+                                    <link.icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
                                     {link.label}
                                 </Link>
                             ))}
@@ -343,7 +345,7 @@ export default function Navbar() {
                                     onClick={() => setMobileOpen(false)}
                                     className="flex items-center gap-2 px-4 py-3 text-sm font-bold text-zinc-950 bg-gradient-to-r from-brand-500 to-brand-400 rounded-xl"
                                 >
-                                    <Zap className="w-4 h-4" />
+                                    <PlusCircle className="w-4 h-4" strokeWidth={1.5} />
                                     {t.nav_advertise}
                                 </Link>
                             </div>

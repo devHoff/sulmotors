@@ -38,7 +38,7 @@ export default function CarFilters({ filters, onChange, totalResults }: CarFilte
             {/* Search row */}
             <div className="flex gap-3">
                 <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" strokeWidth={1.5} />
                     <input
                         type="text"
                         value={filters.search}
@@ -54,7 +54,7 @@ export default function CarFilters({ filters, onChange, totalResults }: CarFilte
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                 >
-                    <SlidersHorizontal className="w-4 h-4" />
+                    <SlidersHorizontal className="w-4 h-4" strokeWidth={1.5} />
                     Filtros
                 </button>
             </div>
@@ -128,7 +128,7 @@ export default function CarFilters({ filters, onChange, totalResults }: CarFilte
                             onClick={clear}
                             className="mt-4 flex items-center gap-1 text-sm text-red-500 hover:text-red-600 font-medium"
                         >
-                            <X className="w-4 h-4" />
+                            <X className="w-4 h-4" strokeWidth={1.5} />
                             Limpar filtros
                         </button>
                     )}

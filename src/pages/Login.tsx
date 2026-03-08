@@ -47,7 +47,7 @@ export default function Login() {
                 <div className="absolute bottom-12 left-12 right-12">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-10 h-10 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center">
-                            <Car className="w-5 h-5 text-zinc-950" />
+                            <Car className="w-5 h-5 text-zinc-950" strokeWidth={1.5} />
                         </div>
                         <span className="text-2xl font-black tracking-tight">
                             <span className="text-brand-400">Sul</span><span className="text-white">Motors</span>
@@ -65,7 +65,7 @@ export default function Login() {
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-md">
                     <Link to="/" className="flex items-center gap-2.5 mb-10 lg:hidden">
                         <div className="w-9 h-9 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center">
-                            <Car className="w-5 h-5 text-zinc-950" />
+                            <Car className="w-5 h-5 text-zinc-950" strokeWidth={1.5} />
                         </div>
                         <span className="text-xl font-black tracking-tight">
                             <span className="text-brand-400">Sul</span><span className="text-slate-900 dark:text-white">Motors</span>
@@ -125,13 +125,13 @@ export default function Login() {
                                     className="w-full pl-10 pr-12 py-3.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 text-sm outline-none transition-all"
                                     placeholder="••••••••" minLength={6} />
                                 <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-600 hover:text-slate-700 dark:hover:text-zinc-400 transition-colors">
-                                    {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    {showPass ? <EyeOff className="w-4 h-4" strokeWidth={1.5} /> : <Eye className="w-4 h-4" strokeWidth={1.5} />}
                                 </button>
                             </div>
                         </div>
                         <button type="submit" disabled={loading}
                             className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow disabled:opacity-60 mt-2">
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>{isLogin ? 'Entrar na conta' : 'Criar conta grátis'}<ArrowRight className="w-5 h-5" /></>}
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} /> : <>{isLogin ? 'Entrar na conta' : 'Criar conta grátis'}<ArrowRight className="w-5 h-5" strokeWidth={1.5} /></>}
                         </button>
                     </form>
 

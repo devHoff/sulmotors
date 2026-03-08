@@ -65,7 +65,7 @@ export default function CropModal({
                         onClick={onCancel}
                         className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-400 transition-colors"
                     >
-                        <X className="w-5 h-5" />
+                        <X className="w-5 h-5" strokeWidth={1.5} />
                     </button>
                 </div>
 
@@ -172,7 +172,7 @@ export default function CropModal({
                                     onClick={handleConfirmCrop}
                                     className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-bold rounded-xl transition-all shadow-sm"
                                 >
-                                    <Check className="w-4 h-4" />
+                                    <Check className="w-4 h-4" strokeWidth={1.5} />
                                     Confirmar recorte
                                 </button>
                             </>
@@ -183,7 +183,7 @@ export default function CropModal({
                                     onClick={() => setCropMode(true)}
                                     className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 text-sm font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors border border-slate-200 dark:border-white/10"
                                 >
-                                    <Crop className="w-4 h-4" />
+                                    <Crop className="w-4 h-4" strokeWidth={1.5} />
                                     Recortar
                                 </button>
 
@@ -193,7 +193,7 @@ export default function CropModal({
                                         onClick={onSkip}
                                         className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-brand-500 hover:bg-brand-400 text-white text-sm font-bold rounded-xl transition-all shadow-sm"
                                     >
-                                        <Check className="w-4 h-4" />
+                                        <Check className="w-4 h-4" strokeWidth={1.5} />
                                         Usar foto
                                     </button>
                                 )}

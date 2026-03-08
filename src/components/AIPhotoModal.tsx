@@ -62,14 +62,14 @@ export default function AIPhotoModal({ isOpen, onClose, imageUrl, carBrand }: AI
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                             <div className="flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-brand-600" />
+                                <Sparkles className="w-5 h-5 text-brand-600" strokeWidth={1.5} />
                                 <h3 className="font-bold text-slate-900">IA — Fotografia Profissional</h3>
                             </div>
                             <button
                                 onClick={handleClose}
                                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                             >
-                                <X className="w-5 h-5 text-slate-400" />
+                                <X className="w-5 h-5 text-slate-400" strokeWidth={1.5} />
                             </button>
                         </div>
 
@@ -84,7 +84,7 @@ export default function AIPhotoModal({ isOpen, onClose, imageUrl, carBrand }: AI
 
                                 {generatedUrl && (
                                     <div className="absolute top-2 right-2 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                                        <Check className="w-3 h-3" />
+                                        <Check className="w-3 h-3" strokeWidth={1.5} />
                                         Recriado (Grátis)
                                     </div>
                                 )}
@@ -94,7 +94,7 @@ export default function AIPhotoModal({ isOpen, onClose, imageUrl, carBrand }: AI
                             {!generatedUrl && (
                                 <div className="p-4 bg-brand-50 border border-brand-100 rounded-xl mb-6">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <Zap className="w-4 h-4 text-brand-600" />
+                                        <Zap className="w-4 h-4 text-brand-600" strokeWidth={1.5} />
                                         <p className="text-sm font-bold text-slate-900">Modo de Recriação</p>
                                     </div>
                                     <p className="text-xs text-slate-600 leading-relaxed">
@@ -107,7 +107,7 @@ export default function AIPhotoModal({ isOpen, onClose, imageUrl, carBrand }: AI
                             {/* Error Message */}
                             {error && (
                                 <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-start gap-2">
-                                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
                                     <div>{error}</div>
                                 </div>
                             )}
@@ -120,19 +120,19 @@ export default function AIPhotoModal({ isOpen, onClose, imageUrl, carBrand }: AI
                             >
                                 {generating ? (
                                     <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />
                                         <span className="font-semibold text-sm">Processando com IA...</span>
                                     </>
                                 ) : generatedUrl ? (
                                     <>
-                                        <Check className="w-5 h-5" />
+                                        <Check className="w-5 h-5" strokeWidth={1.5} />
                                         <div className="text-left">
                                             <div className="font-semibold text-sm">Pronto! Salvar Imagem</div>
                                         </div>
                                     </>
                                 ) : (
                                     <>
-                                        <ImagePlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                        <ImagePlus className="w-5 h-5 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
                                         <div className="text-left">
                                             <div className="font-semibold text-sm">Gerar Foto Profissional</div>
                                             <div className="text-xs text-white/70">

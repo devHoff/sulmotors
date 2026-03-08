@@ -150,7 +150,7 @@ export default function AnunciarCarro() {
                 {/* Header */}
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
                     <div className="flex items-center gap-2 mb-3">
-                        <Car className="w-4 h-4 text-brand-500 dark:text-brand-400" />
+                        <Car className="w-4 h-4 text-brand-500 dark:text-brand-400" strokeWidth={1.5} />
                         <span className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest">Novo anúncio</span>
                     </div>
                     <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">{t.form_anunciar_title}</h1>
@@ -301,7 +301,7 @@ export default function AnunciarCarro() {
                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                                         <button type="button" onClick={() => removeImage(i)}
                                             className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-400 transition-colors">
-                                            <X className="w-4 h-4 text-white" />
+                                            <X className="w-4 h-4 text-white" strokeWidth={1.5} />
                                         </button>
                                     </div>
                                     <div className="absolute top-1.5 left-1.5 w-5 h-5 bg-black/60 rounded-md flex items-center justify-center text-xs font-bold text-white">{i + 1}</div>
@@ -311,10 +311,10 @@ export default function AnunciarCarro() {
                                 <button type="button" onClick={handleImageUploadClick} disabled={uploading}
                                     className="w-28 h-28 border-2 border-dashed border-slate-300 dark:border-white/15 hover:border-brand-400/50 rounded-xl flex flex-col items-center justify-center text-slate-400 dark:text-zinc-500 hover:text-brand-400 transition-all disabled:opacity-40 group">
                                     {uploading ? (
-                                        <Loader2 className="w-6 h-6 animate-spin" />
+                                        <Loader2 className="w-6 h-6 animate-spin" strokeWidth={1.5} />
                                     ) : (
                                         <>
-                                            <Upload className="w-6 h-6 mb-1.5 group-hover:scale-110 transition-transform" />
+                                            <Upload className="w-6 h-6 mb-1.5 group-hover:scale-110 transition-transform" strokeWidth={1.5} />
                                             <span className="text-xs font-bold">{t.form_add_photo}</span>
                                         </>
                                     )}
@@ -332,12 +332,12 @@ export default function AnunciarCarro() {
                         >
                             {loading ? (
                                 <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />
                                     {t.form_publishing}
                                 </>
                             ) : (
                                 <>
-                                    <Zap className="w-5 h-5" />
+                                    <Zap className="w-5 h-5" strokeWidth={1.5} />
                                     {t.form_publish}
                                 </>
                             )}

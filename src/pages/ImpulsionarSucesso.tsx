@@ -112,13 +112,13 @@ export default function ImpulsionarSucesso() {
                     transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 22 }}
                     className={`w-20 h-20 ${config.bg} border rounded-3xl flex items-center justify-center mx-auto mb-6`}
                 >
-                    <Icon className={`w-10 h-10 ${config.color}`} />
+                    <Icon className={`w-10 h-10 ${config.color}`} strokeWidth={1.5} />
                 </motion.div>
 
                 {/* Badge */}
                 <div className="flex justify-center mb-4">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 border rounded-full text-xs font-bold ${config.badgeColor}`}>
-                        <Rocket className="w-3 h-3" />
+                        <Rocket className="w-3 h-3" strokeWidth={1.5} />
                         {config.badge}
                     </span>
                 </div>
@@ -140,7 +140,7 @@ export default function ImpulsionarSucesso() {
                             disabled={checking}
                             className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 border border-white/8 text-white font-bold rounded-xl transition-all text-sm disabled:opacity-50"
                         >
-                            <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} strokeWidth={1.5} />
                             {checking ? 'Verificando...' : 'Verificar status novamente'}
                         </button>
                     )}
@@ -150,7 +150,7 @@ export default function ImpulsionarSucesso() {
                         to="/meus-anuncios"
                         className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow text-sm"
                     >
-                        <Rocket className="w-4 h-4" />
+                        <Rocket className="w-4 h-4" strokeWidth={1.5} />
                         Ver Meus Anúncios
                     </Link>
 
@@ -160,7 +160,7 @@ export default function ImpulsionarSucesso() {
                             to={`/impulsionar/${anuncioId}`}
                             className="w-full flex items-center justify-center gap-2 py-3 text-zinc-400 hover:text-white text-sm font-medium transition-colors"
                         >
-                            <RefreshCw className="w-4 h-4" />
+                            <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
                             Tentar novamente
                         </Link>
                     )}
@@ -169,7 +169,7 @@ export default function ImpulsionarSucesso() {
                         to="/"
                         className="w-full flex items-center justify-center gap-1.5 py-2 text-zinc-600 hover:text-zinc-400 text-xs transition-colors"
                     >
-                        <ArrowLeft className="w-3.5 h-3.5" />
+                        <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.5} />
                         Voltar para o início
                     </Link>
                 </div>

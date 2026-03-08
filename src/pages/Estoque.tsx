@@ -102,11 +102,11 @@ export default function Estoque() {
                                         ${sortOrder !== 'default'
                                             ? 'bg-brand-400/15 border-brand-400/40 text-brand-500 dark:text-brand-400'
                                             : 'bg-slate-100 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}>
-                                    <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" />
+                                    <ArrowUpDown className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} />
                                     <span>
                                         {sortOrder === 'asc' ? 'Menor preço' : sortOrder === 'desc' ? 'Maior preço' : 'Ordenar por'}
                                     </span>
-                                    <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${sortOpen ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${sortOpen ? 'rotate-180' : ''}`} strokeWidth={1.5} />
                                 </button>
 
                                 <AnimatePresence>
@@ -133,7 +133,7 @@ export default function Estoque() {
                                 </AnimatePresence>
                             </div>
                             <div className="relative flex-1 md:w-80">
-                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" />
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" strokeWidth={1.5} />
                                 <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Buscar marca ou modelo..."
                                     className="w-full pl-10 pr-4 py-3 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all" />
@@ -142,7 +142,7 @@ export default function Estoque() {
                                 className={`md:hidden flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${showFilters
                                     ? 'bg-brand-400/15 border-brand-400/40 text-brand-500 dark:text-brand-400'
                                     : 'bg-slate-100 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}`}>
-                                <SlidersHorizontal className="w-4 h-4" /> Filtros
+                                <SlidersHorizontal className="w-4 h-4" strokeWidth={1.5} /> Filtros
                                 {activeFilters && <span className="w-1.5 h-1.5 bg-brand-400 rounded-full" />}
                             </button>
                         </div>
@@ -157,11 +157,11 @@ export default function Estoque() {
                         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/8 p-6 sticky top-24 shadow-sm dark:shadow-none">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <SlidersHorizontal className="w-4 h-4 text-brand-500 dark:text-brand-400" /> Filtros
+                                    <SlidersHorizontal className="w-4 h-4 text-brand-500 dark:text-brand-400" strokeWidth={1.5} /> Filtros
                                 </h3>
                                 {activeFilters && (
                                     <button onClick={clearFilters} className="text-xs font-bold text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 flex items-center gap-1 transition-colors">
-                                        <X className="w-3 h-3" /> Limpar
+                                        <X className="w-3 h-3" strokeWidth={1.5} /> Limpar
                                     </button>
                                 )}
                             </div>
@@ -217,18 +217,18 @@ export default function Estoque() {
                             <div className="flex flex-wrap items-center gap-2 mb-6">
                                 {selectedBrands.map(brand => (
                                     <span key={brand} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-400/10 border border-brand-400/20 text-brand-500 dark:text-brand-400 text-xs font-bold rounded-lg">
-                                        {brand} <button onClick={() => toggleBrand(brand)}><X className="w-3 h-3" /></button>
+                                        {brand} <button onClick={() => toggleBrand(brand)}><X className="w-3 h-3" strokeWidth={1.5} /></button>
                                     </span>
                                 ))}
                                 {priceRange[1] < 500000 && (
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-400/10 border border-brand-400/20 text-brand-500 dark:text-brand-400 text-xs font-bold rounded-lg">
-                                        Até R$ {priceRange[1].toLocaleString()} <button onClick={() => setPriceRange([0, 500000])}><X className="w-3 h-3" /></button>
+                                        Até R$ {priceRange[1].toLocaleString()} <button onClick={() => setPriceRange([0, 500000])}><X className="w-3 h-3" strokeWidth={1.5} /></button>
                                     </span>
                                 )}
                                 {sortOrder !== 'default' && (
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-400/10 border border-brand-400/20 text-brand-500 dark:text-brand-400 text-xs font-bold rounded-lg">
                                         {sortOrder === 'asc' ? 'Menor preço' : 'Maior preço'}
-                                        <button onClick={() => setSortOrder('default')}><X className="w-3 h-3" /></button>
+                                        <button onClick={() => setSortOrder('default')}><X className="w-3 h-3" strokeWidth={1.5} /></button>
                                     </span>
                                 )}
                             </div>
@@ -252,7 +252,7 @@ export default function Estoque() {
                                 ) : (
                                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                                         className="flex flex-col items-center justify-center py-32 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/5">
-                                        <Car className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-4" />
+                                        <Car className="w-16 h-16 text-slate-300 dark:text-zinc-700 mb-4" strokeWidth={1.5} />
                                         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Nenhum veículo encontrado</h3>
                                         <p className="text-slate-500 dark:text-zinc-500 text-sm mb-6">Tente ajustar seus filtros de busca.</p>
                                         <button onClick={clearFilters}

@@ -308,13 +308,13 @@ export default function EditarAnuncio() {
                             <div key={i} className="relative w-28 h-28 rounded-xl overflow-hidden group border border-slate-200 dark:border-white/10">
                                 <img src={url} alt="" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                                    <button type="button" onClick={() => removeImage(i)} className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center"><X className="w-4 h-4 text-white" /></button>
+                                    <button type="button" onClick={() => removeImage(i)} className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center"><X className="w-4 h-4 text-white" strokeWidth={1.5} /></button>
                                 </div>
                             </div>
                         ))}
                         {images.length < 6 && (
                             <button type="button" onClick={handleImageUploadClick} disabled={uploading} className="w-28 h-28 border-2 border-dashed border-slate-300 dark:border-white/15 hover:border-brand-400/50 rounded-xl flex flex-col items-center justify-center text-slate-400 dark:text-zinc-500 hover:text-brand-400 transition-all disabled:opacity-40">
-                                {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Upload className="w-6 h-6 mb-1.5" /><span className="text-xs font-bold">Adicionar</span></>}
+                                {uploading ? <Loader2 className="w-6 h-6 animate-spin" strokeWidth={1.5} /> : <><Upload className="w-6 h-6 mb-1.5" strokeWidth={1.5} /><span className="text-xs font-bold">Adicionar</span></>}
                             </button>
                         )}
                     </div>
@@ -322,7 +322,7 @@ export default function EditarAnuncio() {
 
                 <div className="p-6 md:p-8">
                     <button type="submit" disabled={submitting || uploading} className="w-full flex items-center justify-center gap-3 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black text-sm rounded-xl transition-all hover:shadow-glow active:scale-[0.98] disabled:opacity-50">
-                        {submitting ? <><Loader2 className="w-5 h-5 animate-spin" />Salvando...</> : 'Salvar Alterações'}
+                        {submitting ? <><Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />Salvando...</> : 'Salvar Alterações'}
                     </button>
                 </div>
             </motion.form>
