@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Eye, Users, Zap, Rocket, ArrowLeft, Loader2, QrCode,
     ShieldCheck, CreditCard, Copy, Check, RefreshCw,
-    CheckCircle2, XCircle, Clock, X,
+    CheckCircle2, XCircle, Clock, X, ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
@@ -35,8 +35,8 @@ const TRACK_H = 2;
 const WRAP_H  = 28;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type PayMethod = 'pix' | 'credit_card';
-type PayStatus = 'idle' | 'loading' | 'pix_waiting' | 'approved' | 'rejected';
+type PayMethod = 'pix' | 'credit_card' | 'mercadopago';
+type PayStatus = 'idle' | 'loading' | 'pix_waiting' | 'mp_redirect' | 'approved' | 'rejected';
 
 interface PaymentResult {
     payment_id:         string;
@@ -108,6 +108,9 @@ export default function Impulsionar() {
 
     // PIX polling
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Mercado Pago checkout URL (for the external-redirect tab)
+    const [mpCheckoutUrl, setMpCheckoutUrl] = useState<string | null>(null);
 
     const labels = periodLabels[language] ?? periodLabels['pt-BR'];
     const fmt = (p: number) =>
@@ -281,12 +284,38 @@ export default function Impulsionar() {
         setTimeout(() => setCopied(false), 2500);
     };
 
+    // ── Handle Mercado Pago redirect ──────────────────────────────────────────
+    const handleMercadoPago = async () => {
+        if (!id || !user || !car) return;
+        setPayStatus('loading');
+        try {
+            const period = periods[selectedPeriod];
+            const data = await callFn('create-mp-preference', {
+                anuncio_id:  id,
+                user_id:     user.id,
+                user_email:  user.email ?? 'comprador@sulmotors.com.br',
+                periodo_key: period.key,
+                dias:        period.days,
+                preco:       period.price,
+                carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
+            });
+            const url = data.sandbox_init_point ?? data.init_point;
+            if (!url) throw new Error('URL de pagamento não retornada.');
+            setMpCheckoutUrl(url);
+            setPayStatus('mp_redirect');
+        } catch (err: unknown) {
+            setPayStatus('idle');
+            toast.error(err instanceof Error ? err.message : 'Erro ao gerar link de pagamento.');
+        }
+    };
+
     // ── Close / reset modal ────────────────────────────────────────────────────
     const closeModal = () => {
         if (pollRef.current) clearInterval(pollRef.current);
         setShowModal(false);
         setPayStatus('idle');
         setPayResult(null);
+        setMpCheckoutUrl(null);
         setCopied(false);
         setCardNumber(''); setCardName(''); setCardExpiry(''); setCardCVV('');
     };
@@ -294,6 +323,7 @@ export default function Impulsionar() {
     const openModal = () => {
         setPayStatus('idle');
         setPayResult(null);
+        setMpCheckoutUrl(null);
         setPayMethod('pix');
         setShowModal(true);
     };
@@ -425,7 +455,7 @@ export default function Impulsionar() {
                     </AnimatePresence>
 
                     {/* Payment method badges */}
-                    <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className="flex items-center justify-center gap-2 mb-4 flex-wrap">
                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
                             <QrCode className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} />
                             <span className="text-xs text-emerald-400 font-bold">PIX</span>
@@ -433,6 +463,10 @@ export default function Impulsionar() {
                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
                             <CreditCard className="w-3.5 h-3.5 text-blue-400" strokeWidth={1.5} />
                             <span className="text-xs text-blue-400 font-bold">Cartão de crédito</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-400/10 border border-brand-400/20 rounded-full">
+                            <ExternalLink className="w-3.5 h-3.5 text-brand-400" strokeWidth={1.5} />
+                            <span className="text-xs text-brand-400 font-bold">Mercado Pago</span>
                         </div>
                     </div>
 
@@ -486,21 +520,21 @@ export default function Impulsionar() {
                                         </button>
                                     </div>
 
-                                    {/* Tab switcher */}
-                                    <div className="flex gap-2 p-4 pb-0">
-                                        {(['pix', 'credit_card'] as PayMethod[]).map((m) => (
-                                            <button key={m} onClick={() => setPayMethod(m)}
-                                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all
-                                                    ${payMethod === m
-                                                        ? m === 'pix'
-                                                            ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
-                                                            : 'bg-blue-500/15 border border-blue-500/30 text-blue-400'
+                                    {/* Tab switcher — 3 methods */}
+                                    <div className="flex gap-1.5 p-4 pb-0">
+                                        {([
+                                            { id: 'pix',          label: 'PIX',           icon: QrCode,        active: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' },
+                                            { id: 'credit_card',  label: 'Cartão',        icon: CreditCard,    active: 'bg-blue-500/15 border-blue-500/30 text-blue-400' },
+                                            { id: 'mercadopago',  label: 'Mercado Pago',  icon: ExternalLink,  active: 'bg-brand-400/15 border-brand-400/30 text-brand-400' },
+                                        ] as { id: PayMethod; label: string; icon: React.ElementType; active: string }[]).map(({ id: mId, label, icon: Icon, active }) => (
+                                            <button key={mId} onClick={() => setPayMethod(mId)}
+                                                className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-xl text-[11px] font-bold transition-all
+                                                    ${payMethod === mId
+                                                        ? `border ${active}`
                                                         : 'bg-zinc-800 border border-transparent text-zinc-500 hover:text-zinc-300'
                                                     }`}>
-                                                {m === 'pix'
-                                                    ? <><QrCode className="w-4 h-4" strokeWidth={1.5} /> PIX</>
-                                                    : <><CreditCard className="w-4 h-4" strokeWidth={1.5} /> Cartão</>
-                                                }
+                                                <Icon className="w-4 h-4" strokeWidth={1.5} />
+                                                {label}
                                             </button>
                                         ))}
                                     </div>
@@ -526,6 +560,30 @@ export default function Impulsionar() {
                                                     className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-white font-black rounded-xl transition-all active:scale-[0.98]">
                                                     <QrCode className="w-5 h-5" strokeWidth={1.5} />
                                                     Gerar QR Code PIX
+                                                </button>
+                                            </>
+                                        )}
+
+                                        {/* ── Mercado Pago tab ── */}
+                                        {payMethod === 'mercadopago' && (
+                                            <>
+                                                <div className="p-4 bg-brand-400/8 border border-brand-400/15 rounded-2xl text-center">
+                                                    <ExternalLink className="w-10 h-10 text-brand-400 mx-auto mb-2" strokeWidth={1.5} />
+                                                    <p className="text-brand-300 text-sm font-bold mb-1">Checkout Mercado Pago</p>
+                                                    <p className="text-zinc-400 text-xs">Você será redirecionado para o ambiente seguro do Mercado Pago. Aceita PIX, cartão e boleto.</p>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm py-1">
+                                                    <span className="text-zinc-400">Período</span>
+                                                    <span className="text-white font-bold">{periodLabel}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm pb-1">
+                                                    <span className="text-zinc-400">Total</span>
+                                                    <span className="text-brand-400 font-black text-lg">{fmt(period.price)}</span>
+                                                </div>
+                                                <button onClick={handleMercadoPago}
+                                                    className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all active:scale-[0.98]">
+                                                    <ExternalLink className="w-5 h-5" strokeWidth={1.5} />
+                                                    Ir para o Mercado Pago
                                                 </button>
                                             </>
                                         )}
@@ -599,9 +657,65 @@ export default function Impulsionar() {
                                             </>
                                         )}
 
+
                                         <div className="flex items-center justify-center gap-1.5 pt-1">
                                             <ShieldCheck className="w-3 h-3 text-zinc-600" strokeWidth={1.5} />
                                             <p className="text-[11px] text-zinc-600">Ambiente seguro · Mercado Pago</p>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* ── MP REDIRECT: show link + open in new tab ── */}
+                            {payStatus === 'mp_redirect' && mpCheckoutUrl && (
+                                <>
+                                    <div className="flex items-center justify-between p-5 border-b border-white/8">
+                                        <div>
+                                            <h2 className="text-lg font-black text-white">Checkout gerado</h2>
+                                            <p className="text-zinc-500 text-xs mt-0.5">Abra o link para concluir o pagamento</p>
+                                        </div>
+                                        <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors">
+                                            <X className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
+                                        </button>
+                                    </div>
+                                    <div className="p-6 flex flex-col gap-4">
+                                        <div className="p-4 bg-brand-400/8 border border-brand-400/20 rounded-2xl">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="w-10 h-10 bg-brand-400/15 border border-brand-400/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                                                    <ExternalLink className="w-5 h-5 text-brand-400" strokeWidth={1.5} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-white font-bold text-sm">Mercado Pago</p>
+                                                    <p className="text-zinc-500 text-xs">PIX · Cartão · Boleto</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm mb-1">
+                                                <span className="text-zinc-400">Período</span>
+                                                <span className="text-white font-bold">{periodLabel}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-zinc-400">Valor</span>
+                                                <span className="text-brand-400 font-black">{fmt(period.price)}</span>
+                                            </div>
+                                        </div>
+
+                                        <a
+                                            href={mpCheckoutUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98] text-center"
+                                        >
+                                            <ExternalLink className="w-5 h-5" strokeWidth={1.5} />
+                                            Abrir Mercado Pago
+                                        </a>
+
+                                        <p className="text-zinc-500 text-xs text-center">
+                                            Após pagar, o boost é ativado automaticamente. Você pode fechar esta janela.
+                                        </p>
+
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <ShieldCheck className="w-3 h-3 text-zinc-600" strokeWidth={1.5} />
+                                            <p className="text-[11px] text-zinc-600">Ambiente seguro certificado pelo Mercado Pago</p>
                                         </div>
                                     </div>
                                 </>
