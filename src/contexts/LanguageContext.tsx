@@ -231,6 +231,26 @@ export interface Translations {
     form_editar_title: string;
     form_editar_sub: string;
 
+    // Footer
+    footer_desc: string;
+    footer_section_inventory: string;
+    footer_all_cars: string;
+    footer_used: string;
+    footer_new: string;
+    footer_suvs: string;
+    footer_section_company: string;
+    footer_about: string;
+    footer_advertise: string;
+    footer_enter: string;
+    footer_section_contact: string;
+    footer_city: string;
+    footer_phone: string;
+    footer_whatsapp_label: string;
+    footer_copyright: string;
+    footer_terms: string;
+    footer_privacy: string;
+    footer_rights: string;
+
     // MeuPerfil
     perfil_title: string;
     perfil_sub: string;
@@ -460,6 +480,25 @@ const ptBR: Translations = {
     form_anunciar_sub: 'Preencha os dados do seu veículo',
     form_editar_title: 'Editar Anúncio',
     form_editar_sub: 'Atualize as informações do seu veículo',
+
+    footer_desc: 'O marketplace automotivo mais moderno do Brasil. Compre e venda veículos com segurança, tecnologia e confiança.',
+    footer_section_inventory: 'Estoque',
+    footer_all_cars: 'Todos os Carros',
+    footer_used: 'Seminovos',
+    footer_new: '0 KM',
+    footer_suvs: 'SUVs',
+    footer_section_company: 'Empresa',
+    footer_about: 'Sobre Nós',
+    footer_advertise: 'Anunciar',
+    footer_enter: 'Entrar',
+    footer_section_contact: 'Contato',
+    footer_city: 'Porto Alegre, RS',
+    footer_phone: '(51) 99999-9999',
+    footer_whatsapp_label: 'WhatsApp',
+    footer_copyright: '© 2026 SulMotors. Todos os direitos reservados.',
+    footer_terms: 'Termos de Uso',
+    footer_privacy: 'Política de Privacidade',
+    footer_rights: 'Seus Direitos de Privacidade',
 
     perfil_title: 'Meu Perfil',
     perfil_sub: 'Gerencie suas informações pessoais',
@@ -700,6 +739,25 @@ const en: Translations = {
     perfil_saving: 'Saving...',
     perfil_back: 'Back',
     perfil_change_photo: 'Change photo',
+
+    footer_desc: 'The most modern automotive marketplace in Brazil. Buy and sell vehicles safely, with technology and trust.',
+    footer_section_inventory: 'Inventory',
+    footer_all_cars: 'All Cars',
+    footer_used: 'Used Cars',
+    footer_new: '0 KM',
+    footer_suvs: 'SUVs',
+    footer_section_company: 'Company',
+    footer_about: 'About Us',
+    footer_advertise: 'Sell Your Car',
+    footer_enter: 'Sign In',
+    footer_section_contact: 'Contact',
+    footer_city: 'Porto Alegre, RS',
+    footer_phone: '(51) 99999-9999',
+    footer_whatsapp_label: 'WhatsApp',
+    footer_copyright: '© 2026 SulMotors. All rights reserved.',
+    footer_terms: 'Terms of Use',
+    footer_privacy: 'Privacy Policy',
+    footer_rights: 'Your Privacy Rights',
 };
 
 const es: Translations = {
@@ -929,6 +987,25 @@ const es: Translations = {
     perfil_saving: 'Guardando...',
     perfil_back: 'Volver',
     perfil_change_photo: 'Cambiar foto',
+
+    footer_desc: 'El marketplace automotriz más moderno de Brasil. Compra y vende vehículos con seguridad, tecnología y confianza.',
+    footer_section_inventory: 'Inventario',
+    footer_all_cars: 'Todos los Autos',
+    footer_used: 'Seminuevos',
+    footer_new: '0 KM',
+    footer_suvs: 'SUVs',
+    footer_section_company: 'Empresa',
+    footer_about: 'Sobre Nosotros',
+    footer_advertise: 'Vender Auto',
+    footer_enter: 'Ingresar',
+    footer_section_contact: 'Contacto',
+    footer_city: 'Porto Alegre, RS',
+    footer_phone: '(51) 99999-9999',
+    footer_whatsapp_label: 'WhatsApp',
+    footer_copyright: '© 2026 SulMotors. Todos los derechos reservados.',
+    footer_terms: 'Términos de Uso',
+    footer_privacy: 'Política de Privacidad',
+    footer_rights: 'Tus Derechos de Privacidad',
 };
 
 const allTranslations: Record<Language, Translations> = { 'pt-BR': ptBR, en, es };

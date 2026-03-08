@@ -17,14 +17,17 @@ function FlagBR() {
         </svg>
     );
 }
-function FlagUK() {
+function FlagUS() {
     return (
         <svg viewBox="0 0 20 14" width="20" height="14" className="rounded-sm flex-shrink-0">
-            <rect width="20" height="14" fill="#012169" />
-            <path d="M0,0 L20,14 M20,0 L0,14" stroke="white" strokeWidth="3" />
-            <path d="M0,0 L20,14 M20,0 L0,14" stroke="#C8102E" strokeWidth="1.8" />
-            <path d="M10,0 V14 M0,7 H20" stroke="white" strokeWidth="4.5" />
-            <path d="M10,0 V14 M0,7 H20" stroke="#C8102E" strokeWidth="3" />
+            <rect width="20" height="14" fill="#B22234" />
+            <rect y="1.08" width="20" height="1.08" fill="white" />
+            <rect y="3.23" width="20" height="1.08" fill="white" />
+            <rect y="5.38" width="20" height="1.08" fill="white" />
+            <rect y="7.54" width="20" height="1.08" fill="white" />
+            <rect y="9.69" width="20" height="1.08" fill="white" />
+            <rect y="11.85" width="20" height="1.08" fill="white" />
+            <rect width="8" height="7.54" fill="#3C3B6E" />
         </svg>
     );
 }
@@ -39,7 +42,7 @@ function FlagES() {
 
 const flagMap: Record<Language, { flag: React.ReactNode; label: string }> = {
     'pt-BR': { flag: <FlagBR />, label: 'PT' },
-    'en':    { flag: <FlagUK />, label: 'EN' },
+    'en':    { flag: <FlagUS />, label: 'EN' },
     'es':    { flag: <FlagES />, label: 'ES' },
 };
 
@@ -70,6 +73,7 @@ export default function Navbar() {
         { to: '/', label: t.nav_home },
         { to: '/estoque', label: t.nav_inventory },
         { to: '/sobre-nos', label: t.nav_about },
+        { to: '/anunciar', label: t.nav_advertise },
     ];
 
     const isActive = (path: string) => location.pathname === path;

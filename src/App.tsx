@@ -13,6 +13,9 @@ import ImpulsionarSucesso from './pages/ImpulsionarSucesso';
 import DetalheCarro from './pages/DetalheCarro';
 import SobreNos from './pages/SobreNos';
 import Login from './pages/Login';
+import Termos from './pages/Termos';
+import Privacidade from './pages/Privacidade';
+import SeusDireitos from './pages/SeusDireitos';
 
 export default function App() {
     return (
@@ -32,6 +35,9 @@ export default function App() {
                     <Route path="/carro/:id" element={<DetalheCarro />} />
                     <Route path="/sobre-nos" element={<SobreNos />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/termos" element={<Termos />} />
+                    <Route path="/privacidade" element={<Privacidade />} />
+                    <Route path="/seus-direitos" element={<SeusDireitos />} />
                 </Route>
             </Routes>
         </>
