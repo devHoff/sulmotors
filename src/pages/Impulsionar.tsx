@@ -219,32 +219,56 @@ export default function Impulsionar() {
     };
 
     // ── Handle PIX ────────────────────────────────────────────────────────────
+    // Calls create-mp-payment (the correct function for real PIX QR codes).
+    // Falls back to create-mp-preference (checkout redirect) only if the
+    // payment function is still returning a server error.
     const handlePix = async () => {
         if (!id || !user || !car) return;
         setPayStatus('loading');
         try {
             const period = periods[selectedPeriod];
-            const raw = await callFn('create-mp-preference', {
-                anuncio_id:  id,
-                user_id:     user.id,
-                user_email:  user.email ?? 'comprador@sulmotors.com.br',
-                periodo_key: period.key,
-                dias:        period.days,
-                preco:       period.price,
-                carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
-            });
+            const payload = {
+                payment_method: 'pix',
+                anuncio_id:     id,
+                user_id:        user.id,
+                user_email:     user.email ?? 'comprador@sulmotors.com.br',
+                periodo_key:    period.key,
+                dias:           period.days,
+                preco:          period.price,
+                carro_desc:     `${car.marca} ${car.modelo} ${car.ano}`,
+            };
+
+            // Try create-mp-payment first (returns real pix_qr_code + pix_qr_code_base64)
+            let raw: Record<string, unknown>;
+            try {
+                raw = await callFn('create-mp-payment', payload);
+            } catch (primaryErr) {
+                // If the deployed function is still broken, fall back to
+                // create-mp-preference (returns init_point for checkout redirect)
+                console.warn('create-mp-payment failed, falling back:', primaryErr);
+                const fallback = await callFn('create-mp-preference', {
+                    anuncio_id:  id,
+                    user_id:     user.id,
+                    user_email:  user.email ?? 'comprador@sulmotors.com.br',
+                    periodo_key: period.key,
+                    dias:        period.days,
+                    preco:       period.price,
+                    carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
+                });
+                raw = fallback;
+            }
 
             const result: PaymentResult = {
-                payment_id:         raw.payment_id   ?? raw.preference_id ?? 'mp-checkout',
-                pagamento_id:       raw.pagamento_id ?? null,
-                status:             raw.status        ?? 'pending',
-                status_detail:      raw.status_detail ?? 'waiting_transfer',
-                pix_qr_code:        raw.pix_qr_code        ?? null,
-                pix_qr_code_base64: raw.pix_qr_code_base64 ?? null,
-                pix_expiration:     raw.pix_expiration     ?? null,
-                init_point:         raw.sandbox_init_point ?? raw.init_point ?? null,
-                preference_id:      raw.preference_id      ?? null,
-                _mock:              raw._mock ?? false,
+                payment_id:         String(raw.payment_id   ?? raw.preference_id ?? 'mp-checkout'),
+                pagamento_id:       (raw.pagamento_id as string) ?? null,
+                status:             String(raw.status        ?? 'pending'),
+                status_detail:      String(raw.status_detail ?? 'waiting_transfer'),
+                pix_qr_code:        (raw.pix_qr_code        as string) ?? null,
+                pix_qr_code_base64: (raw.pix_qr_code_base64 as string) ?? null,
+                pix_expiration:     (raw.pix_expiration     as string) ?? null,
+                init_point:         (raw.sandbox_init_point as string) ?? (raw.init_point as string) ?? null,
+                preference_id:      (raw.preference_id      as string) ?? null,
+                _mock:              Boolean(raw._mock),
             };
 
             setPayResult(result);
@@ -313,18 +337,18 @@ export default function Impulsionar() {
                 throw new Error(tokenResult?.cause?.[0]?.description ?? 'Erro ao tokenizar cartão. Verifique os dados.');
             }
 
-            // ── Step 2: send token to edge function ────────────────────────────
-            const result = await callFn('create-mp-preference', {
-                payment_method:   'credit_card',
-                anuncio_id:       id,
-                user_id:          user.id,
-                user_email:       user.email ?? 'comprador@sulmotors.com.br',
-                periodo_key:      period.key,
-                dias:             period.days,
-                preco:            period.price,
-                carro_desc:       `${car.marca} ${car.modelo} ${car.ano}`,
-                card_token:       tokenResult.id,
-                installments:     cardInstall,
+            // ── Step 2: send token to create-mp-payment (correct function) ──────
+            const result = await callFn('create-mp-payment', {
+                payment_method:    'credit_card',
+                anuncio_id:        id,
+                user_id:           user.id,
+                user_email:        user.email ?? 'comprador@sulmotors.com.br',
+                periodo_key:       period.key,
+                dias:              period.days,
+                preco:             period.price,
+                carro_desc:        `${car.marca} ${car.modelo} ${car.ano}`,
+                card_token:        tokenResult.id,
+                installments:      cardInstall,
                 payment_method_id: cardBrand ?? 'visa',
             });
 
