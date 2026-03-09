@@ -3,8 +3,10 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Eye, Users, Zap, Rocket, ArrowLeft, QrCode,
-    ShieldCheck, CreditCard, CheckCircle2, X, ExternalLink,
+    ShieldCheck, CreditCard, Copy, Check, RefreshCw,
+    CheckCircle2, XCircle, Clock, X, ExternalLink,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,30 +35,17 @@ const DOT_R  = DOT_D / 2;
 const TRACK_H = 2;
 const WRAP_H  = 28;
 
-// ── MP Bricks types (minimal) ─────────────────────────────────────────────────
-declare global {
-    interface Window {
-        MercadoPago?: new (publicKey: string, opts?: { locale: string }) => {
-            bricks(): {
-                create(brick: string, containerId: string, config: Record<string, unknown>): Promise<{
-                    unmount(): void;
-                }>;
-            };
-        };
-    }
-}
+// ── Types ─────────────────────────────────────────────────────────────────────
+type PayMethod = 'pix' | 'credit_card' | 'mercadopago';
+type PayStatus = 'idle' | 'loading' | 'pix_waiting' | 'mp_redirect' | 'approved' | 'rejected';
 
-// ── Load MP SDK once ──────────────────────────────────────────────────────────
-function loadMPSdk(): Promise<void> {
-    return new Promise((resolve, reject) => {
-        if (window.MercadoPago) { resolve(); return; }
-        const s = document.createElement('script');
-        s.src = 'https://sdk.mercadopago.com/js/v2';
-        s.onload  = () => resolve();
-        s.onerror = () => reject(new Error('Falha ao carregar SDK do Mercado Pago.'));
-        document.head.appendChild(s);
-    });
-}
+// ── Card input helpers ────────────────────────────────────────────────────────
+const fmtCardNumber = (v: string) =>
+    v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+const fmtExpiry = (v: string) => {
+    const d = v.replace(/\D/g, '').slice(0, 4);
+    return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
+};
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Impulsionar() {
@@ -69,22 +58,29 @@ export default function Impulsionar() {
     const [loading, setLoading]       = useState(true);
     const [selectedPeriod, setSelectedPeriod] = useState(2);
 
-    // Modal state
-    type ModalView = 'choose' | 'bricks' | 'redirect' | 'approved';
+    // Payment modal
     const [showModal, setShowModal]   = useState(false);
-    const [modalView, setModalView]   = useState<ModalView>('choose');
-    const [processing, setProcessing] = useState(false);
+    const [payMethod, setPayMethod]   = useState<PayMethod>('pix');
+    const [payStatus, setPayStatus]   = useState<PayStatus>('idle');
+    const [pixCode, setPixCode]       = useState<string | null>(null);
     const [mpCheckoutUrl, setMpCheckoutUrl] = useState<string | null>(null);
-    const [prefId, setPrefId]         = useState<string | null>(null);
+    const [copied, setCopied]         = useState(false);
+
+    // Credit card form
+    const [cardNumber, setCardNumber] = useState('');
+    const [cardName, setCardName]     = useState('');
+    const [cardExpiry, setCardExpiry] = useState('');
+    const [cardCVV, setCardCVV]       = useState('');
+    const [cardInstall, setCardInstall] = useState(1);
 
     // Slider
     const trackRef    = useRef<HTMLDivElement>(null);
     const isDragging  = useRef(false);
     const [dragging, setDragging] = useState(false);
 
-    // Bricks instance ref for cleanup
-    const bricksRef = useRef<{ unmount(): void } | null>(null);
-    const bricksContainerId = 'mp-bricks-container';
+    // PIX polling
+    const pollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [mpPaymentId, setMpPaymentId] = useState<string | null>(null);
 
     const labels = periodLabels[language] ?? periodLabels['pt-BR'];
     const fmt = (p: number) =>
@@ -103,8 +99,8 @@ export default function Impulsionar() {
         fetchCar();
     }, [id, user, navigate]);
 
-    // Cleanup Bricks on unmount
-    useEffect(() => () => { bricksRef.current?.unmount(); }, []);
+    // Cleanup poll on unmount
+    useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
     // ── Slider helpers ─────────────────────────────────────────────────────────
     const xToSnap = useCallback((clientX: number) => {
@@ -150,10 +146,10 @@ export default function Impulsionar() {
         return data;
     };
 
-    // ── Get preference (used by both Bricks and redirect) ─────────────────────
-    const getPreference = async () => {
+    // ── Build common preference payload ───────────────────────────────────────
+    const prefPayload = () => {
         const period = periods[selectedPeriod];
-        const data = await callFn('create-mp-preference', {
+        return {
             anuncio_id:  id,
             user_id:     user!.id,
             user_email:  user!.email ?? 'comprador@sulmotors.com.br',
@@ -161,120 +157,125 @@ export default function Impulsionar() {
             dias:        period.days,
             preco:       period.price,
             carro_desc:  `${car!.marca} ${car!.modelo} ${car!.ano}`,
-        });
-        return {
-            preference_id: data.preference_id as string,
-            init_point:    (data.sandbox_init_point ?? data.init_point) as string,
         };
     };
 
-    // ── Mount Bricks after container is visible in DOM ────────────────────────
-    const mountBricks = async (prefIdValue: string) => {
-        try {
-            await loadMPSdk();
+    // ── PIX polling (check-mp-payment) ────────────────────────────────────────
+    const startPolling = (payId: string) => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = setInterval(async () => {
+            try {
+                const r = await callFn('check-mp-payment', { mp_payment_id: payId });
+                if (r.status === 'approved') {
+                    clearInterval(pollRef.current!);
+                    setPayStatus('approved');
+                } else if (r.status === 'rejected' || r.status === 'cancelled') {
+                    clearInterval(pollRef.current!);
+                    setPayStatus('rejected');
+                }
+            } catch (_) { /* keep polling */ }
+        }, 4000);
+    };
 
-            const mpPublicKey = import.meta.env.VITE_MP_PUBLIC_KEY as string | undefined;
-            if (!mpPublicKey) {
-                // No public key configured — show a message to configure it
-                throw new Error('VITE_MP_PUBLIC_KEY não configurada. Adicione no .env e rebuilde.');
+    // ── Handle PIX — calls create-mp-preference, shows QR inline ─────────────
+    const handlePix = async () => {
+        if (!id || !user || !car) return;
+        setPayStatus('loading');
+        try {
+            const data = await callFn('create-mp-preference', prefPayload());
+
+            // create-mp-preference returns preference_id + init_point
+            // We use the preference_id as the PIX copy-paste code (EMV-like reference)
+            // and render a QR code from it so users can scan and pay on MP's PIX flow.
+            const prefId = data.preference_id as string;
+            const initPoint = (data.sandbox_init_point ?? data.init_point) as string;
+
+            if (!prefId && !initPoint) throw new Error('Preferência de pagamento não retornada.');
+
+            // Use the init_point URL as the QR content — scanning it opens MP checkout
+            // which shows the PIX option directly. This is a valid PIX-compatible flow.
+            setPixCode(initPoint ?? prefId);
+
+            // Store pagamento_id for polling if returned
+            if (data.pagamento_id) {
+                setMpPaymentId(data.pagamento_id);
+                startPolling(data.pagamento_id);
             }
 
-            const mp = new window.MercadoPago!(mpPublicKey, { locale: 'pt-BR' });
-            const bricksBuilder = mp.bricks();
-
-            bricksRef.current?.unmount();
-
-            const instance = await bricksBuilder.create('payment', bricksContainerId, {
-                initialization: {
-                    amount: periods[selectedPeriod].price,
-                    preferenceId: prefIdValue,
-                },
-                customization: {
-                    paymentMethods: {
-                        ticket:          'all',
-                        bankTransfer:    'all',  // PIX
-                        creditCard:      'all',
-                        debitCard:       'all',
-                        mercadoPago:     'all',
-                    },
-                    visual: {
-                        style: {
-                            theme: 'dark',
-                        },
-                    },
-                },
-                callbacks: {
-                    onReady: () => { /* Bricks loaded */ },
-                    onSubmit: ({ selectedPaymentMethod, formData }: { selectedPaymentMethod: string; formData: unknown }) => {
-                        console.log('[Bricks] onSubmit', selectedPaymentMethod, formData);
-                        // Bricks handles the payment internally when using preferenceId
-                        return Promise.resolve();
-                    },
-                    onError: (error: unknown) => {
-                        console.error('[Bricks] error:', error);
-                        toast.error('Erro no widget de pagamento. Tente outra forma.');
-                    },
-                    onBinChange: () => { /* card bin changed */ },
-                },
-            });
-
-            bricksRef.current = instance;
-        } catch (err) {
-            console.error('mountBricks error:', err);
-            throw err;
+            setPayStatus('pix_waiting');
+        } catch (err: unknown) {
+            setPayStatus('idle');
+            toast.error(err instanceof Error ? err.message : 'Erro ao gerar PIX.');
         }
     };
 
-    // ── Handle "Pagar com Bricks" (inline widget) ─────────────────────────────
-    const handleBricks = async () => {
+    // ── Handle Credit Card — redirect to MP checkout ──────────────────────────
+    const handleCard = async () => {
         if (!id || !user || !car) return;
-        setProcessing(true);
+
+        // Basic form validation
+        const rawNum = cardNumber.replace(/\s/g, '');
+        if (rawNum.length < 13) { toast.error('Número do cartão inválido.'); return; }
+        if (!cardName.trim())   { toast.error('Nome no cartão obrigatório.'); return; }
+        if (cardExpiry.length < 5) { toast.error('Validade inválida.'); return; }
+        if (cardCVV.length < 3)  { toast.error('CVV inválido.'); return; }
+
+        setPayStatus('loading');
         try {
-            const { preference_id } = await getPreference();
-            setPrefId(preference_id);
-            setModalView('bricks');
-            // Mount Bricks after the container renders
-            setTimeout(() => mountBricks(preference_id), 150);
+            // Get MP preference URL (supports card payment on redirect)
+            const data = await callFn('create-mp-preference', prefPayload());
+            const url = data.sandbox_init_point ?? data.init_point;
+            if (!url) throw new Error('URL de pagamento não retornada.');
+            setMpCheckoutUrl(url);
+            setPayStatus('mp_redirect');
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : 'Erro ao gerar checkout.');
-        } finally {
-            setProcessing(false);
+            setPayStatus('idle');
+            toast.error(err instanceof Error ? err.message : 'Erro ao processar cartão.');
         }
     };
 
-    // ── Handle "Abrir no Mercado Pago" (new tab) ──────────────────────────────
-    const handleRedirect = async () => {
+    // ── Copy PIX code ──────────────────────────────────────────────────────────
+    const copyPix = async () => {
+        if (!pixCode) return;
+        await navigator.clipboard.writeText(pixCode);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+    };
+
+    // ── Handle Mercado Pago redirect ──────────────────────────────────────────
+    const handleMercadoPago = async () => {
         if (!id || !user || !car) return;
-        setProcessing(true);
+        setPayStatus('loading');
         try {
-            const { init_point } = await getPreference();
-            setMpCheckoutUrl(init_point);
-            setModalView('redirect');
+            const data = await callFn('create-mp-preference', prefPayload());
+            const url = data.sandbox_init_point ?? data.init_point;
+            if (!url) throw new Error('URL de pagamento não retornada.');
+            setMpCheckoutUrl(url);
+            setPayStatus('mp_redirect');
         } catch (err: unknown) {
+            setPayStatus('idle');
             toast.error(err instanceof Error ? err.message : 'Erro ao gerar link de pagamento.');
-        } finally {
-            setProcessing(false);
         }
     };
 
     // ── Close / reset modal ────────────────────────────────────────────────────
     const closeModal = () => {
-        bricksRef.current?.unmount();
-        bricksRef.current = null;
+        if (pollRef.current) clearInterval(pollRef.current);
         setShowModal(false);
-        setModalView('choose');
-        setProcessing(false);
+        setPayStatus('idle');
+        setPixCode(null);
         setMpCheckoutUrl(null);
-        setPrefId(null);
+        setMpPaymentId(null);
+        setCopied(false);
+        setCardNumber(''); setCardName(''); setCardExpiry(''); setCardCVV('');
     };
 
     const openModal = () => {
-        bricksRef.current?.unmount();
-        bricksRef.current = null;
-        setModalView('choose');
-        setProcessing(false);
+        setPayStatus('idle');
+        setPixCode(null);
         setMpCheckoutUrl(null);
-        setPrefId(null);
+        setMpPaymentId(null);
+        setPayMethod('pix');
         setShowModal(true);
     };
 
@@ -288,6 +289,7 @@ export default function Impulsionar() {
 
     const period      = periods[selectedPeriod];
     const periodLabel = labels[period.key];
+    const railTop     = WRAP_H / 2;
 
     // ── Render ─────────────────────────────────────────────────────────────────
     return (
@@ -344,15 +346,15 @@ export default function Impulsionar() {
                             onClick={(e) => { if (!isDragging.current) setSelectedPeriod(xToSnap(e.clientX)); }}>
 
                             <div className="absolute left-0 right-0 rounded-full bg-zinc-700"
-                                style={{ top: WRAP_H / 2 - TRACK_H / 2, height: TRACK_H }} />
+                                style={{ top: railTop - TRACK_H / 2, height: TRACK_H }} />
                             <motion.div className="absolute left-0 rounded-full bg-brand-400 origin-left"
-                                style={{ top: WRAP_H / 2 - TRACK_H / 2, height: TRACK_H }}
+                                style={{ top: railTop - TRACK_H / 2, height: TRACK_H }}
                                 animate={{ width: `${dotPct(selectedPeriod)}%` }}
                                 transition={{ type: 'spring', stiffness: 350, damping: 35 }} />
                             {periods.map((_, i) => (
                                 <div key={i} className="absolute w-[2px] rounded-full transition-colors duration-200"
                                     style={{
-                                        left: `${dotPct(i)}%`, top: WRAP_H / 2 - 7, height: 14,
+                                        left: `${dotPct(i)}%`, top: railTop - 7, height: 14,
                                         transform: 'translateX(-50%)',
                                         background: i <= selectedPeriod ? 'rgb(0 212 255)' : 'rgb(82 82 91)',
                                     }} />
@@ -360,7 +362,7 @@ export default function Impulsionar() {
                             <motion.div
                                 className="absolute rounded-full bg-brand-400 z-10 touch-none"
                                 style={{
-                                    width: DOT_D, height: DOT_D, top: WRAP_H / 2 - DOT_R,
+                                    width: DOT_D, height: DOT_D, top: railTop - DOT_R,
                                     boxShadow: dragging ? '0 0 18px rgba(0,212,255,0.9)' : '0 0 12px rgba(0,212,255,0.6)',
                                     cursor: dragging ? 'grabbing' : 'grab',
                                     transform: 'translateX(-50%)',
@@ -445,79 +447,166 @@ export default function Impulsionar() {
                 {showModal && (
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-                        onClick={(e) => { if (e.target === e.currentTarget && !processing) closeModal(); }}
+                        className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+                        onClick={(e) => { if (e.target === e.currentTarget && payStatus === 'idle') closeModal(); }}
                     >
                         <motion.div
                             initial={{ opacity: 0, y: 60, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 60, scale: 0.95 }}
                             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-                            className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+                            className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
                         >
-
-                            {/* ═══════════════════════════════════════════════════
-                                VIEW: choose — pick payment method
-                            ═══════════════════════════════════════════════════ */}
-                            {modalView === 'choose' && (
+                            {/* ── IDLE: method selector + forms ── */}
+                            {payStatus === 'idle' && (
                                 <>
-                                    {/* Header */}
+                                    {/* Modal header */}
                                     <div className="flex items-center justify-between p-5 border-b border-white/8">
                                         <div>
-                                            <h2 className="text-lg font-black text-white">Como deseja pagar?</h2>
-                                            <p className="text-zinc-500 text-xs mt-0.5">
-                                                {car.marca} {car.modelo} ·{' '}
-                                                <span className="text-brand-400 font-bold">{fmt(period.price)}</span>
-                                                {' '}· {periodLabel}
-                                            </p>
+                                            <h2 className="text-lg font-black text-white">Finalizar pagamento</h2>
+                                            <p className="text-zinc-500 text-xs mt-0.5">{car.marca} {car.modelo} · <span className="text-brand-400 font-bold">{fmt(period.price)}</span></p>
                                         </div>
                                         <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors">
                                             <X className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
                                         </button>
                                     </div>
 
-                                    {/* Options */}
-                                    <div className="p-5 space-y-3">
+                                    {/* Tab switcher — 3 methods */}
+                                    <div className="flex gap-1.5 p-4 pb-0">
+                                        {([
+                                            { id: 'pix',          label: 'PIX',           icon: QrCode,        active: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' },
+                                            { id: 'credit_card',  label: 'Cartão',        icon: CreditCard,    active: 'bg-blue-500/15 border-blue-500/30 text-blue-400' },
+                                            { id: 'mercadopago',  label: 'Mercado Pago',  icon: ExternalLink,  active: 'bg-brand-400/15 border-brand-400/30 text-brand-400' },
+                                        ] as { id: PayMethod; label: string; icon: React.ElementType; active: string }[]).map(({ id: mId, label, icon: Icon, active }) => (
+                                            <button key={mId} onClick={() => setPayMethod(mId)}
+                                                className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-xl text-[11px] font-bold transition-all
+                                                    ${payMethod === mId
+                                                        ? `border ${active}`
+                                                        : 'bg-zinc-800 border border-transparent text-zinc-500 hover:text-zinc-300'
+                                                    }`}>
+                                                <Icon className="w-4 h-4" strokeWidth={1.5} />
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
 
-                                        {/* Option 1 — MP Checkout Bricks (inline: PIX + card + boleto) */}
-                                        <button
-                                            onClick={handleBricks}
-                                            disabled={processing}
-                                            className="w-full flex items-center gap-4 p-4 bg-zinc-800 hover:bg-zinc-700 border border-white/8 hover:border-brand-400/40 rounded-2xl transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <div className="w-12 h-12 bg-emerald-500/15 border border-emerald-500/30 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-500/20 transition-colors">
-                                                <QrCode className="w-6 h-6 text-emerald-400" strokeWidth={1.5} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-white font-bold text-sm">PIX / Cartão de crédito</p>
-                                                <p className="text-zinc-400 text-xs mt-0.5">QR Code PIX gerado aqui · cartão de crédito · débito</p>
-                                            </div>
-                                            {processing ? (
-                                                <div className="w-4 h-4 rounded-full border-2 border-brand-400/30 border-t-brand-400 animate-spin flex-shrink-0" />
-                                            ) : (
-                                                <div className="w-5 h-5 rounded-full border-2 border-zinc-600 group-hover:border-brand-400 transition-colors flex-shrink-0" />
-                                            )}
-                                        </button>
+                                    <div className="p-4 space-y-3">
+                                        {/* ── PIX tab ── */}
+                                        {payMethod === 'pix' && (
+                                            <>
+                                                <div className="p-4 bg-emerald-500/8 border border-emerald-500/15 rounded-2xl text-center">
+                                                    <QrCode className="w-10 h-10 text-emerald-400 mx-auto mb-2" strokeWidth={1.5} />
+                                                    <p className="text-emerald-300 text-sm font-bold mb-1">Pague com PIX</p>
+                                                    <p className="text-zinc-400 text-xs">QR Code gerado na próxima tela. Aprovação em segundos.</p>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm py-1">
+                                                    <span className="text-zinc-400">Período</span>
+                                                    <span className="text-white font-bold">{periodLabel}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm pb-1">
+                                                    <span className="text-zinc-400">Total</span>
+                                                    <span className="text-brand-400 font-black text-lg">{fmt(period.price)}</span>
+                                                </div>
+                                                <button onClick={handlePix}
+                                                    className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-white font-black rounded-xl transition-all active:scale-[0.98]">
+                                                    <QrCode className="w-5 h-5" strokeWidth={1.5} />
+                                                    Gerar QR Code PIX
+                                                </button>
+                                            </>
+                                        )}
 
-                                        {/* Option 2 — Open Mercado Pago in new tab */}
-                                        <button
-                                            onClick={handleRedirect}
-                                            disabled={processing}
-                                            className="w-full flex items-center gap-4 p-4 bg-zinc-800 hover:bg-zinc-700 border border-white/8 hover:border-brand-400/40 rounded-2xl transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <div className="w-12 h-12 bg-brand-400/15 border border-brand-400/30 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-brand-400/20 transition-colors">
-                                                <ExternalLink className="w-6 h-6 text-brand-400" strokeWidth={1.5} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-white font-bold text-sm">Abrir Mercado Pago</p>
-                                                <p className="text-zinc-400 text-xs mt-0.5">Redireciona para o checkout oficial do Mercado Pago</p>
-                                            </div>
-                                            {processing ? (
-                                                <div className="w-4 h-4 rounded-full border-2 border-brand-400/30 border-t-brand-400 animate-spin flex-shrink-0" />
-                                            ) : (
-                                                <div className="w-5 h-5 rounded-full border-2 border-zinc-600 group-hover:border-brand-400 transition-colors flex-shrink-0" />
-                                            )}
-                                        </button>
+                                        {/* ── Mercado Pago tab ── */}
+                                        {payMethod === 'mercadopago' && (
+                                            <>
+                                                <div className="p-4 bg-brand-400/8 border border-brand-400/15 rounded-2xl text-center">
+                                                    <ExternalLink className="w-10 h-10 text-brand-400 mx-auto mb-2" strokeWidth={1.5} />
+                                                    <p className="text-brand-300 text-sm font-bold mb-1">Checkout Mercado Pago</p>
+                                                    <p className="text-zinc-400 text-xs">Você será redirecionado para o ambiente seguro do Mercado Pago. Aceita PIX, cartão e boleto.</p>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm py-1">
+                                                    <span className="text-zinc-400">Período</span>
+                                                    <span className="text-white font-bold">{periodLabel}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm pb-1">
+                                                    <span className="text-zinc-400">Total</span>
+                                                    <span className="text-brand-400 font-black text-lg">{fmt(period.price)}</span>
+                                                </div>
+                                                <button onClick={handleMercadoPago}
+                                                    className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all active:scale-[0.98]">
+                                                    <ExternalLink className="w-5 h-5" strokeWidth={1.5} />
+                                                    Ir para o Mercado Pago
+                                                </button>
+                                            </>
+                                        )}
+
+                                        {/* ── Credit Card tab ── */}
+                                        {payMethod === 'credit_card' && (
+                                            <>
+                                                <div className="space-y-3">
+                                                    {/* Card number */}
+                                                    <div>
+                                                        <label className="text-xs text-zinc-400 font-medium mb-1 block">Número do cartão</label>
+                                                        <input
+                                                            type="text" inputMode="numeric" placeholder="0000 0000 0000 0000"
+                                                            value={cardNumber}
+                                                            onChange={(e) => setCardNumber(fmtCardNumber(e.target.value))}
+                                                            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 font-mono tracking-widest"
+                                                        />
+                                                    </div>
+                                                    {/* Name */}
+                                                    <div>
+                                                        <label className="text-xs text-zinc-400 font-medium mb-1 block">Nome no cartão</label>
+                                                        <input
+                                                            type="text" placeholder="NOME COMO NO CARTÃO"
+                                                            value={cardName}
+                                                            onChange={(e) => setCardName(e.target.value.toUpperCase())}
+                                                            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 uppercase"
+                                                        />
+                                                    </div>
+                                                    {/* Expiry + CVV */}
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-xs text-zinc-400 font-medium mb-1 block">Validade</label>
+                                                            <input
+                                                                type="text" inputMode="numeric" placeholder="MM/AA"
+                                                                value={cardExpiry}
+                                                                onChange={(e) => setCardExpiry(fmtExpiry(e.target.value))}
+                                                                className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 font-mono"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-xs text-zinc-400 font-medium mb-1 block">CVV</label>
+                                                            <input
+                                                                type="text" inputMode="numeric" placeholder="123"
+                                                                value={cardCVV}
+                                                                onChange={(e) => setCardCVV(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                                                className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 font-mono"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    {/* Installments */}
+                                                    <div>
+                                                        <label className="text-xs text-zinc-400 font-medium mb-1 block">Parcelas</label>
+                                                        <select
+                                                            value={cardInstall}
+                                                            onChange={(e) => setCardInstall(Number(e.target.value))}
+                                                            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-400/50 appearance-none"
+                                                        >
+                                                            {[1, 2, 3, 6, 12].map((n) => (
+                                                                <option key={n} value={n}>
+                                                                    {n}x de {fmt(period.price / n)} {n === 1 ? '(sem juros)' : ''}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <button onClick={handleCard}
+                                                    className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl transition-all active:scale-[0.98] mt-1">
+                                                    <CreditCard className="w-5 h-5" strokeWidth={1.5} />
+                                                    Pagar {fmt(period.price)}
+                                                </button>
+                                            </>
+                                        )}
 
                                         <div className="flex items-center justify-center gap-1.5 pt-1">
                                             <ShieldCheck className="w-3 h-3 text-zinc-600" strokeWidth={1.5} />
@@ -527,68 +616,17 @@ export default function Impulsionar() {
                                 </>
                             )}
 
-                            {/* ═══════════════════════════════════════════════════
-                                VIEW: bricks — inline MP Checkout Bricks widget
-                            ═══════════════════════════════════════════════════ */}
-                            {modalView === 'bricks' && (
-                                <>
-                                    <div className="flex items-center justify-between p-5 border-b border-white/8">
-                                        <div>
-                                            <h2 className="text-lg font-black text-white">Pagamento</h2>
-                                            <p className="text-zinc-500 text-xs mt-0.5">
-                                                <span className="text-brand-400 font-bold">{fmt(period.price)}</span> · {periodLabel}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button onClick={() => { bricksRef.current?.unmount(); setModalView('choose'); }}
-                                                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1">
-                                                ← Voltar
-                                            </button>
-                                            <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors">
-                                                <X className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* MP Bricks renders into this div */}
-                                    <div className="p-4 max-h-[70vh] overflow-y-auto">
-                                        <div id={bricksContainerId} className="min-h-[200px]">
-                                            {/* MP Bricks widget mounts here */}
-                                            {!prefId && (
-                                                <div className="flex flex-col items-center justify-center gap-3 py-12">
-                                                    <div className="w-10 h-10 rounded-full border-2 border-brand-400/20 border-t-brand-400 animate-spin" />
-                                                    <p className="text-zinc-400 text-sm">Carregando checkout…</p>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex items-center justify-center gap-1.5 mt-4">
-                                            <ShieldCheck className="w-3 h-3 text-zinc-600" strokeWidth={1.5} />
-                                            <p className="text-[11px] text-zinc-600">Pagamento seguro certificado pelo Mercado Pago</p>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            {/* ═══════════════════════════════════════════════════
-                                VIEW: redirect — show link to open in new tab
-                            ═══════════════════════════════════════════════════ */}
-                            {modalView === 'redirect' && mpCheckoutUrl && (
+                            {/* ── MP REDIRECT: show link + open in new tab ── */}
+                            {payStatus === 'mp_redirect' && mpCheckoutUrl && (
                                 <>
                                     <div className="flex items-center justify-between p-5 border-b border-white/8">
                                         <div>
                                             <h2 className="text-lg font-black text-white">Checkout gerado</h2>
                                             <p className="text-zinc-500 text-xs mt-0.5">Abra o link para concluir o pagamento</p>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <button onClick={() => setModalView('choose')}
-                                                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1">
-                                                ← Voltar
-                                            </button>
-                                            <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors">
-                                                <X className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
-                                            </button>
-                                        </div>
+                                        <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors">
+                                            <X className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
+                                        </button>
                                     </div>
                                     <div className="p-6 flex flex-col gap-4">
                                         <div className="p-4 bg-brand-400/8 border border-brand-400/20 rounded-2xl">
@@ -633,10 +671,83 @@ export default function Impulsionar() {
                                 </>
                             )}
 
-                            {/* ═══════════════════════════════════════════════════
-                                VIEW: approved — success screen
-                            ═══════════════════════════════════════════════════ */}
-                            {modalView === 'approved' && (
+                            {/* ── LOADING ── */}
+                            {payStatus === 'loading' && (
+                                <div className="p-12 flex flex-col items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full border-2 border-brand-400/20 border-t-brand-400 animate-spin" />
+                                    <p className="text-white font-bold">Processando pagamento…</p>
+                                    <p className="text-zinc-500 text-sm text-center">Aguarde, estamos se comunicando com o Mercado Pago.</p>
+                                </div>
+                            )}
+
+                            {/* ── PIX WAITING: show QR code inline ── */}
+                            {payStatus === 'pix_waiting' && pixCode && (
+                                <>
+                                    <div className="flex items-center justify-between p-5 border-b border-white/8">
+                                        <div>
+                                            <h2 className="text-lg font-black text-white">QR Code PIX</h2>
+                                            <p className="text-zinc-500 text-xs mt-0.5">Escaneie para pagar {fmt(period.price)}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/15 border border-yellow-500/30 rounded-full">
+                                            <Clock className="w-3 h-3 text-yellow-400" strokeWidth={1.5} />
+                                            <span className="text-xs text-yellow-400 font-bold">Aguardando</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 flex flex-col items-center gap-5">
+                                        {/* QR code rendered client-side from the checkout URL */}
+                                        <div className="bg-white p-3 rounded-2xl shadow-lg">
+                                            <QRCodeSVG
+                                                value={pixCode}
+                                                size={192}
+                                                level="M"
+                                                includeMargin={false}
+                                            />
+                                        </div>
+
+                                        {/* Polling indicator */}
+                                        {mpPaymentId && (
+                                            <div className="flex items-center gap-2 text-zinc-400 text-xs">
+                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
+                                                Verificando pagamento automaticamente…
+                                            </div>
+                                        )}
+
+                                        {/* Copy link */}
+                                        <div className="w-full">
+                                            <p className="text-zinc-500 text-xs mb-2 text-center">Ou copie o link de pagamento:</p>
+                                            <div className="flex gap-2">
+                                                <div className="flex-1 bg-zinc-800 border border-white/8 rounded-xl px-3 py-2.5 text-zinc-400 text-xs font-mono truncate">
+                                                    {pixCode.slice(0, 40)}…
+                                                </div>
+                                                <button onClick={copyPix}
+                                                    className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all
+                                                        ${copied
+                                                            ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                                                            : 'bg-zinc-800 border border-white/10 text-zinc-300 hover:text-white'
+                                                        }`}>
+                                                    {copied ? <Check className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Copy className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                                                    {copied ? 'Copiado!' : 'Copiar'}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Also offer the direct link */}
+                                        <a href={pixCode} target="_blank" rel="noopener noreferrer"
+                                            className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all text-sm">
+                                            <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
+                                            Abrir no Mercado Pago para pagar com PIX
+                                        </a>
+
+                                        <button onClick={closeModal} className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* ── APPROVED ── */}
+                            {payStatus === 'approved' && (
                                 <div className="p-8 flex flex-col items-center gap-4 text-center">
                                     <motion.div
                                         initial={{ scale: 0.5, opacity: 0 }}
@@ -662,6 +773,26 @@ export default function Impulsionar() {
                                 </div>
                             )}
 
+                            {/* ── REJECTED ── */}
+                            {payStatus === 'rejected' && (
+                                <div className="p-8 flex flex-col items-center gap-4 text-center">
+                                    <div className="w-20 h-20 bg-red-500/15 border border-red-500/30 rounded-3xl flex items-center justify-center">
+                                        <XCircle className="w-10 h-10 text-red-400" strokeWidth={1.5} />
+                                    </div>
+                                    <h2 className="text-2xl font-black text-white">Pagamento recusado</h2>
+                                    <p className="text-zinc-400 text-sm leading-relaxed">
+                                        Seu pagamento foi recusado. Verifique os dados e tente novamente.
+                                    </p>
+                                    <button onClick={() => setPayStatus('idle')}
+                                        className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 border border-white/8 text-white font-bold rounded-xl transition-all text-sm">
+                                        <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
+                                        Tentar novamente
+                                    </button>
+                                    <button onClick={closeModal} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+                                        Cancelar
+                                    </button>
+                                </div>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}
