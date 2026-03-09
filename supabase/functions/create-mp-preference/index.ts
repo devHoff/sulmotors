@@ -58,12 +58,14 @@ Deno.serve(async (req) => {
             user_id,
             user_email,
             carro_desc,
-            // credit card fields
+            // credit card fields (raw — server tokenizes)
             card_number,
             card_holder_name,
             card_expiry_month,
             card_expiry_year,
             card_cvv,
+            // OR pre-tokenized from browser MP SDK
+            card_token,
             installments = 1,
             payment_method_id,
             issuer_id,
@@ -203,38 +205,50 @@ Deno.serve(async (req) => {
 
         // ══════════════════════════════════════════════════════════════════════
         // MODE C — Credit Card payment
+        // Accepts either:
+        //   (a) card_token — pre-tokenized by browser MP SDK (preferred)
+        //   (b) raw card fields — server tokenizes via /v1/card_tokens
         // ══════════════════════════════════════════════════════════════════════
         if (payment_method === 'credit_card') {
-            // Step 1: Tokenize card server-side
-            if (!card_number) return json({ error: 'Dados do cartão ausentes.' }, 400);
+            // Step 1: Get or create card token
+            let resolvedToken: string;
 
-            const tokenRes = await fetch('https://api.mercadopago.com/v1/card_tokens', {
-                method: 'POST',
-                headers: {
-                    'Content-Type':  'application/json',
-                    'Authorization': `Bearer ${mpToken}`,
-                },
-                body: JSON.stringify({
-                    card_number:      String(card_number).replace(/\s/g, ''),
-                    cardholder: {
-                        name:           card_holder_name ?? '',
-                        identification: { type: 'CPF', number: '00000000000' },
+            if (card_token) {
+                // Browser already tokenized — use directly
+                resolvedToken = String(card_token);
+            } else {
+                // Server-side tokenization from raw card data
+                if (!card_number) return json({ error: 'Dados do cartão ausentes.' }, 400);
+
+                const tokenRes = await fetch('https://api.mercadopago.com/v1/card_tokens', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type':  'application/json',
+                        'Authorization': `Bearer ${mpToken}`,
                     },
-                    expiration_month: Number(card_expiry_month),
-                    expiration_year:  Number(card_expiry_year),
-                    security_code:    String(card_cvv),
-                }),
-            });
-            const tokenData = await tokenRes.json();
-            if (!tokenRes.ok || !tokenData.id) {
-                return json({ error: tokenData?.message ?? 'Erro ao tokenizar cartão.', details: tokenData }, 400);
+                    body: JSON.stringify({
+                        card_number:      String(card_number).replace(/\s/g, ''),
+                        cardholder: {
+                            name:           card_holder_name ?? '',
+                            identification: { type: 'CPF', number: '00000000000' },
+                        },
+                        expiration_month: Number(card_expiry_month),
+                        expiration_year:  Number(card_expiry_year),
+                        security_code:    String(card_cvv),
+                    }),
+                });
+                const tokenData = await tokenRes.json();
+                if (!tokenRes.ok || !tokenData.id) {
+                    return json({ error: tokenData?.message ?? 'Erro ao tokenizar cartão.', details: tokenData }, 400);
+                }
+                resolvedToken = tokenData.id;
             }
 
             // Step 2: Create payment with token
             const mpBody = {
                 transaction_amount: Number(preco),
                 description,
-                token:              tokenData.id,
+                token:              resolvedToken,
                 installments:       Number(installments),
                 payment_method_id:  payment_method_id ?? 'visa',
                 external_reference: pagamentoId ?? anuncio_id,
