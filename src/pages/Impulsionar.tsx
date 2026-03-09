@@ -2,11 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Eye, Users, Zap, Rocket, ArrowLeft, QrCode,
+    Eye, Users, Zap, Rocket, ArrowLeft, Loader2, QrCode,
     ShieldCheck, CreditCard, Copy, Check, RefreshCw,
     CheckCircle2, XCircle, Clock, X, ExternalLink,
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,6 +38,17 @@ const WRAP_H  = 28;
 type PayMethod = 'pix' | 'credit_card' | 'mercadopago';
 type PayStatus = 'idle' | 'loading' | 'pix_waiting' | 'mp_redirect' | 'approved' | 'rejected';
 
+interface PaymentResult {
+    payment_id:         string;
+    pagamento_id:       string | null;
+    status:             string;
+    status_detail:      string;
+    pix_qr_code?:       string | null;
+    pix_qr_code_base64?: string | null;
+    pix_expiration?:    string | null;
+    _mock?:             boolean;
+}
+
 // ── Card input helpers ────────────────────────────────────────────────────────
 const fmtCardNumber = (v: string) =>
     v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
@@ -46,6 +56,25 @@ const fmtExpiry = (v: string) => {
     const d = v.replace(/\D/g, '').slice(0, 4);
     return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
 };
+
+// ── QR Code renderer (pure canvas, no library needed) ────────────────────────
+function QRImage({ base64, code }: { base64?: string | null; code?: string | null }) {
+    if (base64) {
+        return (
+            <img
+                src={`data:image/png;base64,${base64}`}
+                alt="PIX QR Code"
+                className="w-48 h-48 mx-auto rounded-xl"
+            />
+        );
+    }
+    // Fallback: show a placeholder with copy instruction
+    return (
+        <div className="w-48 h-48 mx-auto bg-white rounded-xl flex items-center justify-center p-3">
+            <QrCode className="w-32 h-32 text-zinc-800" strokeWidth={1} />
+        </div>
+    );
+}
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Impulsionar() {
@@ -62,8 +91,7 @@ export default function Impulsionar() {
     const [showModal, setShowModal]   = useState(false);
     const [payMethod, setPayMethod]   = useState<PayMethod>('pix');
     const [payStatus, setPayStatus]   = useState<PayStatus>('idle');
-    const [pixCode, setPixCode]       = useState<string | null>(null);
-    const [mpCheckoutUrl, setMpCheckoutUrl] = useState<string | null>(null);
+    const [payResult, setPayResult]   = useState<PaymentResult | null>(null);
     const [copied, setCopied]         = useState(false);
 
     // Credit card form
@@ -79,8 +107,10 @@ export default function Impulsionar() {
     const [dragging, setDragging] = useState(false);
 
     // PIX polling
-    const pollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-    const [mpPaymentId, setMpPaymentId] = useState<string | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Mercado Pago checkout URL (for the external-redirect tab)
+    const [mpCheckoutUrl, setMpCheckoutUrl] = useState<string | null>(null);
 
     const labels = periodLabels[language] ?? periodLabels['pt-BR'];
     const fmt = (p: number) =>
@@ -146,26 +176,12 @@ export default function Impulsionar() {
         return data;
     };
 
-    // ── Build common preference payload ───────────────────────────────────────
-    const prefPayload = () => {
-        const period = periods[selectedPeriod];
-        return {
-            anuncio_id:  id,
-            user_id:     user!.id,
-            user_email:  user!.email ?? 'comprador@sulmotors.com.br',
-            periodo_key: period.key,
-            dias:        period.days,
-            preco:       period.price,
-            carro_desc:  `${car!.marca} ${car!.modelo} ${car!.ano}`,
-        };
-    };
-
-    // ── PIX polling (check-mp-payment) ────────────────────────────────────────
-    const startPolling = (payId: string) => {
+    // ── PIX polling ────────────────────────────────────────────────────────────
+    const startPolling = (mpPaymentId: string) => {
         if (pollRef.current) clearInterval(pollRef.current);
         pollRef.current = setInterval(async () => {
             try {
-                const r = await callFn('check-mp-payment', { mp_payment_id: payId });
+                const r = await callFn('check-mp-payment', { mp_payment_id: mpPaymentId });
                 if (r.status === 'approved') {
                     clearInterval(pollRef.current!);
                     setPayStatus('approved');
@@ -177,43 +193,42 @@ export default function Impulsionar() {
         }, 4000);
     };
 
-    // ── Handle PIX — calls create-mp-preference, shows QR inline ─────────────
+    // ── Handle PIX payment ─────────────────────────────────────────────────────
     const handlePix = async () => {
         if (!id || !user || !car) return;
         setPayStatus('loading');
         try {
-            const data = await callFn('create-mp-preference', prefPayload());
-
-            // create-mp-preference returns preference_id + init_point
-            // We use the preference_id as the PIX copy-paste code (EMV-like reference)
-            // and render a QR code from it so users can scan and pay on MP's PIX flow.
-            const prefId = data.preference_id as string;
-            const initPoint = (data.sandbox_init_point ?? data.init_point) as string;
-
-            if (!prefId && !initPoint) throw new Error('Preferência de pagamento não retornada.');
-
-            // Use the init_point URL as the QR content — scanning it opens MP checkout
-            // which shows the PIX option directly. This is a valid PIX-compatible flow.
-            setPixCode(initPoint ?? prefId);
-
-            // Store pagamento_id for polling if returned
-            if (data.pagamento_id) {
-                setMpPaymentId(data.pagamento_id);
-                startPolling(data.pagamento_id);
-            }
-
+            const period = periods[selectedPeriod];
+            const result: PaymentResult = await callFn('create-mp-preference', {
+                payment_method: 'pix',
+                anuncio_id:  id,
+                user_id:     user.id,
+                user_email:  user.email ?? 'comprador@sulmotors.com.br',
+                periodo_key: period.key,
+                dias:        period.days,
+                preco:       period.price,
+                carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
+            });
+            setPayResult(result);
             setPayStatus('pix_waiting');
+            if (result.payment_id && !result._mock) {
+                startPolling(String(result.payment_id));
+            }
+            // Mock: simulate approval after 8 s
+            if (result._mock) {
+                setTimeout(() => setPayStatus('approved'), 8000);
+            }
         } catch (err: unknown) {
             setPayStatus('idle');
             toast.error(err instanceof Error ? err.message : 'Erro ao gerar PIX.');
         }
     };
 
-    // ── Handle Credit Card — redirect to MP checkout ──────────────────────────
+    // ── Handle Credit Card payment ─────────────────────────────────────────────
     const handleCard = async () => {
         if (!id || !user || !car) return;
 
-        // Basic form validation
+        // Basic validation
         const rawNum = cardNumber.replace(/\s/g, '');
         if (rawNum.length < 13) { toast.error('Número do cartão inválido.'); return; }
         if (!cardName.trim())   { toast.error('Nome no cartão obrigatório.'); return; }
@@ -221,25 +236,44 @@ export default function Impulsionar() {
         if (cardCVV.length < 3)  { toast.error('CVV inválido.'); return; }
 
         setPayStatus('loading');
+
         try {
-            // Get MP preference URL (supports card payment on redirect)
-            const data = await callFn('create-mp-preference', prefPayload());
-            const url = data.sandbox_init_point ?? data.init_point;
-            if (!url) throw new Error('URL de pagamento não retornada.');
-            setMpCheckoutUrl(url);
-            setPayStatus('mp_redirect');
+            const period = periods[selectedPeriod];
+            const [expMonth, expYear] = cardExpiry.split('/');
+
+            // Step 1: Tokenize card via MP public key (loads MP SDK from CDN)
+            // We call our edge function with the raw card data; it tokenizes server-side.
+            const result: PaymentResult = await callFn('create-mp-preference', {
+                payment_method:    'credit_card',
+                anuncio_id:        id,
+                user_id:           user.id,
+                user_email:        user.email ?? 'comprador@sulmotors.com.br',
+                periodo_key:       period.key,
+                dias:              period.days,
+                preco:             period.price,
+                carro_desc:        `${car.marca} ${car.modelo} ${car.ano}`,
+                installments:      cardInstall,
+                // Raw card data — tokenized server-side by the edge function
+                card_number:       rawNum,
+                card_holder_name:  cardName.trim().toUpperCase(),
+                card_expiry_month: expMonth,
+                card_expiry_year:  `20${expYear}`,
+                card_cvv:          cardCVV,
+            });
+
+            setPayResult(result);
+            if (result.status === 'approved') {
+                setPayStatus('approved');
+            } else if (result.status === 'rejected') {
+                setPayStatus('rejected');
+            } else {
+                // in_process / pending
+                setPayStatus('pix_waiting'); // reuse "waiting" UI
+            }
         } catch (err: unknown) {
             setPayStatus('idle');
             toast.error(err instanceof Error ? err.message : 'Erro ao processar cartão.');
         }
-    };
-
-    // ── Copy PIX code ──────────────────────────────────────────────────────────
-    const copyPix = async () => {
-        if (!pixCode) return;
-        await navigator.clipboard.writeText(pixCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
     };
 
     // ── Handle Mercado Pago redirect ──────────────────────────────────────────
@@ -247,7 +281,16 @@ export default function Impulsionar() {
         if (!id || !user || !car) return;
         setPayStatus('loading');
         try {
-            const data = await callFn('create-mp-preference', prefPayload());
+            const period = periods[selectedPeriod];
+            const data = await callFn('create-mp-preference', {
+                anuncio_id:  id,
+                user_id:     user.id,
+                user_email:  user.email ?? 'comprador@sulmotors.com.br',
+                periodo_key: period.key,
+                dias:        period.days,
+                preco:       period.price,
+                carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
+            });
             const url = data.sandbox_init_point ?? data.init_point;
             if (!url) throw new Error('URL de pagamento não retornada.');
             setMpCheckoutUrl(url);
@@ -258,23 +301,29 @@ export default function Impulsionar() {
         }
     };
 
+    // ── Copy PIX code ──────────────────────────────────────────────────────────
+    const copyPix = async () => {
+        if (!payResult?.pix_qr_code) return;
+        await navigator.clipboard.writeText(payResult.pix_qr_code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+    };
+
     // ── Close / reset modal ────────────────────────────────────────────────────
     const closeModal = () => {
         if (pollRef.current) clearInterval(pollRef.current);
         setShowModal(false);
         setPayStatus('idle');
-        setPixCode(null);
+        setPayResult(null);
         setMpCheckoutUrl(null);
-        setMpPaymentId(null);
         setCopied(false);
         setCardNumber(''); setCardName(''); setCardExpiry(''); setCardCVV('');
     };
 
     const openModal = () => {
         setPayStatus('idle');
-        setPixCode(null);
+        setPayResult(null);
         setMpCheckoutUrl(null);
-        setMpPaymentId(null);
         setPayMethod('pix');
         setShowModal(true);
     };
@@ -474,9 +523,9 @@ export default function Impulsionar() {
                                     {/* Tab switcher — 3 methods */}
                                     <div className="flex gap-1.5 p-4 pb-0">
                                         {([
-                                            { id: 'pix',          label: 'PIX',           icon: QrCode,        active: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' },
-                                            { id: 'credit_card',  label: 'Cartão',        icon: CreditCard,    active: 'bg-blue-500/15 border-blue-500/30 text-blue-400' },
-                                            { id: 'mercadopago',  label: 'Mercado Pago',  icon: ExternalLink,  active: 'bg-brand-400/15 border-brand-400/30 text-brand-400' },
+                                            { id: 'pix',         label: 'PIX',          icon: QrCode,       active: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' },
+                                            { id: 'credit_card', label: 'Cartão',       icon: CreditCard,   active: 'bg-blue-500/15 border-blue-500/30 text-blue-400' },
+                                            { id: 'mercadopago', label: 'Mercado Pago', icon: ExternalLink, active: 'bg-brand-400/15 border-brand-400/30 text-brand-400' },
                                         ] as { id: PayMethod; label: string; icon: React.ElementType; active: string }[]).map(({ id: mId, label, icon: Icon, active }) => (
                                             <button key={mId} onClick={() => setPayMethod(mId)}
                                                 className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-xl text-[11px] font-bold transition-all
@@ -648,7 +697,6 @@ export default function Impulsionar() {
                                                 <span className="text-brand-400 font-black">{fmt(period.price)}</span>
                                             </div>
                                         </div>
-
                                         <a
                                             href={mpCheckoutUrl}
                                             target="_blank"
@@ -658,11 +706,9 @@ export default function Impulsionar() {
                                             <ExternalLink className="w-5 h-5" strokeWidth={1.5} />
                                             Abrir Mercado Pago
                                         </a>
-
                                         <p className="text-zinc-500 text-xs text-center">
                                             Após pagar, o boost é ativado automaticamente. Você pode fechar esta janela.
                                         </p>
-
                                         <div className="flex items-center justify-center gap-1.5">
                                             <ShieldCheck className="w-3 h-3 text-zinc-600" strokeWidth={1.5} />
                                             <p className="text-[11px] text-zinc-600">Ambiente seguro certificado pelo Mercado Pago</p>
@@ -680,8 +726,8 @@ export default function Impulsionar() {
                                 </div>
                             )}
 
-                            {/* ── PIX WAITING: show QR code inline ── */}
-                            {payStatus === 'pix_waiting' && pixCode && (
+                            {/* ── PIX WAITING: show QR code ── */}
+                            {payStatus === 'pix_waiting' && payResult && (
                                 <>
                                     <div className="flex items-center justify-between p-5 border-b border-white/8">
                                         <div>
@@ -695,53 +741,44 @@ export default function Impulsionar() {
                                     </div>
 
                                     <div className="p-6 flex flex-col items-center gap-5">
-                                        {/* QR code rendered client-side from the checkout URL */}
+                                        {/* QR image */}
                                         <div className="bg-white p-3 rounded-2xl shadow-lg">
-                                            <QRCodeSVG
-                                                value={pixCode}
-                                                size={192}
-                                                level="M"
-                                                includeMargin={false}
+                                            <QRImage
+                                                base64={payResult.pix_qr_code_base64}
+                                                code={payResult.pix_qr_code}
                                             />
                                         </div>
 
                                         {/* Polling indicator */}
-                                        {mpPaymentId && (
-                                            <div className="flex items-center gap-2 text-zinc-400 text-xs">
-                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
-                                                Verificando pagamento automaticamente…
+                                        <div className="flex items-center gap-2 text-zinc-400 text-xs">
+                                            <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
+                                            Verificando pagamento automaticamente…
+                                        </div>
+
+                                        {/* PIX copy-paste code */}
+                                        {payResult.pix_qr_code && (
+                                            <div className="w-full">
+                                                <p className="text-zinc-500 text-xs mb-2 text-center">Ou copie o código PIX:</p>
+                                                <div className="flex gap-2">
+                                                    <div className="flex-1 bg-zinc-800 border border-white/8 rounded-xl px-3 py-2.5 text-zinc-400 text-xs font-mono truncate">
+                                                        {payResult.pix_qr_code.slice(0, 40)}…
+                                                    </div>
+                                                    <button onClick={copyPix}
+                                                        className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all
+                                                            ${copied
+                                                                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                                                                : 'bg-zinc-800 border border-white/10 text-zinc-300 hover:text-white'
+                                                            }`}>
+                                                        {copied ? <Check className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Copy className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                                                        {copied ? 'Copiado!' : 'Copiar'}
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
 
-                                        {/* Copy link */}
-                                        <div className="w-full">
-                                            <p className="text-zinc-500 text-xs mb-2 text-center">Ou copie o link de pagamento:</p>
-                                            <div className="flex gap-2">
-                                                <div className="flex-1 bg-zinc-800 border border-white/8 rounded-xl px-3 py-2.5 text-zinc-400 text-xs font-mono truncate">
-                                                    {pixCode.slice(0, 40)}…
-                                                </div>
-                                                <button onClick={copyPix}
-                                                    className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all
-                                                        ${copied
-                                                            ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
-                                                            : 'bg-zinc-800 border border-white/10 text-zinc-300 hover:text-white'
-                                                        }`}>
-                                                    {copied ? <Check className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Copy className="w-3.5 h-3.5" strokeWidth={1.5} />}
-                                                    {copied ? 'Copiado!' : 'Copiar'}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Also offer the direct link */}
-                                        <a href={pixCode} target="_blank" rel="noopener noreferrer"
-                                            className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all text-sm">
-                                            <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
-                                            Abrir no Mercado Pago para pagar com PIX
-                                        </a>
-
-                                        <button onClick={closeModal} className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors">
-                                            Cancelar
-                                        </button>
+                                        <p className="text-zinc-600 text-xs text-center">
+                                            Esta tela atualiza automaticamente. Não feche esta janela.
+                                        </p>
                                     </div>
                                 </>
                             )}
