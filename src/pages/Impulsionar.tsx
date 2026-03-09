@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -46,6 +47,8 @@ interface PaymentResult {
     pix_qr_code?:       string | null;
     pix_qr_code_base64?: string | null;
     pix_expiration?:    string | null;
+    init_point?:        string | null;  // fallback: MP checkout URL for QR
+    preference_id?:     string | null;  // from redirect mode
     _mock?:             boolean;
 }
 
@@ -57,8 +60,9 @@ const fmtExpiry = (v: string) => {
     return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
 };
 
-// ── QR Code renderer (pure canvas, no library needed) ────────────────────────
-function QRImage({ base64, code }: { base64?: string | null; code?: string | null }) {
+// ── QR Code renderer ─────────────────────────────────────────────────────────
+function QRImage({ base64, code, url }: { base64?: string | null; code?: string | null; url?: string | null }) {
+    // Priority 1: real PIX base64 image from Mercado Pago
     if (base64) {
         return (
             <img
@@ -68,7 +72,15 @@ function QRImage({ base64, code }: { base64?: string | null; code?: string | nul
             />
         );
     }
-    // Fallback: show a placeholder with copy instruction
+    // Priority 2: generate QR from PIX copy-paste code
+    if (code) {
+        return <QRCodeSVG value={code} size={192} bgColor="#ffffff" fgColor="#18181b" level="M" />;
+    }
+    // Priority 3: generate QR from MP checkout URL (opens MP checkout on scan)
+    if (url) {
+        return <QRCodeSVG value={url} size={192} bgColor="#ffffff" fgColor="#18181b" level="M" />;
+    }
+    // Fallback placeholder
     return (
         <div className="w-48 h-48 mx-auto bg-white rounded-xl flex items-center justify-center p-3">
             <QrCode className="w-32 h-32 text-zinc-800" strokeWidth={1} />
@@ -199,7 +211,7 @@ export default function Impulsionar() {
         setPayStatus('loading');
         try {
             const period = periods[selectedPeriod];
-            const result: PaymentResult = await callFn('create-mp-preference', {
+            const raw = await callFn('create-mp-preference', {
                 payment_method: 'pix',
                 anuncio_id:  id,
                 user_id:     user.id,
@@ -209,12 +221,30 @@ export default function Impulsionar() {
                 preco:       period.price,
                 carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
             });
+
+            // The live function may return PIX data (pix_qr_code) or preference/redirect data.
+            // Build a unified PaymentResult regardless of which mode the server is running.
+            const result: PaymentResult = {
+                payment_id:         raw.payment_id   ?? raw.preference_id ?? 'mp-checkout',
+                pagamento_id:       raw.pagamento_id ?? null,
+                status:             raw.status        ?? 'pending',
+                status_detail:      raw.status_detail ?? 'waiting_transfer',
+                pix_qr_code:        raw.pix_qr_code        ?? null,
+                pix_qr_code_base64: raw.pix_qr_code_base64 ?? null,
+                pix_expiration:     raw.pix_expiration     ?? null,
+                // fallback: use sandbox_init_point (or init_point) for QR generation
+                init_point:         raw.sandbox_init_point ?? raw.init_point ?? null,
+                preference_id:      raw.preference_id      ?? null,
+                _mock:              raw._mock ?? false,
+            };
+
             setPayResult(result);
             setPayStatus('pix_waiting');
-            if (result.payment_id && !result._mock) {
+
+            if (result.payment_id && !result._mock && !result.preference_id) {
+                // Only poll when we have a real MP payment ID (not a preference)
                 startPolling(String(result.payment_id));
             }
-            // Mock: simulate approval after 8 s
             if (result._mock) {
                 setTimeout(() => setPayStatus('approved'), 8000);
             }
@@ -746,14 +776,36 @@ export default function Impulsionar() {
                                             <QRImage
                                                 base64={payResult.pix_qr_code_base64}
                                                 code={payResult.pix_qr_code}
+                                                url={payResult.init_point}
                                             />
                                         </div>
+                                        {/* If using MP checkout URL as QR, show a notice */}
+                                        {!payResult.pix_qr_code && !payResult.pix_qr_code_base64 && payResult.init_point && (
+                                            <p className="text-yellow-400/80 text-xs text-center px-2">
+                                                Escaneie para abrir o checkout do Mercado Pago e selecione PIX para pagar.
+                                            </p>
+                                        )}
 
-                                        {/* Polling indicator */}
-                                        <div className="flex items-center gap-2 text-zinc-400 text-xs">
-                                            <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
-                                            Verificando pagamento automaticamente…
-                                        </div>
+                                        {/* Polling indicator — only show when we have a real payment ID */}
+                                        {!payResult.preference_id && (
+                                            <div className="flex items-center gap-2 text-zinc-400 text-xs">
+                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
+                                                Verificando pagamento automaticamente…
+                                            </div>
+                                        )}
+
+                                        {/* Link to open MP checkout directly (when using preference mode) */}
+                                        {payResult.preference_id && payResult.init_point && (
+                                            <a
+                                                href={payResult.init_point}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="w-full flex items-center justify-center gap-2 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all text-sm"
+                                            >
+                                                <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
+                                                Abrir Mercado Pago para pagar com PIX
+                                            </a>
+                                        )}
 
                                         {/* PIX copy-paste code */}
                                         {payResult.pix_qr_code && (
