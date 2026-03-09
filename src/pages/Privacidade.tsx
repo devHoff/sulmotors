@@ -5,11 +5,11 @@ import { Link } from 'react-router-dom';
 const sections = [
     {
         title: '1. Quem somos e como nos contatar',
-        content: `SulMotors é uma plataforma de marketplace automotivo operada no Brasil. Somos o controlador dos dados pessoais coletados em nossa Plataforma nos termos da Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018). Contato do encarregado (DPO): suporte@sulmotors.com.br — Porto Alegre, RS, Brasil.`,
+        content: `SulMotor é uma plataforma de marketplace automotivo operada no Brasil. Somos o controlador dos dados pessoais coletados em nossa Plataforma nos termos da Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018). Contato do encarregado (DPO): suporte@sulmotors.com.br — Porto Alegre, RS, Brasil.`,
     },
     {
         title: '2. Quais dados coletamos',
-        content: `Coletamos as seguintes categorias de dados pessoais: (a) Dados de cadastro: nome completo, endereço de e-mail, número de telefone; (b) Dados de perfil: foto de perfil (opcional), informações inseridas pelo usuário; (c) Dados de anúncios: informações sobre veículos anunciados, imagens, descrições e preços; (d) Dados de pagamento: processados integralmente pelo Mercado Pago — o SulMotors não armazena dados de cartão de crédito ou chaves PIX; (e) Dados de uso: endereço IP, tipo de navegador, páginas visitadas, tempo de sessão, cliques e interações na Plataforma; (f) Cookies e tecnologias similares: conforme descrito na seção 5 abaixo.`,
+        content: `Coletamos as seguintes categorias de dados pessoais: (a) Dados de cadastro: nome completo, endereço de e-mail, número de telefone; (b) Dados de perfil: foto de perfil (opcional), informações inseridas pelo usuário; (c) Dados de anúncios: informações sobre veículos anunciados, imagens, descrições e preços; (d) Dados de pagamento: processados integralmente pelo Mercado Pago — o SulMotor não armazena dados de cartão de crédito ou chaves PIX; (e) Dados de uso: endereço IP, tipo de navegador, páginas visitadas, tempo de sessão, cliques e interações na Plataforma; (f) Cookies e tecnologias similares: conforme descrito na seção 5 abaixo.`,
     },
     {
         title: '3. Como usamos seus dados',

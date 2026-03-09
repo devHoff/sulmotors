@@ -36,7 +36,7 @@ const rights = [
     {
         id: '06',
         title: 'Informação sobre compartilhamento (Art. 18, VII)',
-        desc: 'Você tem o direito de saber com quais entidades públicas e privadas o SulMotors compartilha seus dados pessoais.',
+        desc: 'Você tem o direito de saber com quais entidades públicas e privadas o SulMotor compartilha seus dados pessoais.',
         action: 'Essa informação está disponível na seção 6 da nossa Política de Privacidade. Para detalhes adicionais, escreva para suporte@sulmotors.com.br.',
     },
     {

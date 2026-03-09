@@ -74,7 +74,7 @@ export default function SobreNos() {
                     </motion.div>
                     <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative">
                         <div className="relative rounded-2xl overflow-hidden shadow-xl dark:shadow-none">
-                            <img src="https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=600&q=80" alt="Equipe SulMotors" className="w-full h-80 object-cover" />
+                            <img src="https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=600&q=80" alt="Equipe SulMotor" className="w-full h-80 object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                         </div>
                         <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-brand-400/10 border border-brand-400/20 rounded-2xl -z-10" />

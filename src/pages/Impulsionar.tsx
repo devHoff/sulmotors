@@ -353,25 +353,21 @@ export default function Impulsionar() {
             });
 
             setPayResult({
-                payment_id:    result.payment_id    ?? result.preference_id ?? '',
+                payment_id:    String(result.payment_id ?? result.preference_id ?? ''),
                 pagamento_id:  result.pagamento_id  ?? null,
                 status:        result.status         ?? 'pending',
                 status_detail: result.status_detail  ?? '',
-                preference_id: result.preference_id  ?? null,
-                init_point:    result.sandbox_init_point ?? result.init_point ?? null,
                 _mock:         result._mock ?? false,
             });
 
+            // Always stay in-page — never redirect to Mercado Pago for card payments.
             if (result.status === 'approved' || result._mock) {
                 setPayStatus('approved');
             } else if (result.status === 'rejected') {
                 setPayStatus('rejected');
-            } else if (result.preference_id) {
-                // Edge function returned a preference (old deployed version) — redirect to MP
-                setMpCheckoutUrl(result.sandbox_init_point ?? result.init_point);
-                setPayStatus('mp_redirect');
             } else {
-                setPayStatus('approved'); // in_process → treat as pending approval
+                // in_process / pending → treat as approved pending confirmation
+                setPayStatus('approved');
             }
         } catch (err: unknown) {
             setPayStatus('idle');

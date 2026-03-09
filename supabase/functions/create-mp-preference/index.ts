@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
         }
 
         const mpToken  = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
-        const baseUrl  = Deno.env.get('APP_URL') ?? 'https://sulmotors.com.br';
+        const baseUrl  = Deno.env.get('APP_URL') ?? 'https://sulmotor.com.br';
         const sbUrl    = Deno.env.get('SUPABASE_URL') ?? '';
         const sbSvcKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
                     pagamento_id:      mockId,
                     status:            'pending',
                     status_detail:     'waiting_transfer',
-                    pix_qr_code:       '00020126580014BR.GOV.BCB.PIX0136mock-pix-key-for-testing-only5204000053039865802BR5925SulMotors Plataforma6009SAO PAULO62290525sulmotors-mock-ref-0001630421A4',
+                    pix_qr_code:       '00020126580014BR.GOV.BCB.PIX0136mock-pix-key-for-testing-only52040000530398654051985802BR5925SulMotor Plataforma000006009SAO PAULO62270523sulmotor-mock-ref-000163042A4E',
                     pix_qr_code_base64: null,
                     pix_expiration:    new Date(Date.now() + 30 * 60 * 1000).toISOString(),
                     _mock: true,

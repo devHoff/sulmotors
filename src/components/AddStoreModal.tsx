@@ -14,12 +14,12 @@ export default function AddStoreModal({ isOpen, onClose }: AddStoreModalProps) {
     const { t } = useLanguage();
 
     const handleWhatsApp = () => {
-        const msg = encodeURIComponent('Olá! Gostaria de adicionar minha loja na SulMotors.');
+        const msg = encodeURIComponent('Olá! Gostaria de adicionar minha loja na SulMotor.');
         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
     };
 
     const handleEmail = () => {
-        window.location.href = `mailto:${EMAIL_ADDRESS}?subject=Quero adicionar minha loja na SulMotors`;
+        window.location.href = `mailto:${EMAIL_ADDRESS}?subject=Quero adicionar minha loja na SulMotor`;
     };
 
     return (

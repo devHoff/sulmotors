@@ -58,8 +58,8 @@ export default function Footer() {
                     <div className="md:col-span-4">
                         <Link to="/" className="flex items-center mb-5">
                             <img
-                                src={isDark ? '/logo-dark.png' : '/logo-light.png'}
-                                alt="SulMotors"
+                                src={isDark ? '/logo-light.png' : '/logo-dark.png'}
+                                alt="SulMotor"
                                 className="h-9 w-auto object-contain transition-opacity duration-300 hover:opacity-85"
                             />
                         </Link>
