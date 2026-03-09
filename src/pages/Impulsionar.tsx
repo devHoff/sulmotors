@@ -211,8 +211,10 @@ export default function Impulsionar() {
         setPayStatus('loading');
         try {
             const period = periods[selectedPeriod];
+            // NOTE: Do NOT send payment_method field — the deployed function only
+            // works in redirect/preference mode. The PIX QR is generated client-side
+            // from the init_point URL using qrcode.react.
             const raw = await callFn('create-mp-preference', {
-                payment_method: 'pix',
                 anuncio_id:  id,
                 user_id:     user.id,
                 user_email:  user.email ?? 'comprador@sulmotors.com.br',
@@ -255,6 +257,8 @@ export default function Impulsionar() {
     };
 
     // ── Handle Credit Card payment ─────────────────────────────────────────────
+    // The deployed create-mp-preference only works in redirect mode.
+    // So for credit card we generate an MP checkout URL and redirect there.
     const handleCard = async () => {
         if (!id || !user || !car) return;
 
@@ -269,37 +273,21 @@ export default function Impulsionar() {
 
         try {
             const period = periods[selectedPeriod];
-            const [expMonth, expYear] = cardExpiry.split('/');
-
-            // Step 1: Tokenize card via MP public key (loads MP SDK from CDN)
-            // We call our edge function with the raw card data; it tokenizes server-side.
-            const result: PaymentResult = await callFn('create-mp-preference', {
-                payment_method:    'credit_card',
-                anuncio_id:        id,
-                user_id:           user.id,
-                user_email:        user.email ?? 'comprador@sulmotors.com.br',
-                periodo_key:       period.key,
-                dias:              period.days,
-                preco:             period.price,
-                carro_desc:        `${car.marca} ${car.modelo} ${car.ano}`,
-                installments:      cardInstall,
-                // Raw card data — tokenized server-side by the edge function
-                card_number:       rawNum,
-                card_holder_name:  cardName.trim().toUpperCase(),
-                card_expiry_month: expMonth,
-                card_expiry_year:  `20${expYear}`,
-                card_cvv:          cardCVV,
+            // Call in redirect mode (no payment_method) — opens MP checkout where
+            // user can pay with credit card inside the secure MP environment.
+            const data = await callFn('create-mp-preference', {
+                anuncio_id:  id,
+                user_id:     user.id,
+                user_email:  user.email ?? 'comprador@sulmotors.com.br',
+                periodo_key: period.key,
+                dias:        period.days,
+                preco:       period.price,
+                carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
             });
-
-            setPayResult(result);
-            if (result.status === 'approved') {
-                setPayStatus('approved');
-            } else if (result.status === 'rejected') {
-                setPayStatus('rejected');
-            } else {
-                // in_process / pending
-                setPayStatus('pix_waiting'); // reuse "waiting" UI
-            }
+            const url = data.sandbox_init_point ?? data.init_point;
+            if (!url) throw new Error('URL de pagamento não retornada.');
+            setMpCheckoutUrl(url);
+            setPayStatus('mp_redirect');
         } catch (err: unknown) {
             setPayStatus('idle');
             toast.error(err instanceof Error ? err.message : 'Erro ao processar cartão.');
