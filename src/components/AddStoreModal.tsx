@@ -69,6 +69,12 @@ export default function AddStoreModal({ isOpen, onClose }: AddStoreModalProps) {
                                     {t.stores_add_body}
                                 </p>
 
+                                {/* Contact info */}
+                                <div className="flex items-center gap-2 mb-5 px-4 py-3 bg-emerald-500/8 border border-emerald-500/20 rounded-xl">
+                                    <MessageCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" strokeWidth={1.5} />
+                                    <span className="text-sm text-emerald-600 dark:text-emerald-400 font-bold">+55 51 9226-3188</span>
+                                </div>
+
                                 {/* CTA buttons */}
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <button

@@ -7,7 +7,7 @@ import {
     Heart, Share2
 } from 'lucide-react';
 import { type Car } from '../data/mockCars';
-import { supabase } from '../lib/supabase';
+import { supabase, supabasePublic } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -30,7 +30,7 @@ export default function DetalheCarro() {
         async function fetchCar() {
             if (!id) return;
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabasePublic
                     .from('anuncios').select('*').eq('id', id).single();
                 if (error) throw error;
                 if (data) {
@@ -40,7 +40,7 @@ export default function DetalheCarro() {
                             .from('curtidas').select('id').eq('anuncio_id', id).eq('user_id', user.id).maybeSingle();
                         setLiked(!!likeData);
                     }
-                    const { count } = await supabase
+                    const { count } = await supabasePublic
                         .from('curtidas').select('*', { count: 'exact', head: true }).eq('anuncio_id', id);
                     setLikeCount(count ?? 0);
                 }

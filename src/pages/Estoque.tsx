@@ -4,7 +4,7 @@ import { Search, SlidersHorizontal, Loader2, X, Car, ArrowUpDown, ChevronDown } 
 import { motion, AnimatePresence } from 'framer-motion';
 import CarCard from '../components/CarCard';
 import { brands, type Car as CarType } from '../data/mockCars';
-import { supabase } from '../lib/supabase';
+import { supabasePublic } from '../lib/supabase';
 
 export default function Estoque() {
     const [searchParams] = useSearchParams();
@@ -36,7 +36,7 @@ export default function Estoque() {
     useEffect(() => {
         const fetchCars = async () => {
             setLoading(true);
-            const { data, error } = await supabase.from('anuncios').select('*');
+            const { data, error } = await supabasePublic.from('anuncios').select('*');
             if (!error && data) {
                 setSupabaseCars(data.map((d: any) => ({
                     id: d.id, marca: d.marca, modelo: d.modelo, ano: d.ano,

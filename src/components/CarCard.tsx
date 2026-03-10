@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Heart, MapPin, Gauge, Calendar, Fuel, ArrowUpRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Car } from '../data/mockCars';
-import { supabase } from '../lib/supabase';
+import { supabase, supabasePublic } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 interface CarCardProps {
@@ -36,7 +36,7 @@ export default function CarCard({ car, showActions, onEdit, onDelete, onBoost }:
 
     useEffect(() => {
         const fetchLikes = async () => {
-            const { count } = await supabase
+            const { count } = await supabasePublic
                 .from('curtidas').select('*', { count: 'exact', head: true }).eq('anuncio_id', car.id);
             setLikeCount(count ?? 0);
             if (user) {

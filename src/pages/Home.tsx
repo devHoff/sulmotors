@@ -9,7 +9,7 @@ import {
 import CarCard from '../components/CarCard';
 import AddStoreModal from '../components/AddStoreModal';
 import { type Car as CarType } from '../data/mockCars';
-import { supabase } from '../lib/supabase';
+import { supabase, supabasePublic } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const heroImages = [
@@ -38,7 +38,7 @@ export default function Home() {
         const fetchFeatured = async () => {
             setLoadingFeatured(true);
             // Fetch ALL cars sorted by boost/destaque so highlighted ones appear first
-            const { data, error, count } = await supabase.from('anuncios').select('*', { count: 'exact' })
+            const { data, error, count } = await supabasePublic.from('anuncios').select('*', { count: 'exact' })
                 .order('impulsionado', { ascending: false })
                 .order('destaque',     { ascending: false })
                 .order('prioridade',   { ascending: false })
