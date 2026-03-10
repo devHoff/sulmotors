@@ -261,6 +261,7 @@ export default function AnunciarCarro() {
                                     placeholder="Ex: Porto Alegre - RS"
                                     className={inputClass}
                                     allowCustom={true}
+                                    minChars={2}
                                     addNewLabel={(v) => `Usar "${v}"`}
                                 />
                             </div>

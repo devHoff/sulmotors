@@ -11,6 +11,11 @@ interface AutocompleteInputProps {
     allowCustom?: boolean;
     /** Label shown at the bottom of the dropdown when the typed value is not in the list */
     addNewLabel?: (input: string) => string;
+    /**
+     * Minimum number of characters before suggestions appear.
+     * Defaults to 1. Set to 2 for large lists (e.g. city names) to reduce noise.
+     */
+    minChars?: number;
 }
 
 export default function AutocompleteInput({
@@ -21,6 +26,7 @@ export default function AutocompleteInput({
     className = '',
     allowCustom = true,
     addNewLabel = (v) => `Usar "${v}"`,
+    minChars = 1,
 }: AutocompleteInputProps) {
     const [open, setOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value);
@@ -43,11 +49,17 @@ export default function AutocompleteInput({
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    const filtered = suggestions.filter(s =>
-        s.toLowerCase().includes(inputValue.toLowerCase())
-    ).slice(0, 10);
+    // Only filter when we have enough characters
+    const hasEnoughChars = inputValue.trim().length >= minChars;
+
+    const filtered = hasEnoughChars
+        ? suggestions
+            .filter(s => s.toLowerCase().includes(inputValue.toLowerCase()))
+            .slice(0, 10)
+        : [];
 
     const showAddNew = allowCustom &&
+        hasEnoughChars &&
         inputValue.trim().length > 0 &&
         !suggestions.some(s => s.toLowerCase() === inputValue.trim().toLowerCase());
 
