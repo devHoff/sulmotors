@@ -229,9 +229,31 @@ export const mockCars: Car[] = [
 ];
 
 export const brands = [
-    'BMW', 'Chevrolet', 'Fiat', 'Ford', 'Honda', 'Hyundai', 'Jeep',
-    'Mercedes-Benz', 'Nissan', 'Peugeot', 'Renault', 'Toyota', 'Volkswagen',
-];
+    // Brazilian
+    'Agrale', 'Troller', 'Lobini', 'Puma', 'Miura',
+    // German
+    'Audi', 'BMW', 'Mercedes-Benz', 'Volkswagen', 'Porsche', 'Opel', 'Smart',
+    // American
+    'Chevrolet', 'Ford', 'Jeep', 'Dodge', 'Chrysler', 'RAM', 'Cadillac', 'Tesla', 'GMC',
+    // Japanese
+    'Toyota', 'Honda', 'Nissan', 'Mitsubishi', 'Suzuki', 'Subaru', 'Lexus', 'Infiniti', 'Acura',
+    // Korean
+    'Hyundai', 'Kia', 'SsangYong',
+    // French
+    'Renault', 'Peugeot', 'Citroën', 'DS',
+    // Italian
+    'Fiat', 'Ferrari', 'Lamborghini', 'Maserati', 'Alfa Romeo', 'Abarth',
+    // Chinese
+    'BYD', 'Caoa Chery', 'GWM', 'Great Wall', 'JAC Motors', 'Omoda', 'Jaecoo', 'Haval', 'Leapmotor', 'Geely', 'Changan',
+    // Swedish
+    'Volvo', 'Polestar', 'Saab',
+    // British
+    'Land Rover', 'Range Rover', 'Jaguar', 'Mini', 'Bentley', 'Rolls-Royce', 'Aston Martin', 'McLaren',
+    // Spanish
+    'SEAT', 'Cupra',
+    // Romanian / Russian / others
+    'Dacia', 'Lada', 'Daewoo',
+].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
 export const fuels = ['Flex', 'Gasolina', 'Diesel', 'Etanol', 'Híbrido', 'Elétrico'];
 export const transmissions = ['Manual', 'Automático', 'CVT', 'Automatizado'];

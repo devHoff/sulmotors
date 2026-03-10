@@ -201,6 +201,23 @@ export default function Impulsionar() {
         return data;
     };
 
+    // ── Activate boost in DB after successful payment ─────────────────────────
+    const activateBoost = async (days: number) => {
+        if (!id) return;
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + days);
+        try {
+            await supabase.from('anuncios').update({
+                destaque:        true,
+                impulsionado:    true,
+                impulsionado_ate: expiresAt.toISOString(),
+                prioridade:      10,
+            }).eq('id', id);
+        } catch (err) {
+            console.error('activateBoost error:', err);
+        }
+    };
+
     // ── PIX polling ────────────────────────────────────────────────────────────
     const startPolling = (mpPaymentId: string) => {
         if (pollRef.current) clearInterval(pollRef.current);
@@ -209,6 +226,7 @@ export default function Impulsionar() {
                 const r = await callFn('check-mp-payment', { mp_payment_id: mpPaymentId });
                 if (r.status === 'approved') {
                     clearInterval(pollRef.current!);
+                    await activateBoost(periods[selectedPeriod].days);
                     setPayStatus('approved');
                 } else if (r.status === 'rejected' || r.status === 'cancelled') {
                     clearInterval(pollRef.current!);
@@ -278,7 +296,10 @@ export default function Impulsionar() {
                 startPolling(String(result.payment_id));
             }
             if (result._mock) {
-                setTimeout(() => setPayStatus('approved'), 8000);
+                setTimeout(async () => {
+                    await activateBoost(periods[selectedPeriod].days);
+                    setPayStatus('approved');
+                }, 8000);
             }
         } catch (err: unknown) {
             setPayStatus('idle');
@@ -362,11 +383,13 @@ export default function Impulsionar() {
 
             // Always stay in-page — never redirect to Mercado Pago for card payments.
             if (result.status === 'approved' || result._mock) {
+                await activateBoost(periods[selectedPeriod].days);
                 setPayStatus('approved');
             } else if (result.status === 'rejected') {
                 setPayStatus('rejected');
             } else {
                 // in_process / pending → treat as approved pending confirmation
+                await activateBoost(periods[selectedPeriod].days);
                 setPayStatus('approved');
             }
         } catch (err: unknown) {

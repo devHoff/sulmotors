@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, Loader2, Zap, Car } from 'lucide-react';
 import { toast } from 'sonner';
 import { brands, fuels, transmissions } from '../data/mockCars';
-import { brazilianCities } from '../data/brazilianCities';
+import { useBrazilianCities } from '../hooks/useBrazilianCities';
 import CropModal from '../components/CropModal';
 import AutocompleteInput from '../components/AutocompleteInput';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,6 +39,7 @@ export default function AnunciarCarro() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { t } = useLanguage();
+    const { cities: brazilianCities } = useBrazilianCities();
     const [form, setForm] = useState<FormData>(initialForm);
     const [images, setImages] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);

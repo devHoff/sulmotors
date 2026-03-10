@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mockCars, brands, fuels, transmissions, type Car } from '../data/mockCars';
-import { brazilianCities } from '../data/brazilianCities';
+import { useBrazilianCities } from '../hooks/useBrazilianCities';
 import CropModal from '../components/CropModal';
 import AutocompleteInput from '../components/AutocompleteInput';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +30,7 @@ export default function EditarAnuncio() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { cities: brazilianCities } = useBrazilianCities();
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
