@@ -32,7 +32,7 @@ export default function Footer() {
     const socials = [
         {
             label: t.footer_whatsapp_label,
-            href: 'https://wa.me/5551999999999',
+            href: 'https://wa.me/5551922263188',
             icon: <IconWhatsApp className="w-4 h-4" />,
         },
         {
@@ -42,7 +42,7 @@ export default function Footer() {
         },
         {
             label: 'Email',
-            href: 'mailto:contato@sulmotors.com.br',
+            href: 'mailto:bandasleonardo@gmail.com',
             icon: <Mail className="w-4 h-4" strokeWidth={1.5} />,
         },
     ];
@@ -152,10 +152,10 @@ export default function Footer() {
                                     <Mail className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
                                 </div>
                                 <a
-                                    href="mailto:contato@sulmotors.com.br"
+                                    href="mailto:bandasleonardo@gmail.com"
                                     className="text-sm text-slate-600 dark:text-zinc-400 hover:text-brand-400 transition-colors"
                                 >
-                                    contato@sulmotors.com.br
+                                    bandasleonardo@gmail.com
                                 </a>
                             </li>
                         </ul>

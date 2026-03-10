@@ -7,8 +7,8 @@ interface AddStoreModalProps {
     onClose: () => void;
 }
 
-const WHATSAPP_NUMBER = '5551999999999'; // Replace with real number
-const EMAIL_ADDRESS = 'parceiros@sulmotors.com.br';
+const WHATSAPP_NUMBER = '5551922263188'; // SulMotor contact
+const EMAIL_ADDRESS = 'bandasleonardo@gmail.com';
 
 export default function AddStoreModal({ isOpen, onClose }: AddStoreModalProps) {
     const { t } = useLanguage();

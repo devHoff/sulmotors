@@ -25,6 +25,7 @@ export default function Home() {
     const [heroIndex, setHeroIndex] = useState(0);
     const [featuredCars, setFeaturedCars] = useState<CarType[]>([]);
     const [loadingFeatured, setLoadingFeatured] = useState(true);
+    const [totalCars, setTotalCars] = useState<number | null>(null);
     const [addStoreOpen, setAddStoreOpen] = useState(false);
     const heroTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -36,10 +37,12 @@ export default function Home() {
     useEffect(() => {
         const fetchFeatured = async () => {
             setLoadingFeatured(true);
-            const { data, error } = await supabase.from('anuncios').select('*')
-                .or('destaque.eq.true,impulsionado.eq.true')
-                .order('prioridade', { ascending: false })
-                .order('created_at', { ascending: false })
+            // Fetch ALL cars sorted by boost/destaque so highlighted ones appear first
+            const { data, error, count } = await supabase.from('anuncios').select('*', { count: 'exact' })
+                .order('impulsionado', { ascending: false })
+                .order('destaque',     { ascending: false })
+                .order('prioridade',   { ascending: false })
+                .order('created_at',   { ascending: false })
                 .limit(8);
             if (!error && data) {
                 setFeaturedCars(data.map((d: any) => ({
@@ -55,6 +58,7 @@ export default function Home() {
                     created_at: d.created_at, user_id: d.user_id,
                 })));
             }
+            if (count !== null) setTotalCars(count);
             setLoadingFeatured(false);
         };
         fetchFeatured();
@@ -63,10 +67,10 @@ export default function Home() {
     const handleSearch = () => navigate(`/estoque?q=${encodeURIComponent(searchTerm)}`);
 
     const stats = [
-        { value: '2.400+', label: t.home_stats_vehicles, icon: Car    },
-        { value: '98%',    label: t.home_stats_clients,  icon: Users  },
-        { value: '150+',   label: t.home_stats_stores,   icon: Store  },
-        { value: '8+',     label: t.home_stats_market,   icon: Globe  },
+        { value: totalCars !== null ? String(totalCars) : '…', label: t.home_stats_vehicles, icon: Car    },
+        { value: '98%', label: t.home_stats_clients,  icon: Users  },
+        { value: '1',   label: t.home_stats_stores,   icon: Store  },
+        { value: '8+',  label: t.home_stats_market,   icon: Globe  },
     ];
 
     const categories = [
