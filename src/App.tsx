@@ -16,6 +16,9 @@ import Login from './pages/Login';
 import Termos from './pages/Termos';
 import Privacidade from './pages/Privacidade';
 import SeusDireitos from './pages/SeusDireitos';
+import Avaliar from './pages/Avaliar';
+import Alertas from './pages/Alertas';
+import Admin from './pages/Admin';
 
 export default function App() {
     return (
@@ -23,21 +26,24 @@ export default function App() {
             <ScrollToTop />
             <Routes>
                 <Route element={<Layout />}>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/estoque" element={<Estoque />} />
-                    <Route path="/anunciar" element={<AnunciarCarro />} />
-                    <Route path="/editar/:id" element={<EditarAnuncio />} />
-                    <Route path="/meus-anuncios" element={<MeusAnuncios />} />
-                    <Route path="/favoritos" element={<MeusFavoritos />} />
-                    <Route path="/meu-perfil" element={<MeuPerfil />} />
-                    <Route path="/impulsionar/:id" element={<Impulsionar />} />
+                    <Route path="/"                   element={<Home />} />
+                    <Route path="/estoque"            element={<Estoque />} />
+                    <Route path="/anunciar"           element={<AnunciarCarro />} />
+                    <Route path="/editar/:id"         element={<EditarAnuncio />} />
+                    <Route path="/meus-anuncios"      element={<MeusAnuncios />} />
+                    <Route path="/favoritos"          element={<MeusFavoritos />} />
+                    <Route path="/meu-perfil"         element={<MeuPerfil />} />
+                    <Route path="/impulsionar/:id"    element={<Impulsionar />} />
                     <Route path="/impulsionar/sucesso" element={<ImpulsionarSucesso />} />
-                    <Route path="/carro/:id" element={<DetalheCarro />} />
-                    <Route path="/sobre-nos" element={<SobreNos />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/termos" element={<Termos />} />
-                    <Route path="/privacidade" element={<Privacidade />} />
-                    <Route path="/seus-direitos" element={<SeusDireitos />} />
+                    <Route path="/carro/:id"          element={<DetalheCarro />} />
+                    <Route path="/sobre-nos"          element={<SobreNos />} />
+                    <Route path="/login"              element={<Login />} />
+                    <Route path="/termos"             element={<Termos />} />
+                    <Route path="/privacidade"        element={<Privacidade />} />
+                    <Route path="/seus-direitos"      element={<SeusDireitos />} />
+                    <Route path="/avaliar"            element={<Avaliar />} />
+                    <Route path="/alertas"            element={<Alertas />} />
+                    <Route path="/admin"              element={<Admin />} />
                 </Route>
             </Routes>
         </>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogOut, User as UserIcon, ChevronDown, Sun, Moon, Home, Car, Building2, PlusCircle } from 'lucide-react';
+import { Menu, X, LogOut, User as UserIcon, ChevronDown, Sun, Moon, Home, Car, Building2, PlusCircle, TrendingUp, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -72,8 +72,8 @@ export default function Navbar() {
     const links = [
         { to: '/',          label: t.nav_home,      icon: Home       },
         { to: '/estoque',   label: t.nav_inventory, icon: Car        },
+        { to: '/avaliar',   label: 'Avaliar',        icon: TrendingUp },
         { to: '/sobre-nos', label: t.nav_about,     icon: Building2  },
-        { to: '/anunciar',  label: t.nav_advertise, icon: PlusCircle },
     ];
 
     const isActive = (path: string) => location.pathname === path;
@@ -226,6 +226,8 @@ export default function Navbar() {
                                                 { to: '/meu-perfil', label: t.nav_profile },
                                                 { to: '/favoritos', label: t.nav_favorites },
                                                 { to: '/meus-anuncios', label: t.nav_my_ads },
+                                                { to: '/alertas', label: 'Alertas' },
+                                                { to: '/avaliar', label: 'Avaliar carro' },
                                             ].map((item) => (
                                                 <Link
                                                     key={item.to}
@@ -355,6 +357,7 @@ export default function Navbar() {
                                         { to: '/meu-perfil', label: t.nav_profile },
                                         { to: '/favoritos', label: t.nav_favorites },
                                         { to: '/meus-anuncios', label: t.nav_my_ads },
+                                        { to: '/alertas', label: 'Alertas' },
                                     ].map((item) => (
                                         <Link
                                             key={item.to}

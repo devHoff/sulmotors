@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Instagram, Mail, Phone, MapPin, ArrowUpRight } from 'lucide-react';
+import { Instagram, Mail, Phone, MapPin, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -26,13 +26,15 @@ export default function Footer() {
     const companyLinks = [
         { to: '/sobre-nos', label: t.footer_about },
         { to: '/anunciar',  label: t.footer_advertise },
+        { to: '/avaliar',   label: 'Avaliar carro' },
+        { to: '/alertas',   label: 'Alertas de veículo' },
         { to: '/login',     label: t.footer_enter },
     ];
 
     const socials = [
         {
             label: t.footer_whatsapp_label,
-            href: 'https://wa.me/5551922263188',
+            href: 'https://wa.me/555192263188',
             icon: <IconWhatsApp className="w-4 h-4" />,
         },
         {
@@ -191,6 +193,21 @@ export default function Footer() {
                             >
                                 {t.footer_rights}
                             </Link>
+                            <span className="text-slate-300 dark:text-zinc-700 text-xs">|</span>
+                            <Link
+                                to="/cookies"
+                                className="text-xs text-slate-400 dark:text-zinc-600 hover:text-brand-400 transition-colors"
+                            >
+                                Cookies
+                            </Link>
+                        </div>
+
+                        {/* Legal disclaimer */}
+                        <div className="mt-3 flex items-start gap-2 w-full">
+                            <ShieldCheck className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-600 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+                            <p className="text-xs text-slate-400 dark:text-zinc-600 leading-relaxed">
+                                O SulMotors atua exclusivamente como plataforma digital intermediária. Não participamos de transações, não garantimos o estado dos veículos e não somos responsáveis pelas negociações entre compradores e vendedores.
+                            </p>
                         </div>
                     </div>
                 </div>

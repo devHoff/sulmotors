@@ -1,15 +1,21 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, X, Car, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Car, ArrowUpDown, ChevronDown, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CarCard from '../components/CarCard';
 import { brands, type Car as CarType } from '../data/mockCars';
 import { supabasePublic } from '../lib/supabase';
 
+// ── WhatsApp helper ────────────────────────────────────────────────────────────
+const WA_NUMBER = '555192263188';
+function waLink(msg = '') {
+    return `https://wa.me/${WA_NUMBER}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`;
+}
+
 export default function Estoque() {
     const [searchParams] = useSearchParams();
-    const initialQuery = searchParams.get('q') || '';
-    const selectedLoja = searchParams.get('loja') || '';
+    const initialQuery   = searchParams.get('q')    || '';
+    const selectedLoja   = searchParams.get('loja') || '';
 
     const [loading, setLoading]           = useState(true);
     const [supabaseCars, setSupabaseCars] = useState<CarType[]>([]);
@@ -21,10 +27,16 @@ export default function Estoque() {
     const [brandDropOpen, setBrandDropOpen]   = useState(false);
     const brandRef = useRef<HTMLDivElement>(null);
 
-    // ── Price filter: optional numeric input ─────────────────────────────────
+    // ── Price filter: dual input + slider + quick buttons ────────────────────
+    const [minPriceInDB, setMinPriceInDB] = useState(0);
+    const [maxPriceInDB, setMaxPriceInDB] = useState(1000000);
+    const [priceMin, setPriceMin]         = useState(0);
+    const [priceMax, setPriceMax]         = useState(1000000);
+    const [priceMinInput, setPriceMinInput] = useState('');
+    const [priceMaxInput, setPriceMaxInput] = useState('');
     const [priceFilterEnabled, setPriceFilterEnabled] = useState(false);
-    const [priceMaxInput, setPriceMaxInput]           = useState('');   // raw text
-    const [priceMax, setPriceMax]                     = useState(0);    // parsed
+    const sliderTrackRef = useRef<HTMLDivElement>(null);
+    const draggingThumb  = useRef<'min' | 'max' | null>(null);
 
     // ── Year filter ───────────────────────────────────────────────────────────
     const currentYear = new Date().getFullYear();
@@ -65,20 +77,84 @@ export default function Estoque() {
                     created_at: d.created_at, user_id: d.user_id, loja: d.loja,
                 }));
                 setSupabaseCars(mapped);
+                // Compute DB min/max
+                if (mapped.length > 0) {
+                    const prices = mapped.map(c => c.preco);
+                    const dbMin = Math.floor(Math.min(...prices));
+                    const dbMax = Math.ceil(Math.max(...prices));
+                    setMinPriceInDB(dbMin);
+                    setMaxPriceInDB(dbMax);
+                    setPriceMin(dbMin);
+                    setPriceMax(dbMax);
+                    setPriceMinInput(String(dbMin));
+                    setPriceMaxInput(String(dbMax));
+                }
             }
             setLoading(false);
         };
         fetchCars();
     }, []);
 
-    // Parse price input on change
-    const handlePriceInput = (raw: string) => {
-        setPriceMaxInput(raw);
-        const n = parseFloat(raw.replace(/\./g, '').replace(',', '.'));
-        setPriceMax(isNaN(n) ? 0 : n);
+    // ── Slider drag logic ──────────────────────────────────────────────────────
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+    const xToPrice = useCallback((clientX: number) => {
+        const track = sliderTrackRef.current;
+        if (!track) return 0;
+        const { left, width } = track.getBoundingClientRect();
+        const ratio = clamp((clientX - left) / width, 0, 1);
+        return Math.round(minPriceInDB + ratio * (maxPriceInDB - minPriceInDB));
+    }, [minPriceInDB, maxPriceInDB]);
+
+    useEffect(() => {
+        const onMove = (e: PointerEvent) => {
+            if (!draggingThumb.current) return;
+            const price = xToPrice(e.clientX);
+            if (draggingThumb.current === 'min') {
+                const v = clamp(price, minPriceInDB, priceMax - 1);
+                setPriceMin(v);
+                setPriceMinInput(String(v));
+            } else {
+                const v = clamp(price, priceMin + 1, maxPriceInDB);
+                setPriceMax(v);
+                setPriceMaxInput(String(v));
+            }
+        };
+        const onUp = () => { draggingThumb.current = null; };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup',   onUp);
+        return () => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup',   onUp);
+        };
+    }, [xToPrice, minPriceInDB, maxPriceInDB, priceMin, priceMax]);
+
+    const pct = (v: number) =>
+        maxPriceInDB === minPriceInDB ? 0
+        : ((v - minPriceInDB) / (maxPriceInDB - minPriceInDB)) * 100;
+
+    // ── Price input helpers ────────────────────────────────────────────────────
+    const applyMinInput = (raw: string) => {
+        const n = parseInt(raw.replace(/\D/g, ''), 10);
+        if (!isNaN(n)) {
+            const v = clamp(n, minPriceInDB, priceMax - 1);
+            setPriceMin(v);
+            setPriceMinInput(String(v));
+        }
+    };
+    const applyMaxInput = (raw: string) => {
+        const n = parseInt(raw.replace(/\D/g, ''), 10);
+        if (!isNaN(n)) {
+            const v = clamp(n, priceMin + 1, maxPriceInDB);
+            setPriceMax(v);
+            setPriceMaxInput(String(v));
+        }
     };
 
-    // Brand multi-select helpers
+    // Quick price presets
+    const quickPresets = [30000, 50000, 80000, 100000];
+
+    // ── Brand multi-select helpers ─────────────────────────────────────────────
     const toggleBrand = (brand: string) =>
         setSelectedBrands(prev =>
             prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]);
@@ -89,7 +165,7 @@ export default function Estoque() {
 
     const activeFilters =
         selectedBrands.length > 0 ||
-        (priceFilterEnabled && priceMax > 0) ||
+        (priceFilterEnabled && (priceMin > minPriceInDB || priceMax < maxPriceInDB)) ||
         yearMin > 2000 ||
         sortOrder !== 'default';
 
@@ -97,8 +173,10 @@ export default function Estoque() {
         setSelectedBrands([]);
         setBrandSearch('');
         setPriceFilterEnabled(false);
-        setPriceMaxInput('');
-        setPriceMax(0);
+        setPriceMin(minPriceInDB);
+        setPriceMax(maxPriceInDB);
+        setPriceMinInput(String(minPriceInDB));
+        setPriceMaxInput(String(maxPriceInDB));
         setYearMin(2000);
         setSearch('');
         setSortOrder('default');
@@ -109,7 +187,7 @@ export default function Estoque() {
             const q = search.toLowerCase();
             const matchesSearch  = q === '' || `${car.marca} ${car.modelo}`.toLowerCase().includes(q);
             const matchesBrand   = selectedBrands.length === 0 || selectedBrands.includes(car.marca);
-            const matchesPrice   = !priceFilterEnabled || priceMax <= 0 || car.preco <= priceMax;
+            const matchesPrice   = !priceFilterEnabled || (car.preco >= priceMin && car.preco <= priceMax);
             const matchesYear    = car.ano >= yearMin;
             const matchesLoja    = selectedLoja === '' || car.loja === selectedLoja;
             return matchesSearch && matchesBrand && matchesPrice && matchesYear && matchesLoja;
@@ -119,9 +197,12 @@ export default function Estoque() {
             return b.prioridade - a.prioridade ||
                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
-    }, [search, selectedBrands, priceFilterEnabled, priceMax, yearMin, supabaseCars, selectedLoja, sortOrder]);
+    }, [search, selectedBrands, priceFilterEnabled, priceMin, priceMax, yearMin, supabaseCars, selectedLoja, sortOrder]);
 
-    // ── Shared input style ────────────────────────────────────────────────────
+    // ── Formatting helper ──────────────────────────────────────────────────────
+    const fmtBRL = (n: number) =>
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(n);
+
     const inputCls = "w-full px-3 py-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all";
 
     return (
@@ -163,7 +244,7 @@ export default function Estoque() {
                                                 <button key={val} onClick={() => { setSortOrder(val); setSortOpen(false); }}
                                                     className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors
                                                         ${sortOrder === val ? 'bg-brand-400/10 text-brand-500 dark:text-brand-400' : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/8'}`}>
-                                                    {val === 'default' ? 'Ordenar por' : val === 'asc' ? 'Menor preço' : 'Maior preço'}
+                                                    {val === 'default' ? 'Relevância' : val === 'asc' ? 'Menor preço' : 'Maior preço'}
                                                 </button>
                                             ))}
                                         </motion.div>
@@ -196,7 +277,7 @@ export default function Estoque() {
                 <div className="flex flex-col md:flex-row gap-8">
 
                     {/* ── Sidebar Filters ─────────────────────────────────────── */}
-                    <div className={`md:w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden md:block'}`}>
+                    <div className={`md:w-72 flex-shrink-0 ${showFilters ? 'block' : 'hidden md:block'}`}>
                         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-white/8 p-6 sticky top-24 shadow-sm dark:shadow-none space-y-6">
 
                             {/* Header */}
@@ -214,8 +295,6 @@ export default function Estoque() {
                             {/* ── Brand search + tags ─────────────────────────── */}
                             <div>
                                 <h4 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Marca</h4>
-
-                                {/* Selected brand tags */}
                                 {selectedBrands.length > 0 && (
                                     <div className="flex flex-wrap gap-1.5 mb-2">
                                         {selectedBrands.map(b => (
@@ -228,8 +307,6 @@ export default function Estoque() {
                                         ))}
                                     </div>
                                 )}
-
-                                {/* Brand search input */}
                                 <div className="relative" ref={brandRef}>
                                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 pointer-events-none" strokeWidth={1.5} />
                                     <input
@@ -240,7 +317,6 @@ export default function Estoque() {
                                         placeholder="Buscar marca..."
                                         className="w-full pl-8 pr-3 py-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all"
                                     />
-                                    {/* Dropdown suggestions */}
                                     <AnimatePresence>
                                         {brandDropOpen && filteredBrandSuggestions.length > 0 && (
                                             <motion.ul
@@ -266,27 +342,115 @@ export default function Estoque() {
                                 )}
                             </div>
 
-                            {/* ── Price max input ─────────────────────────────── */}
+                            {/* ── Price range filter ──────────────────────────── */}
                             <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <h4 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Preço máximo</h4>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Preço</h4>
                                     <button
-                                        onClick={() => { setPriceFilterEnabled(v => !v); if (priceFilterEnabled) { setPriceMaxInput(''); setPriceMax(0); } }}
+                                        onClick={() => setPriceFilterEnabled(v => !v)}
                                         className={`w-8 h-4 rounded-full transition-colors flex items-center px-0.5 ${priceFilterEnabled ? 'bg-brand-400' : 'bg-slate-300 dark:bg-zinc-600'}`}>
                                         <div className={`w-3 h-3 rounded-full bg-white shadow transition-transform ${priceFilterEnabled ? 'translate-x-4' : ''}`} />
                                     </button>
                                 </div>
+
                                 {priceFilterEnabled ? (
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 dark:text-zinc-500 pointer-events-none">R$</span>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={priceMaxInput}
-                                            onChange={e => handlePriceInput(e.target.value)}
-                                            placeholder="Ex: 150000"
-                                            className="w-full pl-8 pr-3 py-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all"
-                                        />
+                                    <div className="space-y-4">
+                                        {/* Dual inputs */}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="text-xs text-slate-400 dark:text-zinc-500 mb-1 block">Mínimo</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">R$</span>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        value={priceMinInput}
+                                                        onChange={e => setPriceMinInput(e.target.value)}
+                                                        onBlur={e => applyMinInput(e.target.value)}
+                                                        onKeyDown={e => e.key === 'Enter' && applyMinInput(priceMinInput)}
+                                                        className="w-full pl-7 pr-2 py-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-lg text-xs text-slate-900 dark:text-white outline-none transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-slate-400 dark:text-zinc-500 mb-1 block">Máximo</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">R$</span>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        value={priceMaxInput}
+                                                        onChange={e => setPriceMaxInput(e.target.value)}
+                                                        onBlur={e => applyMaxInput(e.target.value)}
+                                                        onKeyDown={e => e.key === 'Enter' && applyMaxInput(priceMaxInput)}
+                                                        className="w-full pl-7 pr-2 py-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-lg text-xs text-slate-900 dark:text-white outline-none transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Dual-thumb slider */}
+                                        <div className="pt-1 pb-3 px-1">
+                                            <div
+                                                ref={sliderTrackRef}
+                                                className="relative h-1.5 bg-slate-200 dark:bg-zinc-700 rounded-full cursor-pointer select-none"
+                                            >
+                                                {/* Fill */}
+                                                <div
+                                                    className="absolute h-full bg-brand-400 rounded-full"
+                                                    style={{ left: `${pct(priceMin)}%`, right: `${100 - pct(priceMax)}%` }}
+                                                />
+                                                {/* Min thumb */}
+                                                <div
+                                                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-brand-400 rounded-full shadow cursor-grab active:cursor-grabbing z-10 hover:scale-125 transition-transform"
+                                                    style={{ left: `${pct(priceMin)}%` }}
+                                                    onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); draggingThumb.current = 'min'; }}
+                                                />
+                                                {/* Max thumb */}
+                                                <div
+                                                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-brand-400 rounded-full shadow cursor-grab active:cursor-grabbing z-10 hover:scale-125 transition-transform"
+                                                    style={{ left: `${pct(priceMax)}%` }}
+                                                    onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); draggingThumb.current = 'max'; }}
+                                                />
+                                            </div>
+                                            <div className="flex justify-between mt-2">
+                                                <span className="text-xs text-brand-500 dark:text-brand-400 font-semibold">{fmtBRL(priceMin)}</span>
+                                                <span className="text-xs text-brand-500 dark:text-brand-400 font-semibold">{fmtBRL(priceMax)}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Quick preset buttons */}
+                                        <div>
+                                            <p className="text-xs text-slate-400 dark:text-zinc-500 mb-2">Filtros rápidos (máximo):</p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {quickPresets.map(p => (
+                                                    <button
+                                                        key={p}
+                                                        onClick={() => {
+                                                            const v = clamp(p, priceMin + 1, maxPriceInDB);
+                                                            setPriceMax(v);
+                                                            setPriceMaxInput(String(v));
+                                                        }}
+                                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all
+                                                            ${priceMax === p
+                                                                ? 'bg-brand-400/20 border-brand-400/50 text-brand-500 dark:text-brand-400'
+                                                                : 'bg-slate-100 dark:bg-zinc-800 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 hover:border-brand-400/40 hover:text-brand-500'}`}>
+                                                        Até {p >= 1000 ? `${p / 1000}k` : p}
+                                                    </button>
+                                                ))}
+                                                <button
+                                                    onClick={() => {
+                                                        setPriceMax(maxPriceInDB);
+                                                        setPriceMaxInput(String(maxPriceInDB));
+                                                    }}
+                                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all
+                                                        ${priceMax === maxPriceInDB
+                                                            ? 'bg-brand-400/20 border-brand-400/50 text-brand-500 dark:text-brand-400'
+                                                            : 'bg-slate-100 dark:bg-zinc-800 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 hover:border-brand-400/40 hover:text-brand-500'}`}>
+                                                    Qualquer
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : (
                                     <p className="text-xs text-slate-400 dark:text-zinc-600 italic">Sem limite de preço</p>
@@ -314,6 +478,15 @@ export default function Estoque() {
                                     </p>
                                 )}
                             </div>
+
+                            {/* ── WhatsApp contact CTA ─────────────────────────── */}
+                            <a
+                                href={waLink('Olá, preciso de ajuda para encontrar um veículo no SulMotors.')}
+                                target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-2 w-full px-3 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-colors">
+                                <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
+                                Precisa de ajuda? Fale conosco
+                            </a>
                         </div>
                     </div>
 
@@ -329,10 +502,10 @@ export default function Estoque() {
                                         <button onClick={() => toggleBrand(brand)}><X className="w-3 h-3" strokeWidth={1.5} /></button>
                                     </span>
                                 ))}
-                                {priceFilterEnabled && priceMax > 0 && (
+                                {priceFilterEnabled && (priceMin > minPriceInDB || priceMax < maxPriceInDB) && (
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-400/10 border border-brand-400/20 text-brand-500 dark:text-brand-400 text-xs font-bold rounded-lg">
-                                        Até R$ {priceMax.toLocaleString('pt-BR')}
-                                        <button onClick={() => { setPriceFilterEnabled(false); setPriceMaxInput(''); setPriceMax(0); }}>
+                                        {fmtBRL(priceMin)} – {fmtBRL(priceMax)}
+                                        <button onClick={() => { setPriceMin(minPriceInDB); setPriceMax(maxPriceInDB); setPriceMinInput(String(minPriceInDB)); setPriceMaxInput(String(maxPriceInDB)); }}>
                                             <X className="w-3 h-3" strokeWidth={1.5} />
                                         </button>
                                     </span>

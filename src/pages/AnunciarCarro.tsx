@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 interface FormData {
     marca: string;
     modelo: string;
+    versao: string;
     ano: string;
     preco: string;
     quilometragem: string;
@@ -22,13 +23,15 @@ interface FormData {
     cambio: string;
     cor: string;
     cidade: string;
+    placa: string;
+    blindado: boolean;
     aceitaTroca: boolean;
 }
 
 const initialForm: FormData = {
-    marca: '', modelo: '', ano: '', preco: '', quilometragem: '',
+    marca: '', modelo: '', versao: '', ano: '', preco: '', quilometragem: '',
     telefone: '', descricao: '', combustivel: '', cambio: '',
-    cor: '', cidade: '', aceitaTroca: false,
+    cor: '', cidade: '', placa: '', blindado: false, aceitaTroca: false,
 };
 
 const inputClass = "w-full px-4 py-3 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-400/60 focus:bg-white dark:focus:bg-zinc-800 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all";
@@ -123,6 +126,14 @@ export default function AnunciarCarro() {
             toast.error('Preencha todos os campos obrigatórios.');
             return;
         }
+        if (!form.placa.trim()) {
+            toast.error('A placa do veículo é obrigatória para segurança.');
+            return;
+        }
+        if (form.descricao.trim().length < 50) {
+            toast.error('A descrição deve ter no mínimo 50 caracteres. Descreva o estado, histórico e detalhes do veículo.');
+            return;
+        }
         if (!user) { toast.error('Você precisa estar logado para anunciar.'); return; }
         try {
             setLoading(true);
@@ -133,6 +144,9 @@ export default function AnunciarCarro() {
                 telefone: form.telefone, descricao: form.descricao,
                 combustivel: form.combustivel, cambio: form.cambio,
                 cor: form.cor, cidade: form.cidade,
+                versao: form.versao || null,
+                placa: form.placa.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                blindado: form.blindado,
                 aceita_troca: form.aceitaTroca, imagens: images,
                 destaque: false, impulsionado: false,
             });
@@ -175,7 +189,7 @@ export default function AnunciarCarro() {
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label className={labelClass}>{t.form_brand}</label>
+                                <label className={labelClass}>{t.form_brand} *</label>
                                 <AutocompleteInput
                                     value={form.marca}
                                     onChange={(v) => update('marca', v)}
@@ -187,11 +201,15 @@ export default function AnunciarCarro() {
                                 />
                             </div>
                             <div>
-                                <label className={labelClass}>{t.form_model}</label>
-                                <input type="text" value={form.modelo} onChange={(e) => update('modelo', e.target.value)} placeholder="Ex: Civic EXL" className={inputClass} />
+                                <label className={labelClass}>{t.form_model} *</label>
+                                <input type="text" value={form.modelo} onChange={(e) => update('modelo', e.target.value)} placeholder="Ex: Civic" className={inputClass} />
                             </div>
                             <div>
-                                <label className={labelClass}>{t.form_year}</label>
+                                <label className={labelClass}>Versão / Acabamento</label>
+                                <input type="text" value={form.versao} onChange={(e) => update('versao', e.target.value)} placeholder="Ex: EXL, Trekking, Sport" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>{t.form_year} *</label>
                                 <div className="relative">
                                     <select value={form.ano} onChange={(e) => update('ano', e.target.value)} className={selectClass}>
                                         <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">{t.form_select_year}</option>
@@ -203,7 +221,7 @@ export default function AnunciarCarro() {
                                 </div>
                             </div>
                             <div>
-                                <label className={labelClass}>{t.form_price}</label>
+                                <label className={labelClass}>{t.form_price} *</label>
                                 <input type="number" value={form.preco} onChange={(e) => update('preco', e.target.value)} placeholder="Ex: 85000" className={inputClass} />
                             </div>
                             <div>
@@ -211,8 +229,20 @@ export default function AnunciarCarro() {
                                 <input type="number" value={form.quilometragem} onChange={(e) => update('quilometragem', e.target.value)} placeholder="Ex: 45000" className={inputClass} />
                             </div>
                             <div>
-                                <label className={labelClass}>{t.form_phone}</label>
+                                <label className={labelClass}>{t.form_phone} *</label>
                                 <input type="text" value={form.telefone} onChange={(e) => update('telefone', e.target.value)} placeholder="(11) 99999-9999" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Placa * <span className="text-xs text-slate-400 dark:text-zinc-500 normal-case font-normal">(obrigatório p/ segurança)</span></label>
+                                <input
+                                    type="text"
+                                    value={form.placa}
+                                    onChange={(e) => update('placa', e.target.value.toUpperCase().slice(0, 7))}
+                                    placeholder="Ex: ABC1D23"
+                                    maxLength={8}
+                                    className={inputClass}
+                                />
+                                <p className="text-xs text-slate-400 dark:text-zinc-600 mt-1">A placa não será exibida publicamente — usada apenas para verificação.</p>
                             </div>
                         </div>
                     </div>
@@ -292,10 +322,23 @@ export default function AnunciarCarro() {
                         <textarea
                             value={form.descricao}
                             onChange={(e) => update('descricao', e.target.value)}
-                            rows={4}
-                            placeholder="Descreva os detalhes do veículo, opcionais, estado de conservação..."
-                            className="w-full px-4 py-3 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all resize-none"
+                            rows={5}
+                            placeholder="Descreva os detalhes do veículo, opcionais, revisões realizadas, estado de conservação, motivo da venda... (mínimo 50 caracteres)"
+                            className={`w-full px-4 py-3 bg-slate-100 dark:bg-zinc-800 border ${form.descricao.length > 0 && form.descricao.length < 50 ? 'border-amber-400/60' : 'border-slate-200 dark:border-white/10'} hover:border-slate-300 dark:hover:border-white/20 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all resize-none`}
                         />
+                        <div className="flex items-center justify-between mt-1.5">
+                            <div>
+                                {form.descricao.length > 0 && form.descricao.length < 50 && (
+                                    <p className="text-xs text-amber-500 font-semibold">Mínimo 50 caracteres ({50 - form.descricao.length} restantes)</p>
+                                )}
+                                {form.descricao.length >= 50 && (
+                                    <p className="text-xs text-emerald-500 font-semibold">✓ Descrição adequada</p>
+                                )}
+                            </div>
+                            <span className={`text-xs font-medium ${form.descricao.length >= 50 ? 'text-emerald-500' : form.descricao.length > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-zinc-500'}`}>
+                                {form.descricao.length}/50+
+                            </span>
+                        </div>
                     </div>
 
                     {/* Section: Fotos */}

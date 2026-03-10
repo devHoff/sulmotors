@@ -38,10 +38,10 @@ export default function Home() {
     useEffect(() => {
         const fetchFeatured = async () => {
             setLoadingFeatured(true);
-            // Fetch ALL cars sorted by boost/destaque so highlighted ones appear first
-            const { data, error, count } = await supabasePublic.from('anuncios').select('*', { count: 'exact' })
+            // Fetch only cars that have paid for boost (impulsionado=true or destaque=true)
+            const { data, error } = await supabasePublic.from('anuncios').select('*')
+                .or('impulsionado.eq.true,destaque.eq.true')
                 .order('impulsionado', { ascending: false })
-                .order('destaque',     { ascending: false })
                 .order('prioridade',   { ascending: false })
                 .order('created_at',   { ascending: false })
                 .limit(8);
@@ -59,10 +59,18 @@ export default function Home() {
                     created_at: d.created_at, user_id: d.user_id,
                 })));
             }
-            if (count !== null) setTotalCars(count);
             setLoadingFeatured(false);
         };
         fetchFeatured();
+
+        // Separate count query for total cars in estoque
+        const fetchCount = async () => {
+            const { count } = await supabasePublic
+                .from('anuncios')
+                .select('id', { count: 'exact', head: true });
+            if (count !== null) setTotalCars(count);
+        };
+        fetchCount();
     }, []);
 
     // Fetch user count
