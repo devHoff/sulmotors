@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, Loader2, Zap, Car } from 'lucide-react';
 import { toast } from 'sonner';
 import { brands, fuels, transmissions } from '../data/mockCars';
+import { brazilianCities } from '../data/brazilianCities';
 import CropModal from '../components/CropModal';
+import AutocompleteInput from '../components/AutocompleteInput';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
@@ -173,15 +175,15 @@ export default function AnunciarCarro() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
                                 <label className={labelClass}>{t.form_brand}</label>
-                                <div className="relative">
-                                    <select value={form.marca} onChange={(e) => update('marca', e.target.value)} className={selectClass}>
-                                        <option value="" className="bg-white dark:bg-zinc-800 text-slate-400 dark:text-zinc-400">{t.form_select_brand}</option>
-                                        {brands.map((b) => <option key={b} value={b} className="bg-white dark:bg-zinc-800 text-slate-900 dark:text-white">{b}</option>)}
-                                    </select>
-                                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                    </div>
-                                </div>
+                                <AutocompleteInput
+                                    value={form.marca}
+                                    onChange={(v) => update('marca', v)}
+                                    suggestions={brands}
+                                    placeholder={t.form_select_brand}
+                                    className={inputClass}
+                                    allowCustom={true}
+                                    addNewLabel={(v) => `Usar "${v}" como marca`}
+                                />
                             </div>
                             <div>
                                 <label className={labelClass}>{t.form_model}</label>
@@ -251,7 +253,15 @@ export default function AnunciarCarro() {
                             </div>
                             <div>
                                 <label className={labelClass}>{t.form_city}</label>
-                                <input type="text" value={form.cidade} onChange={(e) => update('cidade', e.target.value)} placeholder="Ex: São Paulo - SP" className={inputClass} />
+                                <AutocompleteInput
+                                    value={form.cidade}
+                                    onChange={(v) => update('cidade', v)}
+                                    suggestions={brazilianCities}
+                                    placeholder="Ex: Porto Alegre - RS"
+                                    className={inputClass}
+                                    allowCustom={true}
+                                    addNewLabel={(v) => `Usar "${v}"`}
+                                />
                             </div>
                         </div>
 

@@ -26,6 +26,7 @@ export default function Home() {
     const [featuredCars, setFeaturedCars] = useState<CarType[]>([]);
     const [loadingFeatured, setLoadingFeatured] = useState(true);
     const [totalCars, setTotalCars] = useState<number | null>(null);
+    const [totalUsers, setTotalUsers] = useState<number | null>(null);
     const [addStoreOpen, setAddStoreOpen] = useState(false);
     const heroTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -64,13 +65,24 @@ export default function Home() {
         fetchFeatured();
     }, []);
 
+    // Fetch user count
+    useEffect(() => {
+        const fetchUsers = async () => {
+            const { count } = await supabasePublic
+                .from('profiles')
+                .select('id', { count: 'exact', head: true });
+            if (count !== null) setTotalUsers(count);
+        };
+        fetchUsers();
+    }, []);
+
     const handleSearch = () => navigate(`/estoque?q=${encodeURIComponent(searchTerm)}`);
 
     const stats = [
         { value: totalCars !== null ? String(totalCars) : '…', label: t.home_stats_vehicles, icon: Car    },
-        { value: '98%', label: t.home_stats_clients,  icon: Users  },
-        { value: '1',   label: t.home_stats_stores,   icon: Store  },
-        { value: '8+',  label: t.home_stats_market,   icon: Globe  },
+        { value: '-%',                                          label: t.home_stats_clients,  icon: Users  },
+        { value: '1',                                           label: t.home_stats_stores,   icon: Store  },
+        { value: totalUsers !== null ? String(totalUsers) : '…', label: t.home_stats_market, icon: Globe  },
     ];
 
     const categories = [

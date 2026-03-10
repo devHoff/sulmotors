@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mockCars, brands, fuels, transmissions, type Car } from '../data/mockCars';
+import { brazilianCities } from '../data/brazilianCities';
 import CropModal from '../components/CropModal';
+import AutocompleteInput from '../components/AutocompleteInput';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -272,7 +274,7 @@ export default function EditarAnuncio() {
                 <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5 space-y-5">
                     <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2"><span className="w-5 h-5 bg-brand-400/20 border border-brand-400/30 rounded-md flex items-center justify-center text-brand-400 text-xs font-black">1</span>Dados do veículo</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div><label className={lClass}>Marca *</label><div className="relative"><select value={form.marca} onChange={(e) => update('marca', e.target.value)} className={sClass}><option value="" className="bg-white dark:bg-zinc-800">Selecione a marca</option>{brands.map((b) => <option key={b} value={b} className="bg-white dark:bg-zinc-800">{b}</option>)}</select>{chevron}</div></div>
+                        <div><label className={lClass}>Marca *</label><AutocompleteInput value={form.marca} onChange={(v) => update('marca', v)} suggestions={brands} placeholder="Selecione a marca" className={iClass} allowCustom={true} addNewLabel={(v) => `Usar "${v}" como marca`} /></div>
                         <div><label className={lClass}>Modelo *</label><input type="text" value={form.modelo} onChange={(e) => update('modelo', e.target.value)} placeholder="Ex: Civic EXL" className={iClass} /></div>
                         <div><label className={lClass}>Ano *</label><div className="relative"><select value={form.ano} onChange={(e) => update('ano', e.target.value)} className={sClass}><option value="" className="bg-white dark:bg-zinc-800">Selecione o ano</option>{years.map((y) => <option key={y} value={y} className="bg-white dark:bg-zinc-800">{y}</option>)}</select>{chevron}</div></div>
                         <div><label className={lClass}>Preço (R$) *</label><input type="number" value={form.preco} onChange={(e) => update('preco', e.target.value)} className={iClass} /></div>
@@ -287,7 +289,7 @@ export default function EditarAnuncio() {
                         <div><label className={lClass}>Combustível</label><div className="relative"><select value={form.combustivel} onChange={(e) => update('combustivel', e.target.value)} className={sClass}><option value="" className="bg-white dark:bg-zinc-800">Selecione</option>{fuels.map((f) => <option key={f} value={f} className="bg-white dark:bg-zinc-800">{f}</option>)}</select>{chevron}</div></div>
                         <div><label className={lClass}>Câmbio</label><div className="relative"><select value={form.cambio} onChange={(e) => update('cambio', e.target.value)} className={sClass}><option value="" className="bg-white dark:bg-zinc-800">Selecione</option>{transmissions.map((t) => <option key={t} value={t} className="bg-white dark:bg-zinc-800">{t}</option>)}</select>{chevron}</div></div>
                         <div><label className={lClass}>Cor</label><input type="text" value={form.cor} onChange={(e) => update('cor', e.target.value)} className={iClass} /></div>
-                        <div><label className={lClass}>Cidade</label><input type="text" value={form.cidade} onChange={(e) => update('cidade', e.target.value)} className={iClass} /></div>
+                        <div><label className={lClass}>Cidade</label><AutocompleteInput value={form.cidade} onChange={(v) => update('cidade', v)} suggestions={brazilianCities} placeholder="Ex: Porto Alegre - RS" className={iClass} allowCustom={true} addNewLabel={(v) => `Usar "${v}"`} /></div>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/8 rounded-xl">
                         <div><p className="text-sm font-bold text-slate-900 dark:text-white">Aceita troca</p><p className="text-xs text-slate-500 dark:text-zinc-500 mt-0.5">Aceito receber outro veículo como parte do pagamento</p></div>

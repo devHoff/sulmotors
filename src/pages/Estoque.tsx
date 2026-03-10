@@ -15,7 +15,9 @@ export default function Estoque() {
     const [supabaseCars, setSupabaseCars] = useState<CarType[]>([]);
     const [search, setSearch] = useState(initialQuery);
     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-    const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
+    // Price filter: no limit by default; limit enabled by checkbox
+    const [priceFilterEnabled, setPriceFilterEnabled] = useState(false);
+    const [priceMax, setPriceMax] = useState(500000);
     const [yearRange, setYearRange] = useState<[number, number]>([2010, 2025]);
     const [showFilters, setShowFilters] = useState(false);
     const [sortOrder, setSortOrder] = useState<'default' | 'asc' | 'desc'>('default');
@@ -38,7 +40,7 @@ export default function Estoque() {
             setLoading(true);
             const { data, error } = await supabasePublic.from('anuncios').select('*');
             if (!error && data) {
-                setSupabaseCars(data.map((d: any) => ({
+                const mapped = data.map((d: any) => ({
                     id: d.id, marca: d.marca, modelo: d.modelo, ano: d.ano,
                     preco: Number(d.preco), quilometragem: d.quilometragem,
                     telefone: d.telefone, descricao: d.descricao || '',
@@ -49,7 +51,13 @@ export default function Estoque() {
                     impulsionado_ate: d.impulsionado_ate || undefined,
                     prioridade: d.prioridade ?? 0, modelo_3d: false,
                     created_at: d.created_at, user_id: d.user_id, loja: d.loja,
-                })));
+                }));
+                setSupabaseCars(mapped);
+                // Set price max to most expensive car in the estoque
+                if (mapped.length > 0) {
+                    const maxPrice = Math.max(...mapped.map((c: CarType) => c.preco));
+                    setPriceMax(maxPrice > 0 ? maxPrice : 500000);
+                }
             }
             setLoading(false);
         };
@@ -60,7 +68,7 @@ export default function Estoque() {
         return supabaseCars.filter(car => {
             const matchesSearch = search === '' || `${car.marca} ${car.modelo}`.toLowerCase().includes(search.toLowerCase());
             const matchesBrand = selectedBrands.length === 0 || selectedBrands.includes(car.marca);
-            const matchesPrice = car.preco >= priceRange[0] && car.preco <= priceRange[1];
+            const matchesPrice = !priceFilterEnabled || car.preco <= priceMax;
             const matchesYear = car.ano >= yearRange[0] && car.ano <= yearRange[1];
             const matchesLoja = selectedLoja === '' || car.loja === selectedLoja;
             return matchesSearch && matchesBrand && matchesPrice && matchesYear && matchesLoja;
@@ -69,11 +77,17 @@ export default function Estoque() {
             if (sortOrder === 'desc') return b.preco - a.preco;
             return b.prioridade - a.prioridade || new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
-    }, [search, selectedBrands, priceRange, yearRange, supabaseCars, selectedLoja, sortOrder]);
+    }, [search, selectedBrands, priceFilterEnabled, priceMax, yearRange, supabaseCars, selectedLoja, sortOrder]);
 
-    const activeFilters = (selectedBrands.length > 0) || (priceRange[0] > 0 || priceRange[1] < 500000) || (yearRange[0] > 2010 || yearRange[1] < 2025) || sortOrder !== 'default';
+    const activeFilters = (selectedBrands.length > 0) || priceFilterEnabled || (yearRange[0] > 2010 || yearRange[1] < 2025) || sortOrder !== 'default';
 
-    const clearFilters = () => { setSelectedBrands([]); setPriceRange([0, 500000]); setYearRange([2010, 2025]); setSearch(''); setSortOrder('default'); };
+    const clearFilters = () => {
+        setSelectedBrands([]);
+        setPriceFilterEnabled(false);
+        setYearRange([2010, 2025]);
+        setSearch('');
+        setSortOrder('default');
+    };
     const toggleBrand = (brand: string) => setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]);
 
     return (
@@ -94,7 +108,7 @@ export default function Estoque() {
                             </p>
                         </div>
                         <div className="flex gap-3 flex-wrap">
-                            {/* Sort Dropdown – fully custom for theme compatibility */}
+                            {/* Sort Dropdown */}
                             <div className="relative" ref={sortRef}>
                                 <button
                                     onClick={() => setSortOpen(o => !o)}
@@ -187,15 +201,40 @@ export default function Estoque() {
                                 </div>
                             </div>
 
-                            {/* Price Range */}
+                            {/* Price Filter – optional, disabled by default */}
                             <div className="mb-6">
-                                <h4 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Preço máximo</h4>
-                                <input type="range" min="0" max="500000" step="10000" value={priceRange[1]}
-                                    onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])} className="w-full mb-3" />
-                                <div className="flex justify-between">
-                                    <span className="text-xs text-slate-400 dark:text-zinc-600">R$ 0</span>
-                                    <span className="text-xs font-bold text-brand-500 dark:text-brand-400">R$ {priceRange[1].toLocaleString()}</span>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Preço máximo</h4>
+                                    {/* Checkbox toggle */}
+                                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                        <div
+                                            onClick={() => setPriceFilterEnabled(v => !v)}
+                                            className={`w-8 h-4 rounded-full transition-colors duration-200 flex items-center px-0.5 cursor-pointer ${priceFilterEnabled ? 'bg-brand-400' : 'bg-slate-300 dark:bg-zinc-600'}`}
+                                        >
+                                            <div className={`w-3 h-3 rounded-full bg-white shadow transition-transform duration-200 ${priceFilterEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                                        </div>
+                                        <span className="text-xs text-slate-400 dark:text-zinc-500">{priceFilterEnabled ? 'Ativo' : 'Off'}</span>
+                                    </label>
                                 </div>
+                                {priceFilterEnabled ? (
+                                    <>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max={priceMax}
+                                            step={Math.max(1000, Math.round(priceMax / 50) * 1000)}
+                                            value={priceMax}
+                                            onChange={(e) => setPriceMax(Number(e.target.value))}
+                                            className="w-full mb-3"
+                                        />
+                                        <div className="flex justify-between">
+                                            <span className="text-xs text-slate-400 dark:text-zinc-600">R$ 0</span>
+                                            <span className="text-xs font-bold text-brand-500 dark:text-brand-400">R$ {priceMax.toLocaleString('pt-BR')}</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p className="text-xs text-slate-400 dark:text-zinc-600 italic">Sem limite de preço</p>
+                                )}
                             </div>
 
                             {/* Year Range */}
@@ -220,9 +259,9 @@ export default function Estoque() {
                                         {brand} <button onClick={() => toggleBrand(brand)}><X className="w-3 h-3" strokeWidth={1.5} /></button>
                                     </span>
                                 ))}
-                                {priceRange[1] < 500000 && (
+                                {priceFilterEnabled && (
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-400/10 border border-brand-400/20 text-brand-500 dark:text-brand-400 text-xs font-bold rounded-lg">
-                                        Até R$ {priceRange[1].toLocaleString()} <button onClick={() => setPriceRange([0, 500000])}><X className="w-3 h-3" strokeWidth={1.5} /></button>
+                                        Até R$ {priceMax.toLocaleString('pt-BR')} <button onClick={() => setPriceFilterEnabled(false)}><X className="w-3 h-3" strokeWidth={1.5} /></button>
                                     </span>
                                 )}
                                 {sortOrder !== 'default' && (
