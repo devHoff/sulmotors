@@ -73,7 +73,7 @@ export default function Navbar() {
     const links = [
         { to: '/',          label: t.nav_home,      icon: Home       },
         { to: '/estoque',   label: t.nav_inventory, icon: Car        },
-        { to: '/avaliar',   label: 'Avaliar',        icon: TrendingUp },
+        { to: '/avaliar',   label: t('nav_evaluate'), icon: TrendingUp },
         { to: '/sobre-nos', label: t.nav_about,     icon: Building2  },
     ];
 
@@ -230,8 +230,8 @@ export default function Navbar() {
                                                 { to: '/meu-perfil', label: t.nav_profile },
                                                 { to: '/favoritos', label: t.nav_favorites },
                                                 { to: '/meus-anuncios', label: t.nav_my_ads },
-                                                { to: '/alertas', label: 'Alertas' },
-                                                { to: '/avaliar', label: 'Avaliar carro' },
+                                                { to: '/alertas', label: t('nav_alerts') },
+                                                { to: '/avaliar', label: t('nav_evaluate') },
                                             ].map((item) => (
                                                 <Link
                                                     key={item.to}
@@ -361,7 +361,7 @@ export default function Navbar() {
                                         { to: '/meu-perfil', label: t.nav_profile },
                                         { to: '/favoritos', label: t.nav_favorites },
                                         { to: '/meus-anuncios', label: t.nav_my_ads },
-                                        { to: '/alertas', label: 'Alertas' },
+                                        { to: '/alertas', label: t('nav_alerts') },
                                     ].map((item) => (
                                         <Link
                                             key={item.to}

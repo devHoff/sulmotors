@@ -26,8 +26,8 @@ export default function Footer() {
     const companyLinks = [
         { to: '/sobre-nos', label: t.footer_about },
         { to: '/anunciar',  label: t.footer_advertise },
-        { to: '/avaliar',   label: 'Avaliar carro' },
-        { to: '/alertas',   label: 'Alertas de veículo' },
+        { to: '/avaliar',   label: t('footer_evaluate') },
+        { to: '/alertas',   label: t('footer_alerts') },
         { to: '/login',     label: t.footer_enter },
     ];
 
@@ -198,7 +198,7 @@ export default function Footer() {
                                 to="/cookies"
                                 className="text-xs text-slate-400 dark:text-zinc-600 hover:text-brand-400 transition-colors"
                             >
-                                Cookies
+                                {t('footer_cookies')}
                             </Link>
                         </div>
 
@@ -206,7 +206,7 @@ export default function Footer() {
                         <div className="mt-3 flex items-start gap-2 w-full">
                             <ShieldCheck className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-600 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
                             <p className="text-xs text-slate-400 dark:text-zinc-600 leading-relaxed">
-                                O SulMotors atua exclusivamente como plataforma digital intermediária. Não participamos de transações, não garantimos o estado dos veículos e não somos responsáveis pelas negociações entre compradores e vendedores.
+                                {t('footer_legal')}
                             </p>
                         </div>
                     </div>

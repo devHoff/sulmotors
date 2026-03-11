@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Calculator, Car, Gauge, Calendar, Search, ArrowLeft, Zap, CheckCircle2, AlertTriangle, BarChart2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { brands, fuels } from '../data/mockCars';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface EstimateResult {
     min: number;
@@ -64,6 +65,7 @@ function estimatePrice(marca: string, modelo: string, ano: number, km: number, c
 }
 
 export default function Avaliar() {
+    const { t } = useLanguage();
     const [form, setForm] = useState({ marca: '', modelo: '', ano: String(CURRENT_YEAR - 2), km: '', combustivel: '' });
     const [result, setResult] = useState<EstimateResult | null>(null);
     const [loading, setLoading] = useState(false);

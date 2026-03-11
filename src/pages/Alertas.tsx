@@ -4,6 +4,7 @@ import { Bell, Plus, X, Car, Search, ArrowLeft, CheckCircle2, Zap, AlertTriangle
 import { Link } from 'react-router-dom';
 import { toast } from '../utils/toast';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { brands } from '../data/mockCars';
 
@@ -27,6 +28,7 @@ function formatBRL(n: number | null) {
 
 export default function Alertas() {
     const { user } = useAuth();
+    const { t } = useLanguage();
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);

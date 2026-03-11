@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '../utils/toast';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, supabasePublic } from '../lib/supabase';
 
@@ -30,6 +31,7 @@ function timeAgo(dateStr: string) {
 
 export default function Admin() {
     const { user } = useAuth();
+    const { t } = useLanguage();
     const [tab, setTab] = useState<AdminTab>('dashboard');
     const [cars, setCars] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);

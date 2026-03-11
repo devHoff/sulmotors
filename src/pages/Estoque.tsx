@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CarCard from '../components/CarCard';
 import { brands, type Car as CarType } from '../data/mockCars';
 import { supabasePublic } from '../lib/supabase';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // ── WhatsApp helper ────────────────────────────────────────────────────────────
 const WA_NUMBER = '555192263188';
@@ -13,6 +14,7 @@ function waLink(msg = '') {
 }
 
 export default function Estoque() {
+    const { t } = useLanguage();
     const [searchParams] = useSearchParams();
     const initialQuery   = searchParams.get('q')    || '';
     const selectedLoja   = searchParams.get('loja') || '';
@@ -244,7 +246,7 @@ export default function Estoque() {
                                                 <button key={val} onClick={() => { setSortOrder(val); setSortOpen(false); }}
                                                     className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors
                                                         ${sortOrder === val ? 'bg-brand-400/10 text-brand-500 dark:text-brand-400' : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/8'}`}>
-                                                    {val === 'default' ? 'Relevância' : val === 'asc' ? 'Menor preço' : 'Maior preço'}
+                                                    {val === 'default' ? t('estoque_sort_default') : val === 'asc' ? t('estoque_sort_asc') : t('estoque_sort_desc')}
                                                 </button>
                                             ))}
                                         </motion.div>
@@ -256,7 +258,7 @@ export default function Estoque() {
                             <div className="relative flex-1 md:w-80">
                                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" strokeWidth={1.5} />
                                 <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                                    placeholder="Buscar marca ou modelo..."
+                                    placeholder={t('estoque_search_placeholder')}
                                     className="w-full pl-10 pr-4 py-3 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all" />
                             </div>
 
@@ -265,7 +267,7 @@ export default function Estoque() {
                                 className={`md:hidden flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-bold transition-all
                                     ${showFilters ? 'bg-brand-400/15 border-brand-400/40 text-brand-500 dark:text-brand-400'
                                                   : 'bg-slate-100 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400'}`}>
-                                <SlidersHorizontal className="w-4 h-4" strokeWidth={1.5} /> Filtros
+                                <SlidersHorizontal className="w-4 h-4" strokeWidth={1.5} /> {t('estoque_filters')}
                                 {activeFilters && <span className="w-1.5 h-1.5 bg-brand-400 rounded-full" />}
                             </button>
                         </div>
@@ -283,18 +285,18 @@ export default function Estoque() {
                             {/* Header */}
                             <div className="flex items-center justify-between">
                                 <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <SlidersHorizontal className="w-4 h-4 text-brand-500 dark:text-brand-400" strokeWidth={1.5} /> Filtros
+                                    <SlidersHorizontal className="w-4 h-4 text-brand-500 dark:text-brand-400" strokeWidth={1.5} /> {t('estoque_filters')}
                                 </h3>
                                 {activeFilters && (
                                     <button onClick={clearFilters} className="text-xs font-bold text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors">
-                                        <X className="w-3 h-3" strokeWidth={1.5} /> Limpar
+                                        <X className="w-3 h-3" strokeWidth={1.5} /> {t('estoque_clear')}
                                     </button>
                                 )}
                             </div>
 
                             {/* ── Brand search + tags ─────────────────────────── */}
                             <div>
-                                <h4 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Marca</h4>
+                                <h4 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">{t('estoque_filter_brand')}</h4>
                                 {selectedBrands.length > 0 && (
                                     <div className="flex flex-wrap gap-1.5 mb-2">
                                         {selectedBrands.map(b => (
@@ -314,7 +316,7 @@ export default function Estoque() {
                                         value={brandSearch}
                                         onChange={e => { setBrandSearch(e.target.value); setBrandDropOpen(true); }}
                                         onFocus={() => setBrandDropOpen(true)}
-                                        placeholder="Buscar marca..."
+                                        placeholder={t('estoque_brand_search')}
                                         className="w-full pl-8 pr-3 py-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none transition-all"
                                     />
                                     <AnimatePresence>
@@ -421,7 +423,7 @@ export default function Estoque() {
 
                                         {/* Quick preset buttons */}
                                         <div>
-                                            <p className="text-xs text-slate-400 dark:text-zinc-500 mb-2">Filtros rápidos (máximo):</p>
+                                            <p className="text-xs text-slate-400 dark:text-zinc-500 mb-2">{t('estoque_price_range')}:</p>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {quickPresets.map(p => (
                                                     <button
@@ -548,7 +550,7 @@ export default function Estoque() {
                                         <p className="text-slate-500 dark:text-zinc-500 text-sm mb-6">Tente ajustar seus filtros de busca.</p>
                                         <button onClick={clearFilters}
                                             className="px-6 py-2.5 bg-brand-400/10 border border-brand-400/20 text-brand-500 dark:text-brand-400 font-bold rounded-xl hover:bg-brand-400/20 transition-colors text-sm">
-                                            Limpar filtros
+                                            {t('estoque_clear_filters')}
                                         </button>
                                     </motion.div>
                                 )}

@@ -9,6 +9,7 @@ import {
 import { toast } from '../utils/toast';
 import { useAuth } from '../contexts/AuthContext';
 import { smToast } from '../utils/toast';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // ── Step types for registration flow ─────────────────────────────────────────
 type RegStep = 'form' | 'legal' | 'otp' | 'profile';
@@ -19,6 +20,7 @@ const DEMO_OTP = '483921';
 export default function Login() {
     const navigate = useNavigate();
     const { signInWithEmail, signUp } = useAuth();
+    const { t } = useLanguage();
 
     const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading]   = useState(false);
@@ -48,7 +50,7 @@ export default function Login() {
             smToast.loginSuccess();
             navigate('/');
         } catch (error: any) {
-            toast.error(error.message || 'E-mail ou senha incorretos.');
+            toast.error(error.message || t('common_error'));
         } finally {
             setLoading(false);
         }
@@ -57,9 +59,9 @@ export default function Login() {
     // ── Registration step 1: validate form → go to legal ────────────────────
     const handleSignupFormNext = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.nome.trim()) { toast.error('Por favor, informe seu nome.'); return; }
-        if (!form.email.trim()) { toast.error('Por favor, informe seu e-mail.'); return; }
-        if (form.password.length < 6) { toast.error('A senha deve ter no mínimo 6 caracteres.'); return; }
+        if (!form.nome.trim()) { toast.error(t('login_name_error')); return; }
+        if (!form.email.trim()) { toast.error(t('login_email_error')); return; }
+        if (form.password.length < 6) { toast.error(t('login_pass_error')); return; }
         setRegStep('legal');
     };
 
@@ -67,8 +69,6 @@ export default function Login() {
     const handleLegalNext = () => {
         if (!legalAccepted) { setLegalError(true); return; }
         setLegalError(false);
-        // In production: signUp creates account & sends OTP email
-        // For demo we jump straight to OTP step
         setRegStep('otp');
     };
 
@@ -76,7 +76,7 @@ export default function Login() {
     const handleOtpVerify = async () => {
         if (otpValue !== DEMO_OTP) {
             setOtpError(true);
-            toast.error('Código inválido. Tente novamente.');
+            toast.error(t('login_otp_error'));
             return;
         }
         setOtpError(false);
@@ -89,7 +89,7 @@ export default function Login() {
             smToast.signupSuccess();
             navigate('/meu-perfil');
         } catch (error: any) {
-            toast.error(error.message || 'Erro ao criar conta.');
+            toast.error(error.message || t('common_error'));
         } finally {
             setLoading(false);
         }
@@ -131,17 +131,18 @@ export default function Login() {
                         </span>
                     </div>
                     <h2 className="text-3xl font-black text-white leading-tight mb-3">
-                        O marketplace automotivo<span className="text-brand-400"> mais moderno</span> do Brasil.
+                        {t('home_cta_title')}{' '}
+                        <span className="text-brand-400">{t('home_why_accent')}</span>
                     </h2>
                     <p className="text-zinc-400 text-sm leading-relaxed">
-                        Compre e venda veículos com segurança, transparência e a melhor tecnologia.
+                        {t('home_hero_sub')}
                     </p>
                     {/* Trust indicators */}
                     <div className="mt-6 flex flex-wrap gap-3">
                         {[
-                            { icon: ShieldCheck, label: 'Anúncios verificados' },
-                            { icon: Shield,      label: 'Plataforma segura' },
-                            { icon: CheckCircle2, label: 'Suporte rápido' },
+                            { icon: ShieldCheck, label: t('home_security_title') },
+                            { icon: Shield,      label: t('home_support_title')  },
+                            { icon: CheckCircle2, label: t('home_price_title')   },
                         ].map(({ icon: Icon, label }) => (
                             <div key={label} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
                                 <Icon className="w-3.5 h-3.5 text-brand-400" strokeWidth={1.5} />
@@ -174,7 +175,10 @@ export default function Login() {
                     {/* Mode toggle (only when not mid-registration) */}
                     {(isLogin || regStep === 'form') && (
                         <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/8 rounded-xl mb-8">
-                            {[{ label: 'Entrar', val: true }, { label: 'Cadastrar', val: false }].map(({ label, val }) => (
+                            {[
+                                { label: t('login_enter'),    val: true  },
+                                { label: t('login_register'), val: false },
+                            ].map(({ label, val }) => (
                                 <button
                                     key={label}
                                     onClick={() => { setIsLogin(val); resetReg(); }}
@@ -196,19 +200,19 @@ export default function Login() {
                                 exit={{ opacity: 0, y: -12 }}
                             >
                                 <div className="mb-8">
-                                    <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Bem-vindo de volta</h1>
-                                    <p className="text-slate-500 dark:text-zinc-500 text-sm">Entre para gerenciar seus anúncios e favoritos</p>
+                                    <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">{t('login_welcome')}</h1>
+                                    <p className="text-slate-500 dark:text-zinc-500 text-sm">{t('login_login_sub')}</p>
                                 </div>
                                 <form onSubmit={handleLogin} className="space-y-4">
                                     <div>
-                                        <label className={lClass}>E-mail *</label>
+                                        <label className={lClass}>{t('login_email')} *</label>
                                         <div className="relative">
                                             <Mail className={iconClass} strokeWidth={1.5} />
                                             <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={iClass} placeholder="seu@email.com" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className={lClass}>Senha *</label>
+                                        <label className={lClass}>{t('login_password')} *</label>
                                         <div className="relative">
                                             <Lock className={iconClass} strokeWidth={1.5} />
                                             <input
@@ -236,13 +240,13 @@ export default function Login() {
                                     >
                                         {loading
                                             ? <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />
-                                            : <>Entrar na conta <ArrowRight className="w-5 h-5" strokeWidth={1.5} /></>}
+                                            : <>{t('login_login_btn')} <ArrowRight className="w-5 h-5" strokeWidth={1.5} /></>}
                                     </button>
                                 </form>
                                 <p className="mt-6 text-center text-sm text-slate-500 dark:text-zinc-600">
-                                    Não tem uma conta?{' '}
+                                    {t('login_no_account')}{' '}
                                     <button onClick={() => { setIsLogin(false); resetReg(); }} className="text-brand-500 dark:text-brand-400 font-bold hover:text-brand-600 dark:hover:text-brand-300 transition-colors">
-                                        Cadastre-se grátis
+                                        {t('login_free_signup')}
                                     </button>
                                 </p>
                             </motion.div>
@@ -262,33 +266,33 @@ export default function Login() {
                                             <div key={s} className={`h-1.5 flex-1 rounded-full transition-all ${s === 1 ? 'bg-brand-400' : 'bg-slate-200 dark:bg-zinc-700'}`} />
                                         ))}
                                     </div>
-                                    <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Crie sua conta</h1>
-                                    <p className="text-slate-500 dark:text-zinc-500 text-sm">Passo 1 de 3 · Dados básicos</p>
+                                    <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">{t('login_create')}</h1>
+                                    <p className="text-slate-500 dark:text-zinc-500 text-sm">{t('login_signup_sub')}</p>
                                 </div>
                                 <form onSubmit={handleSignupFormNext} className="space-y-4">
                                     <div>
-                                        <label className={lClass}>Nome completo *</label>
+                                        <label className={lClass}>{t('login_full_name')}</label>
                                         <div className="relative">
                                             <User className={iconClass} strokeWidth={1.5} />
                                             <input type="text" required value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} className={iClass} placeholder="Seu nome completo" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className={lClass}>Telefone</label>
+                                        <label className={lClass}>{t('login_phone')}</label>
                                         <div className="relative">
                                             <Phone className={iconClass} strokeWidth={1.5} />
                                             <input type="tel" value={form.telefone} onChange={e => setForm({ ...form, telefone: e.target.value })} className={iClass} placeholder="(51) 99999-9999" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className={lClass}>E-mail *</label>
+                                        <label className={lClass}>{t('login_email')}</label>
                                         <div className="relative">
                                             <Mail className={iconClass} strokeWidth={1.5} />
                                             <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={iClass} placeholder="seu@email.com" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className={lClass}>Senha *</label>
+                                        <label className={lClass}>{t('login_password')}</label>
                                         <div className="relative">
                                             <Lock className={iconClass} strokeWidth={1.5} />
                                             <input
@@ -297,7 +301,7 @@ export default function Login() {
                                                 value={form.password}
                                                 onChange={e => setForm({ ...form, password: e.target.value })}
                                                 className="w-full pl-10 pr-12 py-3.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 text-sm outline-none transition-all"
-                                                placeholder="Mínimo 6 caracteres"
+                                                placeholder="Min. 6 caracteres"
                                                 minLength={6}
                                             />
                                             <button
@@ -314,9 +318,7 @@ export default function Login() {
                                     <div className="flex items-center gap-2.5 p-3 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/8 rounded-xl">
                                         <Shield className="w-4 h-4 text-brand-400 flex-shrink-0" strokeWidth={1.5} />
                                         <p className="text-xs text-slate-500 dark:text-zinc-500 leading-relaxed">
-                                            Protegido por <strong className="text-slate-700 dark:text-zinc-300">reCAPTCHA</strong> e sujeito à{' '}
-                                            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-500 hover:underline">Política de Privacidade</a>{' '}
-                                            do Google.
+                                            {t('home_security_desc')}
                                         </p>
                                     </div>
 
@@ -324,13 +326,13 @@ export default function Login() {
                                         type="submit"
                                         className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow mt-2"
                                     >
-                                        Continuar <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
+                                        {t('login_legal_continue')} <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
                                     </button>
                                 </form>
                                 <p className="mt-6 text-center text-sm text-slate-500 dark:text-zinc-600">
-                                    Já tem uma conta?{' '}
+                                    {t('login_has_account')}{' '}
                                     <button onClick={() => setIsLogin(true)} className="text-brand-500 dark:text-brand-400 font-bold hover:text-brand-600 dark:hover:text-brand-300 transition-colors">
-                                        Fazer login
+                                        {t('login_do_login')}
                                     </button>
                                 </p>
                             </motion.div>
@@ -350,23 +352,21 @@ export default function Login() {
                                             <div key={s} className={`h-1.5 flex-1 rounded-full transition-all ${s <= 2 ? 'bg-brand-400' : 'bg-slate-200 dark:bg-zinc-700'}`} />
                                         ))}
                                     </div>
-                                    <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Termos legais</h1>
-                                    <p className="text-slate-500 dark:text-zinc-500 text-sm">Passo 2 de 3 · Leia e aceite para continuar</p>
+                                    <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">{t('login_legal_title')}</h1>
+                                    <p className="text-slate-500 dark:text-zinc-500 text-sm">{t('login_signup_sub')}</p>
                                 </div>
 
                                 <div className="space-y-3 mb-6">
                                     <div className="p-4 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-white/8 rounded-2xl max-h-48 overflow-y-auto text-xs text-slate-600 dark:text-zinc-400 leading-relaxed space-y-2">
-                                        <p className="font-black text-slate-900 dark:text-white text-sm mb-2">Resumo dos Termos</p>
-                                        <p>O <strong>SulMotors</strong> é uma plataforma de anúncios de veículos e atua exclusivamente como <strong>intermediário</strong> entre compradores e vendedores, não sendo responsável pelas transações financeiras.</p>
-                                        <p>Ao criar uma conta você concorda em: não publicar anúncios falsos ou enganosos; não solicitar pagamentos antecipados; respeitar os limites de anúncios por plano; fornecer informações verdadeiras.</p>
-                                        <p>Seus dados são tratados conforme a <strong>LGPD (Lei 13.709/2018)</strong>. Usamos cookies essenciais para segurança e sessão.</p>
+                                        <p className="font-black text-slate-900 dark:text-white text-sm mb-2">{t('footer_terms')}</p>
+                                        <p>{t('footer_legal')}</p>
                                     </div>
 
                                     <div className="space-y-2">
                                         {[
-                                            { to: '/termos',     label: 'Termos de Uso completos' },
-                                            { to: '/privacidade', label: 'Política de Privacidade' },
-                                            { to: '/cookies',    label: 'Política de Cookies (LGPD)' },
+                                            { to: '/termos',      label: t('footer_terms')   },
+                                            { to: '/privacidade', label: t('footer_privacy')  },
+                                            { to: '/cookies',     label: t('footer_cookies')  },
                                         ].map(({ to, label }) => (
                                             <Link
                                                 key={to}
@@ -393,15 +393,17 @@ export default function Login() {
                                             className="sr-only"
                                         />
                                         <span className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed">
-                                            Li e aceito os <Link to="/termos" target="_blank" className="text-brand-500 font-semibold hover:underline">Termos de Uso</Link>,{' '}
-                                            <Link to="/privacidade" target="_blank" className="text-brand-500 font-semibold hover:underline">Política de Privacidade</Link> e{' '}
-                                            <Link to="/cookies" target="_blank" className="text-brand-500 font-semibold hover:underline">Política de Cookies</Link>.
+                                            {t('login_legal_accept')}{' '}
+                                            <Link to="/termos" target="_blank" className="text-brand-500 font-semibold hover:underline">{t('footer_terms')}</Link>{', '}
+                                            <Link to="/privacidade" target="_blank" className="text-brand-500 font-semibold hover:underline">{t('footer_privacy')}</Link>{' '}
+                                            {t('login_legal_and')}{' '}
+                                            <Link to="/cookies" target="_blank" className="text-brand-500 font-semibold hover:underline">{t('footer_cookies')}</Link>.
                                         </span>
                                     </label>
                                     {legalError && (
                                         <p className="text-xs text-red-500 font-semibold flex items-center gap-1">
                                             <AlertTriangle className="w-3.5 h-3.5" strokeWidth={2} />
-                                            Você precisa aceitar os termos para continuar.
+                                            {t('login_legal_error')}
                                         </p>
                                     )}
                                 </div>
@@ -412,14 +414,14 @@ export default function Login() {
                                         onClick={() => setRegStep('form')}
                                         className="flex-shrink-0 px-5 py-4 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-zinc-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors"
                                     >
-                                        Voltar
+                                        {t('login_back')}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handleLegalNext}
                                         className="flex-1 flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow"
                                     >
-                                        Confirmar <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
+                                        {t('login_legal_continue')} <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
                                     </button>
                                 </div>
                             </motion.div>
@@ -439,26 +441,25 @@ export default function Login() {
                                             <div key={s} className="h-1.5 flex-1 rounded-full bg-brand-400" />
                                         ))}
                                     </div>
-                                    <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Verificar e-mail</h1>
-                                    <p className="text-slate-500 dark:text-zinc-500 text-sm">Passo 3 de 3 · Confirme sua identidade</p>
+                                    <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">{t('login_otp_title')}</h1>
+                                    <p className="text-slate-500 dark:text-zinc-500 text-sm">{t('login_otp_sub')} <strong>{form.email}</strong></p>
                                 </div>
 
                                 <div className="mb-6 p-5 bg-blue-500/8 border border-blue-500/20 rounded-2xl">
                                     <div className="flex items-center gap-3 mb-2">
                                         <Mail className="w-5 h-5 text-blue-400 flex-shrink-0" strokeWidth={1.5} />
-                                        <p className="text-sm font-black text-blue-600 dark:text-blue-400">Código enviado!</p>
+                                        <p className="text-sm font-black text-blue-600 dark:text-blue-400">{t('notif_email_verified')}</p>
                                     </div>
                                     <p className="text-xs text-blue-600/80 dark:text-blue-400/70 leading-relaxed">
-                                        Enviamos um código de 6 dígitos para <strong>{form.email}</strong>.
-                                        Verifique sua caixa de entrada (e spam).
+                                        {t('login_otp_sub')} <strong>{form.email}</strong>.
                                     </p>
                                     <p className="text-xs text-blue-400/60 dark:text-blue-500/50 mt-2 font-mono">
-                                        Demo: use o código <strong className="text-brand-400">483921</strong>
+                                        Demo: <strong className="text-brand-400">483921</strong>
                                     </p>
                                 </div>
 
                                 <div className="mb-6">
-                                    <label className={lClass}>Código de verificação</label>
+                                    <label className={lClass}>{t('login_otp_title')}</label>
                                     <div className="relative">
                                         <KeyRound className={iconClass} strokeWidth={1.5} />
                                         <input
@@ -477,7 +478,7 @@ export default function Login() {
                                     {otpError && (
                                         <p className="text-xs text-red-500 font-semibold mt-1.5 flex items-center gap-1">
                                             <X className="w-3.5 h-3.5" strokeWidth={2} />
-                                            Código incorreto. Verifique e tente novamente.
+                                            {t('login_otp_wrong')}
                                         </p>
                                     )}
                                 </div>
@@ -488,7 +489,7 @@ export default function Login() {
                                         onClick={() => setRegStep('legal')}
                                         className="flex-shrink-0 px-5 py-4 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-zinc-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors"
                                     >
-                                        Voltar
+                                        {t('login_back')}
                                     </button>
                                     <button
                                         type="button"
@@ -498,16 +499,16 @@ export default function Login() {
                                     >
                                         {loading
                                             ? <Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />
-                                            : <><CheckCircle2 className="w-5 h-5" strokeWidth={1.5} /> Verificar e criar conta</>}
+                                            : <><CheckCircle2 className="w-5 h-5" strokeWidth={1.5} /> {t('login_otp_verify')}</>}
                                     </button>
                                 </div>
 
                                 <button
                                     type="button"
                                     className="mt-4 w-full text-xs text-slate-400 dark:text-zinc-600 hover:text-brand-400 transition-colors"
-                                    onClick={() => toast.info('Reenviando código... (demo: 483921)')}
+                                    onClick={() => toast.info(t('login_otp_resend'))}
                                 >
-                                    Não recebeu o código? <span className="font-bold text-brand-500">Reenviar</span>
+                                    {t('login_otp_resend')}
                                 </button>
                             </motion.div>
                         )}
