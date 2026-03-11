@@ -19,6 +19,7 @@ import SeusDireitos from './pages/SeusDireitos';
 import Avaliar from './pages/Avaliar';
 import Alertas from './pages/Alertas';
 import Admin from './pages/Admin';
+import Cookies from './pages/Cookies';
 
 export default function App() {
     return (
@@ -44,6 +45,7 @@ export default function App() {
                     <Route path="/avaliar"            element={<Avaliar />} />
                     <Route path="/alertas"            element={<Alertas />} />
                     <Route path="/admin"              element={<Admin />} />
+                    <Route path="/cookies"            element={<Cookies />} />
                 </Route>
             </Routes>
         </>

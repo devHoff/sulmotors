@@ -37,6 +37,42 @@ function cepMask(v: string) {
     return v.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d{1,3})$/, '$1-$2');
 }
 
+/** Mask dd/mm/aaaa as the user types */
+function dateMask(v: string): string {
+    const digits = v.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+/** Returns true when the date string (dd/mm/aaaa) represents age >= 18 */
+function isAtLeast18(dateStr: string): boolean {
+    const parts = dateStr.split('/');
+    if (parts.length !== 3 || parts[2].length !== 4) return false;
+    const [dd, mm, yyyy] = parts.map(Number);
+    if (!dd || !mm || !yyyy) return false;
+    const dob = new Date(yyyy, mm - 1, dd);
+    const today = new Date();
+    const age18 = new Date(dob.getFullYear() + 18, dob.getMonth(), dob.getDate());
+    return today >= age18;
+}
+
+/** Convert stored ISO date (yyyy-mm-dd) → display (dd/mm/aaaa) */
+function isoToDMY(iso: string): string {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    if (!y || !m || !d) return iso; // already masked or empty
+    return `${d}/${m}/${y}`;
+}
+
+/** Convert display (dd/mm/aaaa) → ISO (yyyy-mm-dd) for storage */
+function dmyToISO(dmy: string): string {
+    const parts = dmy.split('/');
+    if (parts.length !== 3 || parts[2].length !== 4) return '';
+    const [dd, mm, yyyy] = parts;
+    return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+}
+
 function validateCPF(cpf: string) {
     const n = cpf.replace(/\D/g, '');
     if (n.length !== 11 || /^(\d)\1{10}$/.test(n)) return false;
@@ -60,7 +96,7 @@ export default function MeuPerfil() {
     // Dados pessoais
     const [profile, setProfile] = useState({
         full_name: '', email: '', phone: '', avatar_url: '',
-        cpf: '', data_nascimento: '', genero: '',
+        cpf: '', data_nascimento: '', data_nascimento_display: '', genero: '',
     });
 
     // Endereço
@@ -80,7 +116,15 @@ export default function MeuPerfil() {
 
     // Verificação / segurança
     const [cpfValid, setCpfValid] = useState<null | boolean>(null);
-    const [isVerified] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
+    const [verificationStatus, setVerificationStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none');
+    const [docFile, setDocFile] = useState<File | null>(null);
+    const [selfieFile, setSelfieFile] = useState<File | null>(null);
+    const [docPreview, setDocPreview] = useState<string | null>(null);
+    const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
+    const [uploadingVerif, setUploadingVerif] = useState(false);
+    const docInputRef = useRef<HTMLInputElement>(null);
+    const selfieInputRef = useRef<HTMLInputElement>(null);
 
     // Atividade
     const [activity] = useState({
@@ -91,6 +135,44 @@ export default function MeuPerfil() {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [showCropModal, setShowCropModal]  = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleDocChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'doc' | 'selfie') => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        if (type === 'doc') { setDocFile(file); setDocPreview(url); }
+        else { setSelfieFile(file); setSelfiePreview(url); }
+    };
+
+    const handleSubmitVerification = async () => {
+        if (!docFile || !selfieFile) {
+            toast.error('Envie o documento e a selfie para solicitar verificação.');
+            return;
+        }
+        if (!profile.cpf || !validateCPF(profile.cpf)) {
+            toast.error('CPF válido é obrigatório para verificação. Vá à aba Meus Dados.');
+            return;
+        }
+        setUploadingVerif(true);
+        try {
+            const uid = user?.id;
+            const docPath = `verifications/${uid}/document_${Date.now()}`;
+            const selfiePath = `verifications/${uid}/selfie_${Date.now()}`;
+            await supabase.storage.from('verifications').upload(docPath, docFile, { upsert: true });
+            await supabase.storage.from('verifications').upload(selfiePath, selfieFile, { upsert: true });
+            await supabase.from('profiles').upsert({
+                id: uid,
+                verification_status: 'pending',
+                updated_at: new Date(),
+            });
+            setVerificationStatus('pending');
+            toast.success('Documentos enviados! Sua verificação será analisada em até 24h.');
+        } catch {
+            toast.error('Erro ao enviar documentos. Tente novamente.');
+        } finally {
+            setUploadingVerif(false);
+        }
+    };
 
     useEffect(() => {
         if (user) fetchProfile();
@@ -106,6 +188,7 @@ export default function MeuPerfil() {
                 avatar_url:      data?.avatar_url       || '',
                 cpf:             data?.cpf              || '',
                 data_nascimento: data?.data_nascimento  || '',
+                data_nascimento_display: isoToDMY(data?.data_nascimento || ''),
                 genero:          data?.genero           || '',
             });
             setAddress({
@@ -124,6 +207,10 @@ export default function MeuPerfil() {
         e.preventDefault();
         if (!profile.full_name.trim()) { toast.error('Nome completo é obrigatório.'); return; }
         if (profile.cpf && !validateCPF(profile.cpf)) { toast.error('CPF inválido.'); return; }
+        if (profile.data_nascimento_display && profile.data_nascimento_display.length === 10 && !isAtLeast18(profile.data_nascimento_display)) {
+            toast.error('Você precisa ter pelo menos 18 anos para usar a plataforma.');
+            return;
+        }
         setSaving(true);
         try {
             await supabase.from('profiles').upsert({
@@ -131,7 +218,7 @@ export default function MeuPerfil() {
                 full_name:       profile.full_name,
                 phone:           profile.phone,
                 cpf:             profile.cpf.replace(/\D/g, ''),
-                data_nascimento: profile.data_nascimento || null,
+                data_nascimento: dmyToISO(profile.data_nascimento_display) || profile.data_nascimento || null,
                 genero:          profile.genero || null,
                 cep:             address.cep.replace(/\D/g, ''),
                 estado:          address.estado,
@@ -365,9 +452,24 @@ export default function MeuPerfil() {
                                                         <label className={lClass}>Data de Nascimento *</label>
                                                         <div className="relative">
                                                             <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-zinc-500" strokeWidth={1.5} />
-                                                            <input type="date" value={profile.data_nascimento}
-                                                                onChange={e => setProfile(p => ({ ...p, data_nascimento: e.target.value }))}
-                                                                className={`${iClass} pl-10`} />
+                                                            <input
+                                                                type="text"
+                                                                value={profile.data_nascimento_display}
+                                                                onChange={e => {
+                                                                    const masked = dateMask(e.target.value);
+                                                                    setProfile(p => ({ ...p, data_nascimento_display: masked }));
+                                                                }}
+                                                                onBlur={() => {
+                                                                    const d = profile.data_nascimento_display;
+                                                                    if (d.length === 10 && !isAtLeast18(d)) {
+                                                                        toast.error('Você precisa ter pelo menos 18 anos para usar a plataforma.');
+                                                                    }
+                                                                }}
+                                                                className={`${iClass} pl-10`}
+                                                                placeholder="dd/mm/aaaa"
+                                                                maxLength={10}
+                                                                inputMode="numeric"
+                                                            />
                                                         </div>
                                                     </div>
                                                 </div>
@@ -550,52 +652,172 @@ export default function MeuPerfil() {
 
                                         {/* ─── TAB: Verificação ───────── */}
                                         {activeTab === 'verificacao' && (
-                                            <div className="p-6 space-y-5">
-                                                <h2 className="text-lg font-black text-slate-900 dark:text-white mb-2">Verificação de Identidade</h2>
-                                                <p className="text-sm text-slate-500 dark:text-zinc-500 mb-4">
-                                                    Usuários verificados recebem o badge <strong>✅ Verificado</strong> e têm mais credibilidade com compradores.
-                                                </p>
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-white/8 rounded-xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isVerified ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-200 dark:bg-zinc-700 text-slate-400'}`}>
-                                                                {isVerified ? <CheckCircle2 className="w-4 h-4" strokeWidth={2} /> : <span className="text-sm font-bold">1</span>}
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-bold text-slate-900 dark:text-white">CPF cadastrado</p>
-                                                                <p className="text-xs text-slate-500 dark:text-zinc-500">{profile.cpf ? 'CPF informado' : 'Adicione seu CPF na aba Meus Dados'}</p>
-                                                            </div>
+                                            <div className="p-6 space-y-6">
+                                                <div>
+                                                    <h2 className="text-lg font-black text-slate-900 dark:text-white mb-1">Verificação de Identidade</h2>
+                                                    <p className="text-sm text-slate-500 dark:text-zinc-500">
+                                                        Usuários verificados recebem o badge <strong className="text-emerald-500">✔ Verificado</strong> e têm maior visibilidade e credibilidade com compradores.
+                                                    </p>
+                                                </div>
+
+                                                {/* Status banner */}
+                                                {verificationStatus === 'approved' || isVerified ? (
+                                                    <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl">
+                                                        <BadgeCheck className="w-6 h-6 text-emerald-500 flex-shrink-0" strokeWidth={1.5} />
+                                                        <div>
+                                                            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">Conta Verificada!</p>
+                                                            <p className="text-xs text-emerald-600/80 dark:text-emerald-400/70">Seu badge ✔ Verificado está ativo em todos os seus anúncios.</p>
                                                         </div>
-                                                        {profile.cpf && validateCPF(profile.cpf)
-                                                            ? <CheckCircle2 className="w-5 h-5 text-emerald-500" strokeWidth={2} />
-                                                            : <span className="text-xs text-slate-400 dark:text-zinc-500">Pendente</span>}
                                                     </div>
-                                                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-white/8 rounded-xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center text-slate-400">
-                                                                <span className="text-sm font-bold">2</span>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-bold text-slate-900 dark:text-white">Selfie com documento</p>
-                                                                <p className="text-xs text-slate-500 dark:text-zinc-500">Envie uma selfie segurando seu RG ou CNH</p>
-                                                            </div>
+                                                ) : verificationStatus === 'pending' ? (
+                                                    <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+                                                        <Loader2 className="w-5 h-5 text-amber-500 animate-spin flex-shrink-0" strokeWidth={1.5} />
+                                                        <div>
+                                                            <p className="text-sm font-black text-amber-600 dark:text-amber-400">Verificação em análise</p>
+                                                            <p className="text-xs text-amber-600/80 dark:text-amber-400/70">Seus documentos foram enviados. Retornaremos em até 24h.</p>
                                                         </div>
-                                                        <span className="px-3 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-lg">Em breve</span>
                                                     </div>
-                                                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-white/8 rounded-xl">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center text-slate-400">
-                                                                <span className="text-sm font-bold">3</span>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-bold text-slate-900 dark:text-white">Verificação por email</p>
-                                                                <p className="text-xs text-slate-500 dark:text-zinc-500">{user?.email_confirmed_at ? 'Email verificado ✓' : 'Confirme seu email'}</p>
-                                                            </div>
+                                                ) : verificationStatus === 'rejected' ? (
+                                                    <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl">
+                                                        <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" strokeWidth={1.5} />
+                                                        <div>
+                                                            <p className="text-sm font-black text-red-600 dark:text-red-400">Verificação reprovada</p>
+                                                            <p className="text-xs text-red-600/80 dark:text-red-400/70">Os documentos não foram aceitos. Por favor, reenvie fotos nítidas e válidas.</p>
                                                         </div>
-                                                        {user?.email_confirmed_at
-                                                            ? <CheckCircle2 className="w-5 h-5 text-emerald-500" strokeWidth={2} />
-                                                            : <span className="text-xs text-slate-400 dark:text-zinc-500">Pendente</span>}
                                                     </div>
+                                                ) : null}
+
+                                                {/* Steps checklist */}
+                                                <div className="space-y-3">
+                                                    {[
+                                                        {
+                                                            step: 1,
+                                                            title: 'CPF válido cadastrado',
+                                                            desc: profile.cpf && validateCPF(profile.cpf) ? 'CPF informado e válido ✓' : 'Adicione seu CPF na aba Meus Dados',
+                                                            done: !!(profile.cpf && validateCPF(profile.cpf)),
+                                                        },
+                                                        {
+                                                            step: 2,
+                                                            title: 'E-mail verificado',
+                                                            desc: user?.email_confirmed_at ? 'E-mail confirmado ✓' : 'Verifique o link enviado para seu e-mail',
+                                                            done: !!user?.email_confirmed_at,
+                                                        },
+                                                        {
+                                                            step: 3,
+                                                            title: 'Documento de identidade',
+                                                            desc: docFile ? `Arquivo selecionado: ${docFile.name}` : 'Envie foto do RG, CNH ou passaporte',
+                                                            done: !!docFile,
+                                                        },
+                                                        {
+                                                            step: 4,
+                                                            title: 'Selfie com documento',
+                                                            desc: selfieFile ? `Arquivo selecionado: ${selfieFile.name}` : 'Segure o documento ao lado do rosto',
+                                                            done: !!selfieFile,
+                                                        },
+                                                    ].map(({ step, title, desc, done }) => (
+                                                        <div key={step} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-white/8 rounded-xl">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${done ? 'bg-emerald-500/20' : 'bg-slate-200 dark:bg-zinc-700'}`}>
+                                                                    {done
+                                                                        ? <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={2} />
+                                                                        : <span className="text-sm font-bold text-slate-400 dark:text-zinc-500">{step}</span>}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-bold text-slate-900 dark:text-white">{title}</p>
+                                                                    <p className="text-xs text-slate-500 dark:text-zinc-500">{desc}</p>
+                                                                </div>
+                                                            </div>
+                                                            {done
+                                                                ? <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" strokeWidth={2} />
+                                                                : <span className="text-xs text-amber-500 font-bold flex-shrink-0">Pendente</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Upload area — only when not verified */}
+                                                {!isVerified && verificationStatus !== 'pending' && verificationStatus !== 'approved' && (
+                                                    <div className="space-y-4">
+                                                        <p className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Enviar documentos</p>
+
+                                                        {/* Document upload */}
+                                                        <div>
+                                                            <label className="block text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-wider mb-2">
+                                                                Documento de Identidade (RG / CNH / Passaporte)
+                                                            </label>
+                                                            <input
+                                                                ref={docInputRef}
+                                                                type="file"
+                                                                accept="image/*,.pdf"
+                                                                className="hidden"
+                                                                onChange={e => handleDocChange(e, 'doc')}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => docInputRef.current?.click()}
+                                                                className={`w-full flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed rounded-2xl transition-colors ${docPreview ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-slate-200 dark:border-white/10 hover:border-brand-400/40 hover:bg-brand-400/5'}`}
+                                                            >
+                                                                {docPreview ? (
+                                                                    <img src={docPreview} alt="Doc preview" className="h-24 object-contain rounded-lg" />
+                                                                ) : (
+                                                                    <>
+                                                                        <CreditCard className="w-8 h-8 text-slate-400 dark:text-zinc-600" strokeWidth={1} />
+                                                                        <span className="text-sm text-slate-500 dark:text-zinc-500 font-medium">Clique para selecionar foto do documento</span>
+                                                                        <span className="text-xs text-slate-400 dark:text-zinc-600">JPG, PNG ou PDF · Máx. 10 MB</span>
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Selfie upload */}
+                                                        <div>
+                                                            <label className="block text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-wider mb-2">
+                                                                Selfie segurando o documento
+                                                            </label>
+                                                            <input
+                                                                ref={selfieInputRef}
+                                                                type="file"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={e => handleDocChange(e, 'selfie')}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => selfieInputRef.current?.click()}
+                                                                className={`w-full flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed rounded-2xl transition-colors ${selfiePreview ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-slate-200 dark:border-white/10 hover:border-brand-400/40 hover:bg-brand-400/5'}`}
+                                                            >
+                                                                {selfiePreview ? (
+                                                                    <img src={selfiePreview} alt="Selfie preview" className="h-24 object-contain rounded-lg" />
+                                                                ) : (
+                                                                    <>
+                                                                        <Camera className="w-8 h-8 text-slate-400 dark:text-zinc-600" strokeWidth={1} />
+                                                                        <span className="text-sm text-slate-500 dark:text-zinc-500 font-medium">Clique para tirar ou selecionar selfie</span>
+                                                                        <span className="text-xs text-slate-400 dark:text-zinc-600">Rosto e documento visíveis · JPG ou PNG</span>
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Submit */}
+                                                        <button
+                                                            type="button"
+                                                            disabled={!docFile || !selfieFile || uploadingVerif}
+                                                            onClick={handleSubmitVerification}
+                                                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all disabled:opacity-50 hover:shadow-glow"
+                                                        >
+                                                            {uploadingVerif
+                                                                ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5} /> Enviando...</>
+                                                                : <><BadgeCheck className="w-4 h-4" strokeWidth={1.5} /> Solicitar verificação</>}
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* LGPD note */}
+                                                <div className="flex items-start gap-2.5 p-3.5 bg-blue-500/8 border border-blue-500/20 rounded-xl">
+                                                    <Shield className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+                                                    <p className="text-xs text-blue-600 dark:text-blue-400/80 leading-relaxed">
+                                                        Seus documentos são tratados com sigilo conforme a <strong>LGPD (Lei 13.709/2018)</strong>.
+                                                        Usados exclusivamente para verificação de identidade e excluídos após aprovação.
+                                                    </p>
                                                 </div>
                                             </div>
                                         )}
