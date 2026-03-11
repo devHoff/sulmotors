@@ -28,6 +28,10 @@ export default function App() {
         <>
             <ScrollToTop />
             <Routes>
+                {/* ── Admin: full-screen layout (no navbar/footer) ── */}
+                <Route path="/admin" element={<Admin />} />
+
+                {/* ── All other pages: standard Layout ── */}
                 <Route element={<Layout />}>
                     <Route path="/"                    element={<Home />} />
                     <Route path="/estoque"             element={<Estoque />} />
@@ -46,7 +50,6 @@ export default function App() {
                     <Route path="/seus-direitos"       element={<SeusDireitos />} />
                     <Route path="/avaliar"             element={<Avaliar />} />
                     <Route path="/alertas"             element={<Alertas />} />
-                    <Route path="/admin"               element={<Admin />} />
                     <Route path="/cookies"             element={<Cookies />} />
                     <Route path="/toast-demo"          element={<ToastDemo />} />
                     <Route path="/performance"         element={<Performance />} />
