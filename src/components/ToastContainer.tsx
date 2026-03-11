@@ -2,18 +2,31 @@
  * ToastContainer — Enterprise notification stack.
  *
  * Spec:
- *  • Position: top-right, fixed, z-[9000], offset 20px from edges
+ *  • Position: top-right, BELOW header via #sm-toast-root CSS rule
  *  • Max 3 visible notifications stacked vertically (newest on top)
  *  • If count > 3: show a "N novas notificações" group badge at top
  *  • Clicking group badge expands all notifications
  *  • Smooth reflow when items enter/leave (CSS transition on wrapper)
  *  • Registers push fn into toastBridge for external (non-React) calls
+ *  • Uses React portal into #sm-toast-root for correct stacking
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useToast, _registerPush } from '../contexts/ToastContext';
 import ToastItemCard from './ToastItem';
+
+// Ensure the portal root exists (created once, persistent)
+function getOrCreateRoot(): HTMLElement {
+    let el = document.getElementById('sm-toast-root');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'sm-toast-root';
+        document.body.appendChild(el);
+    }
+    return el;
+}
 
 const MAX_VISIBLE = 3;
 
@@ -44,15 +57,11 @@ export default function ToastContainer() {
 
     if (toasts.length === 0) return null;
 
-    return (
+    const content = (
         <div
             aria-live="polite"
             aria-label="Notificações"
             style={{
-                position: 'fixed',
-                top: 20,
-                right: 20,
-                zIndex: 9000,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'flex-end',
@@ -160,6 +169,8 @@ export default function ToastContainer() {
             </div>
         </div>
     );
+
+    return createPortal(content, getOrCreateRoot());
 }
 
 // ── Grouped line (compact row for overflow toasts) ────────────────────────────

@@ -86,3 +86,59 @@ input[type="range"]::-webkit-slider-thumb {
     from { opacity: 0; transform: translateY(-4px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Layout CSS Variables ───────────────────────────────────────────────── */
+
+:root {
+    --header-height: 64px;   /* matches h-16 in Navbar */
+}
+
+/* ─── Toast / Notification container placement ───────────────────────────── */
+
+#sm-toast-root {
+    position: fixed;
+    /* Below header + safe-area awareness */
+    top: max(calc(var(--header-height) + 16px), env(safe-area-inset-top, calc(var(--header-height) + 16px)));
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    pointer-events: none;
+    /* Don't cover header items */
+    max-height: calc(100vh - var(--header-height) - 32px);
+}
+
+#sm-toast-root > * {
+    pointer-events: auto;
+}
+
+/* ─── Bell ring animation ────────────────────────────────────────────────── */
+
+@keyframes sm-bell-ring {
+    0%,  100% { transform: rotate(0deg); }
+    5%         { transform: rotate(14deg); }
+    10%        { transform: rotate(-10deg); }
+    15%        { transform: rotate(12deg); }
+    20%        { transform: rotate(-8deg); }
+    25%        { transform: rotate(0deg); }
+}
+
+/* ─── Notification scroll panel custom scrollbar ────────────────────────── */
+
+.notif-scroll::-webkit-scrollbar        { width: 4px; }
+.notif-scroll::-webkit-scrollbar-track  { background: transparent; }
+.notif-scroll::-webkit-scrollbar-thumb  { background: #1f2937; border-radius: 2px; }
+.notif-scroll::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+/* ─── Notification panel backdrop (mobile overlay) ──────────────────────── */
+
+@media (max-width: 480px) {
+    .sm-notif-panel {
+        position: fixed !important;
+        top: calc(var(--header-height) + 8px) !important;
+        left:  12px !important;
+        right: 12px !important;
+        width: auto !important;
+    }
+}

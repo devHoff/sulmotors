@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogOut, User as UserIcon, ChevronDown, Sun, Moon, Home, Car, Building2, PlusCircle, TrendingUp, Bell } from 'lucide-react';
+import { Menu, X, LogOut, User as UserIcon, ChevronDown, Sun, Moon, Home, Car, Building2, PlusCircle, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage, type Language } from '../contexts/LanguageContext';
+import NotificationBell from './NotificationBell';
 
 /* ── Flag SVGs as inline components ───────────────────── */
 function FlagBR() {
@@ -176,6 +177,9 @@ export default function Navbar() {
                         >
                             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                         </button>
+
+                        {/* Notification Bell */}
+                        <NotificationBell />
 
                         {/* Advertise CTA */}
                         <Link

@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { ToastProvider } from './contexts/ToastContext'
+import { NotificationProvider } from './contexts/NotificationContext'
 import ToastContainer from './components/ToastContainer'
 import App from './App'
 import './index.css'
@@ -15,10 +16,12 @@ createRoot(document.getElementById('root')!).render(
             <LanguageProvider>
                 <AuthProvider>
                     <ToastProvider>
-                        <BrowserRouter>
-                            <App />
-                            <ToastContainer />
-                        </BrowserRouter>
+                        <NotificationProvider>
+                            <BrowserRouter>
+                                <App />
+                                <ToastContainer />
+                            </BrowserRouter>
+                        </NotificationProvider>
                     </ToastProvider>
                 </AuthProvider>
             </LanguageProvider>
