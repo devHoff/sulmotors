@@ -6,7 +6,7 @@ import {
     TrendingUp, ArrowLeft, Search, RefreshCw, Ban, ChevronDown
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '../utils/toast';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, supabasePublic } from '../lib/supabase';
 

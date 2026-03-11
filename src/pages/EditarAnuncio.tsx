@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '../utils/toast';
 import { mockCars, brands, fuels, transmissions, type Car } from '../data/mockCars';
 import { useBrazilianCities } from '../hooks/useBrazilianCities';
 import CropModal from '../components/CropModal';

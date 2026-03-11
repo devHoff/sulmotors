@@ -20,6 +20,7 @@ import Avaliar from './pages/Avaliar';
 import Alertas from './pages/Alertas';
 import Admin from './pages/Admin';
 import Cookies from './pages/Cookies';
+import ToastDemo from './pages/ToastDemo';
 
 export default function App() {
     return (
@@ -46,6 +47,7 @@ export default function App() {
                     <Route path="/alertas"            element={<Alertas />} />
                     <Route path="/admin"              element={<Admin />} />
                     <Route path="/cookies"            element={<Cookies />} />
+                    <Route path="/toast-demo"         element={<ToastDemo />} />
                 </Route>
             </Routes>
         </>

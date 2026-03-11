@@ -6,7 +6,7 @@ import {
     ChevronDown, X, BadgeCheck, Settings, Zap
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '../utils/toast';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import CropModal from '../components/CropModal';
@@ -247,8 +247,8 @@ export default function MeuPerfil() {
     const handleCropComplete = async (blob: Blob) => {
         setShowCropModal(false);
         const fileName = `${user?.id}-${Math.random()}.jpg`;
-        const t = toast.loading('Enviando foto...');
         try {
+            setSaving(true);
             const { error } = await supabase.storage.from('avatars').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
             if (error) throw error;
             const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
@@ -256,7 +256,7 @@ export default function MeuPerfil() {
             await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
             setProfile(p => ({ ...p, avatar_url: publicUrl }));
             toast.success('Foto atualizada!');
-        } catch (err: any) { toast.error(`Erro: ${err.message}`); } finally { toast.dismiss(t); setSelectedImage(null); }
+        } catch (err: any) { toast.error(`Erro: ${err.message}`); } finally { setSaving(false); setSelectedImage(null); }
     };
 
     const fetchCEP = async (cep: string) => {

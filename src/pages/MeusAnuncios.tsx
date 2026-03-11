@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Car, Zap } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '../utils/toast';
 import CarCard from '../components/CarCard';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';

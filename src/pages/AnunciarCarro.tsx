@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, Loader2, Zap, Car, CheckCircle2, AlertTriangle, ShieldAlert, Shield } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '../utils/toast';
 import { brands, fuels, transmissions } from '../data/mockCars';
 import { useBrazilianCities } from '../hooks/useBrazilianCities';
 import CropModal from '../components/CropModal';

@@ -7,7 +7,7 @@ import {
     ShieldCheck, CreditCard, Copy, Check, RefreshCw,
     CheckCircle2, XCircle, Clock, X, ExternalLink,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '../utils/toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';

@@ -6,7 +6,7 @@ import {
     Eye, EyeOff, Shield, CheckCircle2, AlertTriangle,
     ShieldCheck, X, ChevronRight, KeyRound,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '../utils/toast';
 import { useAuth } from '../contexts/AuthContext';
 import { smToast } from '../utils/toast';
 
