@@ -432,7 +432,7 @@ export default function DetalheCarro() {
                                 <div className="space-y-1.5">
                                     <p className="text-xs font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Aviso legal</p>
                                     <p className="text-xs text-slate-500 dark:text-zinc-500 leading-relaxed">
-                                        t('detail_platform_notice')
+                                        {t('detail_platform_notice')}
                                     </p>
                                 </div>
                             </div>

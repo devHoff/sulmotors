@@ -19,11 +19,11 @@ import {
     PieChart as RePieChart, Pie, Cell
 } from 'recharts';
 import { toast } from '../utils/toast';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, ADMIN_EMAIL } from '../contexts/AuthContext';
 import { supabase, supabasePublic } from '../lib/supabase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const ADMIN_EMAIL = 'bandasleonardo@gmail.com';
+// ADMIN_EMAIL is imported from AuthContext — single source of truth
 const ADMIN_2FA_CODE = '834221';
 
 type AdminSection =

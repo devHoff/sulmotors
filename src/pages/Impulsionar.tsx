@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from '../utils/toast';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, isAdminEmail } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { Car } from '../data/mockCars';
 
@@ -95,6 +95,7 @@ export default function Impulsionar() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const adminMode = isAdminEmail(user?.email);
     const { t, language } = useLanguage();
 
     const [car, setCar]             = useState<Car | null>(null);
@@ -138,7 +139,8 @@ export default function Impulsionar() {
             if (!id) return;
             const { data, error } = await supabase.from('anuncios').select('*').eq('id', id).single();
             if (error || !data) { toast.error('Anúncio não encontrado.'); navigate('/meus-anuncios'); return; }
-            if (data.user_id !== user?.id) { toast.error('Sem permissão.'); navigate('/meus-anuncios'); return; }
+            // Admin can boost any listing; regular users only their own
+            if (data.user_id !== user?.id && !isAdminEmail(user?.email)) { toast.error('Sem permissão.'); navigate('/meus-anuncios'); return; }
             setCar({ ...data, aceitaTroca: data.aceita_troca, modelo_3d: false, imagens: data.imagens || [] });
             setLoading(false);
         };
@@ -199,6 +201,19 @@ export default function Impulsionar() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data?.error) throw new Error(data?.error ?? data?.message ?? `Erro ${res.status}`);
         return data;
+    };
+
+    // ── Admin: instant free boost ──────────────────────────────────────────────
+    const handleAdminFreeBoost = async () => {
+        if (!id || !car) return;
+        const period = periods[selectedPeriod];
+        try {
+            await activateBoost(period.days);
+            toast.success(`⭐ Destaque gratuito ativado por ${period.days} dias!`);
+            setTimeout(() => navigate('/meus-anuncios'), 1200);
+        } catch {
+            toast.error('Erro ao ativar destaque.');
+        }
     };
 
     // ── Activate boost in DB after successful payment ─────────────────────────
@@ -611,12 +626,20 @@ export default function Impulsionar() {
                         </div>
                     </div>
 
-                    {/* CTA */}
+                    {/* Admin free-boost CTA — replaces payment flow */}
+                    {adminMode ? (
+                        <button onClick={handleAdminFreeBoost}
+                            className="w-full flex items-center justify-center gap-2.5 py-4 bg-gradient-to-r from-amber-500 to-brand-400 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98]">
+                            <Zap className="w-5 h-5" strokeWidth={1.5} />
+                            ⭐ Ativar Destaque Gratuito (Admin)
+                        </button>
+                    ) : (
                     <button onClick={openModal}
                         className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow active:scale-[0.98]">
                         <Rocket className="w-5 h-5" strokeWidth={1.5} />
                         {t.imp_btn_boost} {fmt(period.price)}
                     </button>
+                    )}
 
                     <div className="flex items-center justify-center gap-1.5 mt-3">
                         <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" strokeWidth={1.5} />

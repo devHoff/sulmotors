@@ -7,7 +7,7 @@ import { mockCars, brands, fuels, transmissions, type Car } from '../data/mockCa
 import { useBrazilianCities } from '../hooks/useBrazilianCities';
 import CropModal from '../components/CropModal';
 import AutocompleteInput from '../components/AutocompleteInput';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, isAdminEmail } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
 // Helper interface for the form state
@@ -75,8 +75,8 @@ export default function EditarAnuncio() {
                 if (error) throw error;
 
                 if (data) {
-                    // Check ownership
-                    if (data.user_id !== user.id) {
+                    // Check ownership — admin can edit any listing
+                    if (data.user_id !== user.id && !isAdminEmail(user.email)) {
                         toast.error('Você não tem permissão para editar este anúncio.');
                         navigate('/meus-anuncios');
                         return;
@@ -217,7 +217,8 @@ export default function EditarAnuncio() {
         try {
             setSubmitting(true);
 
-            const { error } = await supabase
+            // Admin can update any listing; regular users restricted to their own
+            let query = supabase
                 .from('anuncios')
                 .update({
                     marca: form.marca,
@@ -234,8 +235,11 @@ export default function EditarAnuncio() {
                     aceita_troca: form.aceitaTroca,
                     imagens: images,
                 })
-                .eq('id', id)
-                .eq('user_id', user.id); // Security check
+                .eq('id', id);
+            if (!isAdminEmail(user.email)) {
+                query = query.eq('user_id', user.id);
+            }
+            const { error } = await query;
 
             if (error) throw error;
 
