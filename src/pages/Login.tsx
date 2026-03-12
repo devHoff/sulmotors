@@ -127,7 +127,7 @@ export default function Login() {
                             <Car className="w-5 h-5 text-zinc-950" strokeWidth={1.5} />
                         </div>
                         <span className="text-2xl font-black tracking-tight">
-                            <span className="text-brand-400">Sul</span><span className="text-white">Motors</span>
+                            <span className="text-brand-400">Sul</span><span className="text-white">Motor</span>
                         </span>
                     </div>
                     <h2 className="text-3xl font-black text-white leading-tight mb-3">
@@ -168,7 +168,7 @@ export default function Login() {
                         </div>
                         <span className="text-xl font-black tracking-tight">
                             <span className="text-brand-400">Sul</span>
-                            <span className="text-slate-900 dark:text-white">Motors</span>
+                            <span className="text-slate-900 dark:text-white">Motor</span>
                         </span>
                     </Link>
 
@@ -218,6 +218,7 @@ export default function Login() {
                                             <input
                                                 type={showPass ? 'text' : 'password'}
                                                 required
+                                                autoComplete="current-password"
                                                 value={form.password}
                                                 onChange={e => setForm({ ...form, password: e.target.value })}
                                                 className="w-full pl-10 pr-12 py-3.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 text-sm outline-none transition-all"
@@ -298,6 +299,7 @@ export default function Login() {
                                             <input
                                                 type={showPass ? 'text' : 'password'}
                                                 required
+                                                autoComplete="new-password"
                                                 value={form.password}
                                                 onChange={e => setForm({ ...form, password: e.target.value })}
                                                 className="w-full pl-10 pr-12 py-3.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 text-sm outline-none transition-all"

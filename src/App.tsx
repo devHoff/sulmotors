@@ -36,8 +36,8 @@ export default function App() {
                     <Route path="/meus-anuncios"       element={<MeusAnuncios />} />
                     <Route path="/favoritos"           element={<MeusFavoritos />} />
                     <Route path="/meu-perfil"          element={<MeuPerfil />} />
-                    <Route path="/impulsionar/:id"     element={<Impulsionar />} />
                     <Route path="/impulsionar/sucesso" element={<ImpulsionarSucesso />} />
+                    <Route path="/impulsionar/:id"     element={<Impulsionar />} />
                     <Route path="/carro/:id"           element={<DetalheCarro />} />
                     <Route path="/sobre-nos"           element={<SobreNos />} />
                     <Route path="/login"               element={<Login />} />

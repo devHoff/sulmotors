@@ -24,9 +24,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  */
 export const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-        persistSession:  false,
-        autoRefreshToken: false,
+        persistSession:     false,
+        autoRefreshToken:   false,
         detectSessionInUrl: false,
+        storageKey:         'sm_public_auth',
     },
     global: {
         headers: {
