@@ -1,5 +1,5 @@
 /**
- * TrustBadge — SulMotors verified-seller badge component.
+ * TrustBadge — SulMotor verified-seller badge component.
  *
  * Usage:
  *   <TrustBadge size="sm" />     — small inline badge (e.g. in CarCard)
@@ -34,7 +34,7 @@ export default function TrustBadge({
         <motion.span
             initial={{ scale: 0.85, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            title="Conta verificada pelo SulMotors"
+            title="Conta verificada pelo SulMotor"
             className={`inline-flex items-center ${s.gap} px-2 py-0.5 bg-emerald-500/15 border border-emerald-500/30 rounded-full ${className}`}
         >
             <BadgeCheck className={`${s.icon} text-emerald-500 flex-shrink-0`} strokeWidth={2} />

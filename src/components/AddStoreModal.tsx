@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MessageCircle, Mail, Store } from 'lucide-react';
+import { X, Mail, Store } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface AddStoreModalProps {
@@ -7,16 +7,10 @@ interface AddStoreModalProps {
     onClose: () => void;
 }
 
-const WHATSAPP_NUMBER = '5551922263188'; // SulMotor contact
-const EMAIL_ADDRESS = 'bandasleonardo@gmail.com';
+const EMAIL_ADDRESS = 'contato@sulmotor.com.br';
 
 export default function AddStoreModal({ isOpen, onClose }: AddStoreModalProps) {
     const { t } = useLanguage();
-
-    const handleWhatsApp = () => {
-        const msg = encodeURIComponent('Olá! Gostaria de adicionar minha loja na SulMotor.');
-        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
-    };
 
     const handleEmail = () => {
         window.location.href = `mailto:${EMAIL_ADDRESS}?subject=Quero adicionar minha loja na SulMotor`;
@@ -63,33 +57,26 @@ export default function AddStoreModal({ isOpen, onClose }: AddStoreModalProps) {
                                 </div>
 
                                 <h2 className="text-xl font-black text-slate-900 dark:text-white mb-3">
-                                    {t.stores_add_title}
+                                    {t('stores_add_title')}
                                 </h2>
                                 <p className="text-sm text-slate-500 dark:text-zinc-400 leading-relaxed mb-7">
-                                    {t.stores_add_body}
+                                    {t('stores_add_body')}
                                 </p>
 
                                 {/* Contact info */}
-                                <div className="flex items-center gap-2 mb-5 px-4 py-3 bg-emerald-500/8 border border-emerald-500/20 rounded-xl">
-                                    <MessageCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" strokeWidth={1.5} />
-                                    <span className="text-sm text-emerald-600 dark:text-emerald-400 font-bold">+55 51 9226-3188</span>
+                                <div className="flex items-center gap-2 mb-5 px-4 py-3 bg-brand-400/8 border border-brand-400/20 rounded-xl">
+                                    <Mail className="w-4 h-4 text-brand-500 dark:text-brand-400 flex-shrink-0" strokeWidth={1.5} />
+                                    <span className="text-sm text-brand-600 dark:text-brand-400 font-bold">{EMAIL_ADDRESS}</span>
                                 </div>
 
                                 {/* CTA buttons */}
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <button
-                                        onClick={handleWhatsApp}
-                                        className="flex-1 flex items-center justify-center gap-2.5 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl transition-all hover:shadow-lg hover:shadow-emerald-500/25"
-                                    >
-                                        <MessageCircle className="w-5 h-5" strokeWidth={1.5} />
-                                        {t.stores_whatsapp}
-                                    </button>
-                                    <button
                                         onClick={handleEmail}
-                                        className="flex-1 flex items-center justify-center gap-2.5 py-3.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold rounded-xl transition-all"
+                                        className="flex-1 flex items-center justify-center gap-2.5 py-3.5 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-bold rounded-xl transition-all hover:shadow-lg hover:shadow-brand-400/25"
                                     >
                                         <Mail className="w-5 h-5" strokeWidth={1.5} />
-                                        {t.stores_email}
+                                        {t('stores_contact')}
                                     </button>
                                 </div>
 
@@ -98,7 +85,7 @@ export default function AddStoreModal({ isOpen, onClose }: AddStoreModalProps) {
                                     onClick={onClose}
                                     className="w-full mt-4 text-center text-sm text-slate-400 dark:text-zinc-600 hover:text-slate-600 dark:hover:text-zinc-400 transition-colors"
                                 >
-                                    {t.stores_close}
+                                    {t('stores_close')}
                                 </button>
                             </div>
                         </div>

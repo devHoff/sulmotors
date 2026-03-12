@@ -581,7 +581,7 @@ export default function AnunciarCarro() {
                     <div className="mx-6 md:mx-8 my-4 flex items-start gap-2.5 p-3.5 bg-amber-500/8 border border-amber-500/20 rounded-xl">
                         <ShieldAlert className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
                         <p className="text-xs text-amber-700 dark:text-amber-400/90 leading-relaxed">
-                            <strong>Nunca solicite pagamentos antecipados.</strong> O SulMotors não intermedia pagamentos e não se responsabiliza por transações entre compradores e vendedores.
+                            <strong>Nunca solicite pagamentos antecipados.</strong> O SulMotor não intermedia pagamentos e não se responsabiliza por transações entre compradores e vendedores.
                         </p>
                     </div>
 

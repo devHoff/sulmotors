@@ -410,7 +410,7 @@ export default function Admin() {
                     </div>
                     {!sidebarCollapsed && (
                         <div>
-                            <span className="text-sm font-black text-white leading-none block">SulMotors</span>
+                            <span className="text-sm font-black text-white leading-none block">SulMotor</span>
                             <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest">Admin</span>
                         </div>
                     )}

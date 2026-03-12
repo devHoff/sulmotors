@@ -143,7 +143,7 @@ export default function CookieBanner() {
                         {/* Body */}
                         <div className="p-5 pt-4">
                             <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed mb-4">
-                                Este site utiliza cookies para melhorar sua experiência no SulMotors, personalizar conteúdo
+                                Este site utiliza cookies para melhorar sua experiência no SulMotor, personalizar conteúdo
                                 e analisar o tráfego.{' '}
                                 <Link to="/cookies" className="text-brand-500 dark:text-brand-400 font-semibold hover:underline" onClick={() => dismiss()}>
                                     Saiba mais

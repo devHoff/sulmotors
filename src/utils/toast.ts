@@ -1,68 +1,43 @@
 /**
- * SulMotors Enterprise Toast + Notification Utility
+ * SulMotor Toast Utility
  * ─────────────────────────────────────────────────────────────────────────────
- * Semantic helper wrappers around ToastContext + NotificationContext bridges.
+ * Semantic helper wrappers around ToastContext.
  * All messages are fully localized using the LanguageContext singleton (getT()).
- *
- * Usage:
- *   import { smToast } from '../utils/toast';
- *   smToast.profileSaved();
- *   smToast.listingCreated('Honda Civic 2022');
- *   smToast.newMessage('João Silva');
- *   smToast.priceAlert('Fiat Argo', 45000);
- *
- * For legacy `toast.success / toast.error` calls: export `toast` compat shim.
  */
 
 import { toastBridge } from '../contexts/ToastContext';
-import { notifyBridge } from '../contexts/NotificationContext';
 import { getT } from '../contexts/LanguageContext';
 
-// ── Semantic helpers ──────────────────────────────────────────────────────────
+const D = 3500; // default duration ms
 
 export const smToast = {
 
-    // ── Profile ───────────────────────────────────────────────────────────────
     profileSaved: () => {
         const t = getT();
-        return notifyBridge({ type: 'success', title: t('notif_profile_saved'), description: t('notif_profile_saved_desc') });
+        return toastBridge({ type: 'success', title: t('notif_profile_saved'), description: t('notif_profile_saved_desc'), duration: D });
     },
     profileError: (msg?: string) => {
         const t = getT();
-        return notifyBridge({ type: 'error', title: t('notif_profile_error'), description: msg ?? t('notif_profile_error_desc') });
+        return toastBridge({ type: 'error', title: t('notif_profile_error'), description: msg ?? t('notif_profile_error_desc'), duration: D });
     },
     profileIncomplete: () => {
         const t = getT();
-        return notifyBridge({ type: 'warning', title: t('notif_profile_incomplete'), description: t('notif_profile_incomplete_desc') });
+        return toastBridge({ type: 'warning', title: t('notif_profile_incomplete'), description: t('notif_profile_incomplete_desc'), duration: D });
     },
 
-    // ── Listings ─────────────────────────────────────────────────────────────
     listingCreated: (name?: string) => {
         const t = getT();
-        return notifyBridge({
-            type: 'success',
-            title: t('notif_listing_created'),
-            description: name ? `"${name}" — ${t('notif_listing_created_desc')}` : t('notif_listing_created_desc'),
-            href: '/meus-anuncios',
-        });
+        const desc = name ? `"${name}" — ${t('notif_listing_created_desc')}` : t('notif_listing_created_desc');
+        return toastBridge({ type: 'success', title: t('notif_listing_created'), description: desc, duration: D });
     },
     listingApproved: (name?: string) => {
         const t = getT();
-        return notifyBridge({
-            type: 'success',
-            title: t('notif_listing_approved'),
-            description: name ? `"${name}" — ${t('notif_listing_approved_desc')}` : t('notif_listing_approved_desc'),
-            href: '/meus-anuncios',
-        });
+        const desc = name ? `"${name}" — ${t('notif_listing_approved_desc')}` : t('notif_listing_approved_desc');
+        return toastBridge({ type: 'success', title: t('notif_listing_approved'), description: desc, duration: D });
     },
     listingRejected: (reason?: string) => {
         const t = getT();
-        return notifyBridge({
-            type: 'error',
-            title: t('notif_listing_rejected'),
-            description: reason ?? t('notif_listing_rejected_desc'),
-            href: '/meus-anuncios',
-        });
+        return toastBridge({ type: 'error', title: t('notif_listing_rejected'), description: reason ?? t('notif_listing_rejected_desc'), duration: D });
     },
     listingDeleted: () => {
         const t = getT();
@@ -70,74 +45,39 @@ export const smToast = {
     },
     listingUpdated: () => {
         const t = getT();
-        return notifyBridge({ type: 'success', title: t('notif_listing_updated'), description: t('notif_listing_updated_desc') });
+        return toastBridge({ type: 'success', title: t('notif_listing_updated'), description: t('notif_listing_updated_desc'), duration: D });
     },
     listingError: (msg?: string) => {
         const t = getT();
-        return notifyBridge({ type: 'error', title: t('notif_listing_error'), description: msg ?? t('notif_listing_error_desc') });
+        return toastBridge({ type: 'error', title: t('notif_listing_error'), description: msg ?? t('notif_listing_error_desc'), duration: D });
     },
     dailyLimitReached: () => {
         const t = getT();
-        return notifyBridge({ type: 'warning', title: t('notif_daily_limit'), description: t('notif_daily_limit_desc') });
+        return toastBridge({ type: 'warning', title: t('notif_daily_limit'), description: t('notif_daily_limit_desc'), duration: D });
     },
 
-    // ── Chat ─────────────────────────────────────────────────────────────────
     newMessage: (senderName?: string) => {
         const t = getT();
-        return notifyBridge({
-            type: 'message',
-            title: t('notif_new_message'),
-            description: senderName ? `${senderName} — ${t('notif_new_message_desc')}` : t('notif_new_message_desc'),
-        });
+        const desc = senderName ? `${senderName} — ${t('notif_new_message_desc')}` : t('notif_new_message_desc');
+        return toastBridge({ type: 'info', title: t('notif_new_message'), description: desc, duration: D });
     },
     messageFlagged: () => {
         const t = getT();
-        return notifyBridge({ type: 'warning', title: t('notif_message_flagged'), description: t('notif_message_flagged_desc') });
+        return toastBridge({ type: 'warning', title: t('notif_message_flagged'), description: t('notif_message_flagged_desc'), duration: D });
     },
 
-    // ── Favorites ────────────────────────────────────────────────────────────
     favoriteAdded: (carName?: string) => {
         const t = getT();
-        return toastBridge({
-            type: 'success',
-            title: t('notif_favorite_added'),
-            description: carName ? `"${carName}"` : undefined,
-            duration: 3000,
-        });
+        return toastBridge({ type: 'success', title: t('notif_favorite_added'), description: carName ? `"${carName}"` : undefined, duration: 3000 });
     },
     favoriteRemoved: (carName?: string) => {
         const t = getT();
-        return toastBridge({
-            type: 'info',
-            title: t('notif_favorite_removed'),
-            description: carName ? `"${carName}"` : undefined,
-            duration: 3000,
-        });
+        return toastBridge({ type: 'info', title: t('notif_favorite_removed'), description: carName ? `"${carName}"` : undefined, duration: 3000 });
     },
 
-    // ── Alerts ───────────────────────────────────────────────────────────────
-    priceAlert: (carName: string, price: number) => {
-        const t = getT();
-        return notifyBridge({
-            type: 'info',
-            title: t('notif_price_alert'),
-            description: `"${carName}" — R$ ${price.toLocaleString('pt-BR')}`,
-            href: '/alertas',
-        });
-    },
-    alertCreated: () => {
-        const t = getT();
-        return toastBridge({ type: 'success', title: t('notif_alert_created'), description: t('notif_alert_created_desc'), duration: 3500 });
-    },
-    alertDeleted: () => {
-        const t = getT();
-        return toastBridge({ type: 'info', title: t('notif_alert_deleted'), duration: 3000 });
-    },
-
-    // ── Auth ─────────────────────────────────────────────────────────────────
     loginSuccess: () => {
         const t = getT();
-        return notifyBridge({ type: 'success', title: t('notif_login_success'), description: t('notif_login_welcome') });
+        return toastBridge({ type: 'success', title: t('notif_login_success'), description: t('notif_login_welcome'), duration: D });
     },
     logoutSuccess: () => {
         const t = getT();
@@ -145,24 +85,13 @@ export const smToast = {
     },
     signupSuccess: () => {
         const t = getT();
-        return notifyBridge({ type: 'success', title: t('notif_signup'), description: t('notif_signup_desc') });
+        return toastBridge({ type: 'success', title: t('notif_signup'), description: t('notif_signup_desc'), duration: D });
     },
     emailVerified: () => {
         const t = getT();
-        return notifyBridge({ type: 'success', title: t('notif_email_verified'), description: t('notif_email_verified_desc') });
+        return toastBridge({ type: 'success', title: t('notif_email_verified'), description: t('notif_email_verified_desc'), duration: D });
     },
 
-    // ── Verification ─────────────────────────────────────────────────────────
-    verificationSubmitted: () => {
-        const t = getT();
-        return notifyBridge({ type: 'success', title: t('notif_verification_submitted'), description: t('notif_verification_submitted_desc') });
-    },
-    verifiedBadgeGranted: () => {
-        const t = getT();
-        return notifyBridge({ type: 'success', title: t('notif_verified_badge'), description: t('notif_verified_badge_desc') });
-    },
-
-    // ── Generic ──────────────────────────────────────────────────────────────
     copied: () => {
         const t = getT();
         return toastBridge({ type: 'success', title: t('notif_copied'), duration: 2500 });
@@ -179,7 +108,7 @@ export const smToast = {
 
 export default smToast;
 
-// ── Compat shim — replaces `import { toast } from 'sonner'` calls ─────────────
+// ── Compat shim ───────────────────────────────────────────────────────────────
 
 type SonnerOpts = { description?: string; duration?: number };
 

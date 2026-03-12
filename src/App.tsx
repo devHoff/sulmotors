@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -16,12 +16,8 @@ import Login from './pages/Login';
 import Termos from './pages/Termos';
 import Privacidade from './pages/Privacidade';
 import SeusDireitos from './pages/SeusDireitos';
-import Avaliar from './pages/Avaliar';
-import Alertas from './pages/Alertas';
 import Admin from './pages/Admin';
 import Cookies from './pages/Cookies';
-import ToastDemo from './pages/ToastDemo';
-import Performance from './pages/Performance';
 
 export default function App() {
     return (
@@ -48,11 +44,13 @@ export default function App() {
                     <Route path="/termos"              element={<Termos />} />
                     <Route path="/privacidade"         element={<Privacidade />} />
                     <Route path="/seus-direitos"       element={<SeusDireitos />} />
-                    <Route path="/avaliar"             element={<Avaliar />} />
-                    <Route path="/alertas"             element={<Alertas />} />
                     <Route path="/cookies"             element={<Cookies />} />
-                    <Route path="/toast-demo"          element={<ToastDemo />} />
-                    <Route path="/performance"         element={<Performance />} />
+
+                    {/* Removed pages → redirect home */}
+                    <Route path="/avaliar"     element={<Navigate to="/" replace />} />
+                    <Route path="/alertas"     element={<Navigate to="/" replace />} />
+                    <Route path="/toast-demo"  element={<Navigate to="/" replace />} />
+                    <Route path="/performance" element={<Navigate to="/" replace />} />
                 </Route>
             </Routes>
         </>

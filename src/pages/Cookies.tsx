@@ -20,7 +20,7 @@ export default function Cookies() {
             content: (
                 <div className="space-y-3 text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
                     <p>
-                        Cookies são pequenos arquivos de texto armazenados no seu navegador quando você visita o SulMotors.
+                        Cookies são pequenos arquivos de texto armazenados no seu navegador quando você visita o SulMotor.
                         Eles permitem que o site funcione corretamente, melhore a experiência do usuário e forneça
                         funcionalidades como sessões de login, preferências do usuário e análise de tráfego.
                     </p>
@@ -98,7 +98,7 @@ export default function Cookies() {
             content: (
                 <div className="space-y-4 text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
                     <p>
-                        Você tem o direito de controlar quais cookies aceita. Ao visitar o SulMotors pela primeira vez,
+                        Você tem o direito de controlar quais cookies aceita. Ao visitar o SulMotor pela primeira vez,
                         exibimos um banner de consentimento onde você pode aceitar todos os cookies ou configurá-los
                         individualmente.
                     </p>
@@ -246,7 +246,7 @@ export default function Cookies() {
                                     Conformidade com a LGPD
                                 </p>
                                 <p className="text-xs text-emerald-600 dark:text-emerald-400/80 leading-relaxed">
-                                    O SulMotors está comprometido com a proteção dos seus dados pessoais conforme a
+                                    O SulMotor está comprometido com a proteção dos seus dados pessoais conforme a
                                     Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018). Nossa política de cookies
                                     é revisada periodicamente para garantir conformidade com as regulamentações vigentes.
                                 </p>

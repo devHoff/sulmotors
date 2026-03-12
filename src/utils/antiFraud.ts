@@ -1,5 +1,5 @@
 /**
- * Anti-fraud & vehicle validation utilities for SulMotors.
+ * Anti-fraud & vehicle validation utilities for SulMotor.
  * ─────────────────────────────────────────────────────────
  * Includes:
  *   - Spam / scam keyword detection

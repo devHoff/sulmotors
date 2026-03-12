@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    ChevronLeft, ChevronRight, ArrowLeft, MessageCircle,
+    ChevronLeft, ChevronRight, ArrowLeft, Mail,
     Calendar, Gauge, Fuel, Settings2, Palette, MapPin, ArrowLeftRight,
     Heart, Share2, ShieldAlert, Star, TrendingUp, Calculator,
     CheckCircle2, AlertTriangle, BadgeCheck
@@ -12,14 +12,15 @@ import { supabase, supabasePublic } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
-// ── WhatsApp centralised number ───────────────────────────────────────────────
-const WA_NUMBER = '555192263188';
-function waLink(car: Car) {
+// ── Internal contact helper ───────────────────────────────────────────────────
+const CONTACT_EMAIL = 'contato@sulmotor.com.br';
+function contactLink(car: Car) {
     const priceStr = new Intl.NumberFormat('pt-BR', {
         style: 'currency', currency: 'BRL', minimumFractionDigits: 0
     }).format(car.preco);
-    const msg = `Olá, vi este carro no SulMotors:\n\nModelo: ${car.marca} ${car.modelo} ${car.ano}\nPreço: ${priceStr}\nLink: ${window.location.href}`;
-    return `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
+    const subject = encodeURIComponent(`Interesse: ${car.marca} ${car.modelo} ${car.ano}`);
+    const body = encodeURIComponent(`Olá,\n\nTenho interesse no seguinte veículo anunciado na SulMotor:\n\nModelo: ${car.marca} ${car.modelo} ${car.ano}\nPreço: ${priceStr}\nLink: ${window.location.href}\n\nAguardo retorno.`);
+    return `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
 }
 
 // ── Financing calculator ──────────────────────────────────────────────────────
@@ -109,8 +110,8 @@ export default function DetalheCarro() {
 
     if (!car) return (
         <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col items-center justify-center">
-            <p className="text-xl text-slate-500 dark:text-zinc-400 mb-4">{t.detail_not_found}</p>
-            <Link to="/estoque" className="text-brand-500 dark:text-brand-400 font-bold hover:underline">{t.detail_back_inventory}</Link>
+            <p className="text-xl text-slate-500 dark:text-zinc-400 mb-4">{t('detail_not_found')}</p>
+            <Link to="/estoque" className="text-brand-500 dark:text-brand-400 font-bold hover:underline">{t('detail_back_inventory')}</Link>
         </div>
     );
 
@@ -144,13 +145,13 @@ export default function DetalheCarro() {
     const total = monthly * months + dp;
 
     const specs = [
-        { icon: Calendar, label: t.detail_year, value: String(car.ano) },
-        { icon: Gauge,    label: t.detail_km,   value: formatKm(car.quilometragem) },
-        { icon: Fuel,     label: t.detail_fuel,  value: car.combustivel },
-        { icon: Settings2,label: t.detail_gearbox, value: car.cambio },
-        { icon: Palette,  label: t.detail_color, value: car.cor },
-        { icon: MapPin,   label: t.detail_city,  value: car.cidade },
-        { icon: ArrowLeftRight, label: t.detail_trade, value: car.aceitaTroca ? t.detail_trade_yes : t.detail_trade_no },
+        { icon: Calendar, label: t('detail_year'), value: String(car.ano) },
+        { icon: Gauge,    label: t('detail_km'),   value: formatKm(car.quilometragem) },
+        { icon: Fuel,     label: t('detail_fuel'),  value: car.combustivel },
+        { icon: Settings2,label: t('detail_gearbox'), value: car.cambio },
+        { icon: Palette,  label: t('detail_color'), value: car.cor },
+        { icon: MapPin,   label: t('detail_city'),  value: car.cidade },
+        { icon: ArrowLeftRight, label: t('detail_trade'), value: car.aceitaTroca ? t('detail_trade_yes') : t('detail_trade_no') },
     ];
 
     const slideVariants = {
@@ -222,7 +223,7 @@ export default function DetalheCarro() {
                 {/* Nav bar (top) */}
                 <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 sm:p-5 z-30">
                     <Link to="/estoque" className="flex items-center gap-2 px-4 py-2 bg-black/50 backdrop-blur-sm border border-white/15 text-white text-sm font-bold rounded-xl hover:bg-black/70 transition-all">
-                        <ArrowLeft className="w-4 h-4" strokeWidth={1.5} /> {t.detail_back}
+                        <ArrowLeft className="w-4 h-4" strokeWidth={1.5} /> {t('detail_back')}
                     </Link>
                     <div className="flex items-center gap-2">
                         <button className="flex items-center gap-2 px-3 py-2 bg-black/50 backdrop-blur-sm border border-white/15 text-white/70 text-sm rounded-xl hover:text-white transition-all"
@@ -281,7 +282,7 @@ export default function DetalheCarro() {
                     <div>
                         <p className="text-sm font-bold text-amber-700 dark:text-amber-400">Aviso de segurança</p>
                         <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-0.5 leading-relaxed">
-                            <strong>Nunca realize pagamentos antecipados.</strong> O SulMotors não intermedeia pagamentos entre compradores e vendedores.
+                            <strong>Nunca realize pagamentos antecipados.</strong> O SulMotor não intermedeia pagamentos entre compradores e vendedores.
                             Desconfie de preços muito abaixo do mercado. Sempre veja o veículo pessoalmente antes de negociar.
                         </p>
                     </div>
@@ -304,7 +305,7 @@ export default function DetalheCarro() {
                                     <p className="text-slate-500 dark:text-zinc-500 text-sm">{car.ano} • {formatKm(car.quilometragem)}</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-xs text-slate-400 dark:text-zinc-600 mb-1">{t.detail_price}</p>
+                                    <p className="text-xs text-slate-400 dark:text-zinc-600 mb-1">{t('detail_price')}</p>
                                     <p className="text-3xl md:text-4xl font-black text-brand-500 dark:text-brand-400 tracking-tight">
                                         {formatPrice(car.preco)}
                                     </p>
@@ -313,7 +314,7 @@ export default function DetalheCarro() {
 
                             {/* Specs Grid */}
                             <div className="mb-8">
-                                <h3 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-4">{t.detail_specs}</h3>
+                                <h3 className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-4">{t('detail_specs')}</h3>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     {specs.map(({ icon: Icon, label, value }) => (
                                         <div key={label} className="flex items-center gap-3 p-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/5 rounded-xl hover:border-brand-400/20 transition-colors shadow-sm dark:shadow-none">
@@ -332,7 +333,7 @@ export default function DetalheCarro() {
                             {/* Description */}
                             {car.descricao && (
                                 <div className="p-6 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm dark:shadow-none">
-                                    <h3 className="text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-3">{t.detail_description}</h3>
+                                    <h3 className="text-xs font-bold text-slate-500 dark:text-zinc-500 uppercase tracking-widest mb-3">{t('detail_description')}</h3>
                                     <p className="text-slate-600 dark:text-zinc-300 leading-relaxed text-sm">{car.descricao}</p>
                                 </div>
                             )}
@@ -412,9 +413,9 @@ export default function DetalheCarro() {
                                                     * Simulação meramente indicativa. Condições reais de crédito podem variar conforme análise do banco.
                                                 </p>
 
-                                                <a href={waLink(car)} target="_blank" rel="noopener noreferrer"
-                                                    className="flex items-center justify-center gap-2 w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-all text-sm">
-                                                    <MessageCircle className="w-4 h-4" strokeWidth={1.5} />
+                                                <a href={contactLink(car)}
+                                                    className="flex items-center justify-center gap-2 w-full py-3 bg-brand-500 hover:bg-brand-400 text-zinc-950 font-bold rounded-xl transition-all text-sm">
+                                                    <Mail className="w-4 h-4" strokeWidth={1.5} />
                                                     Quero financiar — Falar com consultor
                                                 </a>
                                             </div>
@@ -431,8 +432,7 @@ export default function DetalheCarro() {
                                 <div className="space-y-1.5">
                                     <p className="text-xs font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Aviso legal</p>
                                     <p className="text-xs text-slate-500 dark:text-zinc-500 leading-relaxed">
-                                        O SulMotors atua exclusivamente como plataforma digital intermediária. Não participamos de transações,
-                                        não garantimos o estado do veículo e não somos responsáveis pelas negociações entre compradores e vendedores.
+                                        t('detail_platform_notice')
                                     </p>
                                 </div>
                             </div>
@@ -453,7 +453,7 @@ export default function DetalheCarro() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-1.5 flex-wrap">
-                                                <p className="font-bold text-slate-900 dark:text-white">{t.detail_seller}</p>
+                                                <p className="font-bold text-slate-900 dark:text-white">{t('detail_seller')}</p>
                                                 {sellerVerified && (
                                                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-md">
                                                         <BadgeCheck className="w-3 h-3" strokeWidth={1.5} /> Verificado
@@ -468,7 +468,7 @@ export default function DetalheCarro() {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                        <p className="text-xs text-emerald-500 dark:text-emerald-400 font-medium">{t.detail_available}</p>
+                                        <p className="text-xs text-emerald-500 dark:text-emerald-400 font-medium">{t('detail_available')}</p>
                                         <span className="text-slate-300 dark:text-zinc-700">·</span>
                                         <MapPin className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5} />
                                         <span className="text-xs text-slate-500 dark:text-zinc-500">{car.cidade}</span>
@@ -478,23 +478,23 @@ export default function DetalheCarro() {
                                 {/* Price */}
                                 <div className="p-6 border-b border-slate-100 dark:border-white/5">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-slate-500 dark:text-zinc-500 text-sm">{t.detail_vehicle_value}</span>
+                                        <span className="text-slate-500 dark:text-zinc-500 text-sm">{t('detail_vehicle_value')}</span>
                                         <span className="text-2xl font-black text-brand-500 dark:text-brand-400">{formatPrice(car.preco)}</span>
                                     </div>
                                     {car.aceitaTroca && (
                                         <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                                             <ArrowLeftRight className="w-4 h-4 text-emerald-500 dark:text-emerald-400" strokeWidth={1.5} />
-                                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{t.detail_accepts_trade}</span>
+                                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{t('detail_accepts_trade')}</span>
                                         </div>
                                     )}
                                 </div>
 
                                 {/* CTAs — ALL via centralised WhatsApp */}
                                 <div className="p-6 space-y-3">
-                                    <a href={waLink(car)} target="_blank" rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2.5 w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-black rounded-xl hover:shadow-lg hover:shadow-emerald-500/20 transition-all">
-                                        <MessageCircle className="w-5 h-5" strokeWidth={1.5} />
-                                        {t.detail_whatsapp}
+                                    <a href={contactLink(car)}
+                                        className="flex items-center justify-center gap-2.5 w-full py-4 bg-gradient-to-r from-brand-500 to-brand-400 text-zinc-950 font-black rounded-xl hover:shadow-lg hover:shadow-brand-400/20 transition-all">
+                                        <Mail className="w-5 h-5" strokeWidth={1.5} />
+                                        {t('detail_contact_label')}
                                     </a>
                                     <button
                                         onClick={() => setShowFinancing(true)}
@@ -512,7 +512,7 @@ export default function DetalheCarro() {
                                     </div>
                                     <div className="flex items-start gap-2">
                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
-                                        <p className="text-xs text-slate-400 dark:text-zinc-600">SulMotors não intermedeia pagamentos.</p>
+                                        <p className="text-xs text-slate-400 dark:text-zinc-600">SulMotor não intermedeia pagamentos.</p>
                                     </div>
                                 </div>
                             </div>
@@ -521,7 +521,7 @@ export default function DetalheCarro() {
                             <Link to="/estoque"
                                 className="flex items-center justify-center gap-2 w-full py-3 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/8 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white text-sm font-bold rounded-xl transition-all hover:border-slate-300 dark:hover:border-white/20 shadow-sm dark:shadow-none">
                                 <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
-                                {t.detail_see_more}
+                                {t('detail_see_more')}
                             </Link>
                         </motion.div>
                     </div>

@@ -1,5 +1,5 @@
 /**
- * SulMotors – LanguageContext v2
+ * SulMotor – LanguageContext v2
  * ─────────────────────────────────────────────────────────────────────────────
  * Full i18n system backed by JSON locale dictionaries.
  *

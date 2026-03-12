@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogOut, User as UserIcon, ChevronDown, Sun, Moon, Home, Car, Building2, PlusCircle, TrendingUp } from 'lucide-react';
+import { Menu, X, LogOut, User as UserIcon, ChevronDown, Sun, Moon, Home, Car, Building2, PlusCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage, type Language } from '../contexts/LanguageContext';
-import NotificationBell from './NotificationBell';
 
-/* ── Flag SVGs as inline components ───────────────────── */
+/* ── Flag SVGs ─────────────────────────────────────────── */
 function FlagBR() {
     return (
         <svg viewBox="0 0 20 14" width="20" height="14" className="rounded-sm flex-shrink-0">
@@ -59,7 +58,6 @@ export default function Navbar() {
     const { language, setLanguage, t } = useLanguage();
     const langRef = useRef<HTMLDivElement>(null);
 
-    // Close lang dropdown on outside click
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (langRef.current && !langRef.current.contains(e.target as Node)) {
@@ -71,10 +69,9 @@ export default function Navbar() {
     }, []);
 
     const links = [
-        { to: '/',          label: t.nav_home,      icon: Home       },
-        { to: '/estoque',   label: t.nav_inventory, icon: Car        },
-        { to: '/avaliar',   label: t('nav_evaluate'), icon: TrendingUp },
-        { to: '/sobre-nos', label: t.nav_about,     icon: Building2  },
+        { to: '/',          label: t('nav_home'),      icon: Home      },
+        { to: '/estoque',   label: t('nav_inventory'), icon: Car       },
+        { to: '/sobre-nos', label: t('nav_about'),     icon: Building2 },
     ];
 
     const isActive = (path: string) => location.pathname === path;
@@ -92,7 +89,7 @@ export default function Navbar() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
 
-                    {/* ── Logo (theme-aware) ── */}
+                    {/* ── Logo ── */}
                     <Link to="/" className="flex items-center group">
                         <img
                             src={isDark ? '/logo-light.png' : '/logo-dark.png'}
@@ -101,7 +98,7 @@ export default function Navbar() {
                         />
                     </Link>
 
-                    {/* ── Desktop nav links ── */}
+                    {/* ── Desktop nav ── */}
                     <div className="hidden md:flex items-center gap-1">
                         {links.map((link) => (
                             <Link
@@ -133,7 +130,7 @@ export default function Navbar() {
                             <button
                                 onClick={() => setLangMenuOpen(!langMenuOpen)}
                                 className="flex items-center gap-1.5 h-9 px-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:border-brand-400/40 transition-all"
-                                aria-label="Change language"
+                                aria-label={t('common_change_language')}
                             >
                                 {flagMap[language].flag}
                                 <span className="text-xs font-bold text-slate-600 dark:text-zinc-400">{flagMap[language].label}</span>
@@ -160,7 +157,7 @@ export default function Navbar() {
                                                 }`}
                                             >
                                                 {flagMap[lang].flag}
-                                                <span>{flagMap[lang].label === 'PT' ? 'Português' : flagMap[lang].label === 'EN' ? 'English' : 'Español'}</span>
+                                                <span>{lang === 'pt-BR' ? 'Português' : lang === 'en' ? 'English' : 'Español'}</span>
                                                 {language === lang && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-400" />}
                                             </button>
                                         ))}
@@ -173,13 +170,10 @@ export default function Navbar() {
                         <button
                             onClick={toggleTheme}
                             className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-zinc-400 hover:text-brand-400 hover:border-brand-400/40 transition-all"
-                            aria-label="Toggle theme"
+                            aria-label={t('common_toggle_theme')}
                         >
                             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                         </button>
-
-                        {/* Notification Bell */}
-                        <NotificationBell />
 
                         {/* Advertise CTA */}
                         <Link
@@ -188,7 +182,7 @@ export default function Navbar() {
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-brand-500 to-brand-400 transition-all group-hover:opacity-90" />
                             <PlusCircle className="relative w-4 h-4 text-zinc-950" strokeWidth={1.5} />
-                            <span className="relative text-zinc-950">{t.nav_advertise}</span>
+                            <span className="relative text-zinc-950">{t('nav_advertise')}</span>
                         </Link>
 
                         {/* User menu */}
@@ -200,7 +194,7 @@ export default function Navbar() {
                                 >
                                     <div className="w-7 h-7 bg-gradient-to-br from-brand-400 to-brand-600 rounded-full flex items-center justify-center text-zinc-950 overflow-hidden">
                                         {user.user_metadata?.avatar_url ? (
-                                            <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                            <img src={user.user_metadata.avatar_url} alt={t('nav_profile')} className="w-full h-full object-cover" />
                                         ) : (
                                             <UserIcon className="w-4 h-4" />
                                         )}
@@ -223,15 +217,13 @@ export default function Navbar() {
                                             className="absolute right-0 mt-2 w-52 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 py-2 overflow-hidden"
                                         >
                                             <div className="px-4 py-2 border-b border-slate-100 dark:border-white/5 mb-1">
-                                                <p className="text-xs text-slate-400 dark:text-zinc-500">{t.nav_account}</p>
+                                                <p className="text-xs text-slate-400 dark:text-zinc-500">{t('nav_account')}</p>
                                                 <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{user.email}</p>
                                             </div>
                                             {[
-                                                { to: '/meu-perfil', label: t.nav_profile },
-                                                { to: '/favoritos', label: t.nav_favorites },
-                                                { to: '/meus-anuncios', label: t.nav_my_ads },
-                                                { to: '/alertas', label: t('nav_alerts') },
-                                                { to: '/avaliar', label: t('nav_evaluate') },
+                                                { to: '/meu-perfil',    label: t('nav_profile')   },
+                                                { to: '/favoritos',     label: t('nav_favorites') },
+                                                { to: '/meus-anuncios', label: t('nav_my_ads')    },
                                             ].map((item) => (
                                                 <Link
                                                     key={item.to}
@@ -248,7 +240,7 @@ export default function Navbar() {
                                                     className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
                                                 >
                                                     <LogOut className="w-4 h-4" />
-                                                    {t.nav_sign_out}
+                                                    {t('nav_sign_out')}
                                                 </button>
                                             </div>
                                         </motion.div>
@@ -260,19 +252,18 @@ export default function Navbar() {
                                 to="/login"
                                 className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all border border-slate-200 dark:border-white/10"
                             >
-                                {t.nav_enter}
+                                {t('nav_enter')}
                             </Link>
                         )}
                     </div>
 
                     {/* ── Mobile: language + theme + hamburger ── */}
                     <div className="md:hidden flex items-center gap-1.5">
-                        {/* Language mini button (flag only) */}
                         <div className="relative" ref={undefined}>
                             <button
                                 onClick={() => setLangMenuOpen(!langMenuOpen)}
                                 className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 transition-all"
-                                aria-label="Change language"
+                                aria-label={t('common_change_language')}
                             >
                                 {flagMap[language].flag}
                             </button>
@@ -296,7 +287,7 @@ export default function Navbar() {
                                                 }`}
                                             >
                                                 {flagMap[lang].flag}
-                                                <span>{flagMap[lang].label === 'PT' ? 'Português' : flagMap[lang].label === 'EN' ? 'English' : 'Español'}</span>
+                                                <span>{lang === 'pt-BR' ? 'Português' : lang === 'en' ? 'English' : 'Español'}</span>
                                             </button>
                                         ))}
                                     </motion.div>
@@ -352,16 +343,15 @@ export default function Navbar() {
                                     className="flex items-center gap-2 px-4 py-3 text-sm font-bold text-zinc-950 bg-gradient-to-r from-brand-500 to-brand-400 rounded-xl"
                                 >
                                     <PlusCircle className="w-4 h-4" strokeWidth={1.5} />
-                                    {t.nav_advertise}
+                                    {t('nav_advertise')}
                                 </Link>
                             </div>
                             {user ? (
                                 <>
                                     {[
-                                        { to: '/meu-perfil', label: t.nav_profile },
-                                        { to: '/favoritos', label: t.nav_favorites },
-                                        { to: '/meus-anuncios', label: t.nav_my_ads },
-                                        { to: '/alertas', label: t('nav_alerts') },
+                                        { to: '/meu-perfil',    label: t('nav_profile')   },
+                                        { to: '/favoritos',     label: t('nav_favorites') },
+                                        { to: '/meus-anuncios', label: t('nav_my_ads')    },
                                     ].map((item) => (
                                         <Link
                                             key={item.to}
@@ -376,7 +366,7 @@ export default function Navbar() {
                                         onClick={() => { handleSignOut(); setMobileOpen(false); }}
                                         className="w-full text-left px-4 py-3 text-sm font-medium text-red-500 dark:text-red-400"
                                     >
-                                        {t.nav_sign_out}
+                                        {t('nav_sign_out')}
                                     </button>
                                 </>
                             ) : (
@@ -385,7 +375,7 @@ export default function Navbar() {
                                     onClick={() => setMobileOpen(false)}
                                     className="block px-4 py-3 text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
                                 >
-                                    {t.nav_enter}
+                                    {t('nav_enter')}
                                 </Link>
                             )}
                         </div>

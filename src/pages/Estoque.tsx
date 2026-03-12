@@ -7,11 +7,7 @@ import { brands, type Car as CarType } from '../data/mockCars';
 import { supabasePublic } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 
-// ── WhatsApp helper ────────────────────────────────────────────────────────────
-const WA_NUMBER = '555192263188';
-function waLink(msg = '') {
-    return `https://wa.me/${WA_NUMBER}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`;
-}
+
 
 export default function Estoque() {
     const { t } = useLanguage();
@@ -481,13 +477,12 @@ export default function Estoque() {
                                 )}
                             </div>
 
-                            {/* ── WhatsApp contact CTA ─────────────────────────── */}
+                            {/* ── Contact CTA ──────────────────────────────────── */}
                             <a
-                                href={waLink('Olá, preciso de ajuda para encontrar um veículo no SulMotors.')}
-                                target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-2 w-full px-3 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-colors">
+                                href="mailto:contato@sulmotor.com.br?subject=Ajuda para encontrar veículo"
+                                className="flex items-center gap-2 w-full px-3 py-2.5 bg-brand-400/10 border border-brand-400/30 text-brand-500 dark:text-brand-400 rounded-xl text-xs font-bold hover:bg-brand-400/20 transition-colors">
                                 <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
-                                Precisa de ajuda? Fale conosco
+                                {t('estoque_contact_btn')}
                             </a>
                         </div>
                     </div>

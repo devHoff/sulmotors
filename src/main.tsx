@@ -5,7 +5,6 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { LanguageProvider, useLanguage, _registerTFn } from './contexts/LanguageContext'
 import { ToastProvider } from './contexts/ToastContext'
-import { NotificationProvider } from './contexts/NotificationContext'
 import ToastContainer from './components/ToastContainer'
 import App from './App'
 import './index.css'
@@ -24,12 +23,10 @@ createRoot(document.getElementById('root')!).render(
                 <LanguageBridge />
                 <AuthProvider>
                     <ToastProvider>
-                        <NotificationProvider>
-                            <BrowserRouter>
-                                <App />
-                                <ToastContainer />
-                            </BrowserRouter>
-                        </NotificationProvider>
+                        <BrowserRouter>
+                            <App />
+                            <ToastContainer />
+                        </BrowserRouter>
                     </ToastProvider>
                 </AuthProvider>
             </LanguageProvider>

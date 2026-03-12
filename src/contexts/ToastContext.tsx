@@ -1,5 +1,5 @@
 /**
- * SulMotors Enterprise Toast System
+ * SulMotor Enterprise Toast System
  * ─────────────────────────────────────────────────────────────────────────────
  * Context-based toast engine — replaces Sonner entirely.
  *
