@@ -87,10 +87,10 @@ export default function Navbar() {
             <div className="h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent opacity-60" />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="relative flex items-center justify-between h-16">
+                <div className="grid grid-cols-[auto_1fr_auto] items-center h-16 gap-4">
 
                     {/* ── Logo ── */}
-                    <Link to="/" className="flex items-center group flex-shrink-0">
+                    <Link to="/" className="flex items-center group">
                         <img
                             src={isDark ? '/logo-light.png' : '/logo-dark.png'}
                             alt="SulMotor"
@@ -98,8 +98,8 @@ export default function Navbar() {
                         />
                     </Link>
 
-                    {/* ── Desktop nav — absolutely centred ── */}
-                    <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+                    {/* ── Desktop nav — centre column ── */}
+                    <div className="hidden md:flex items-center justify-center gap-1">
                         {links.map((link) => (
                             <Link
                                 key={link.to}
@@ -122,19 +122,28 @@ export default function Navbar() {
                         ))}
                     </div>
 
-                    {/* ── Desktop right controls ── */}
-                    <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                    {/* ── Third column: desktop controls + mobile controls (same cell) ── */}
+                    <div className="flex items-center gap-2 justify-end">
 
-                        {/* Language selector */}
+                        {/* ── Language selector (shared: desktop label visible, mobile icon only) ── */}
                         <div className="relative" ref={langRef}>
+                            {/* Desktop button */}
                             <button
                                 onClick={() => setLangMenuOpen(!langMenuOpen)}
-                                className="flex items-center gap-1.5 h-9 px-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:border-brand-400/40 transition-all"
+                                className="hidden md:flex items-center gap-1.5 h-9 px-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:border-brand-400/40 transition-all"
                                 aria-label={t('common_change_language')}
                             >
                                 {flagMap[language].flag}
                                 <span className="text-xs font-bold text-slate-600 dark:text-zinc-400">{flagMap[language].label}</span>
                                 <ChevronDown className={`w-3 h-3 text-slate-400 dark:text-zinc-500 transition-transform ${langMenuOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {/* Mobile button */}
+                            <button
+                                onClick={() => setLangMenuOpen(!langMenuOpen)}
+                                className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 transition-all"
+                                aria-label={t('common_change_language')}
+                            >
+                                {flagMap[language].flag}
                             </button>
 
                             <AnimatePresence>
@@ -144,7 +153,7 @@ export default function Navbar() {
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: 6, scale: 0.96 }}
                                         transition={{ duration: 0.12 }}
-                                        className="absolute right-0 mt-2 w-36 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-white/10 py-1.5 overflow-hidden"
+                                        className="absolute right-0 mt-2 w-36 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-white/10 py-1.5 overflow-hidden z-50"
                                     >
                                         {languageOptions.map((lang) => (
                                             <button
@@ -175,19 +184,19 @@ export default function Navbar() {
                             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                         </button>
 
-                        {/* Advertise CTA */}
+                        {/* Advertise CTA — desktop only */}
                         <Link
                             to="/anunciar"
-                            className="group relative flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl overflow-hidden transition-all hover:shadow-glow"
+                            className="hidden md:flex group relative items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl overflow-hidden transition-all hover:shadow-glow"
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-brand-500 to-brand-400 transition-all group-hover:opacity-90" />
                             <PlusCircle className="relative w-4 h-4 text-zinc-950" strokeWidth={1.5} />
                             <span className="relative text-zinc-950">{t('nav_advertise')}</span>
                         </Link>
 
-                        {/* User menu */}
+                        {/* User menu — desktop only */}
                         {user ? (
-                            <div className="relative">
+                            <div className="relative hidden md:block">
                                 <button
                                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                                     className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all border border-slate-200 dark:border-white/10"
@@ -250,59 +259,15 @@ export default function Navbar() {
                         ) : (
                             <Link
                                 to="/login"
-                                className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all border border-slate-200 dark:border-white/10"
+                                className="hidden md:block px-4 py-2 text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl transition-all border border-slate-200 dark:border-white/10"
                             >
                                 {t('nav_enter')}
                             </Link>
                         )}
-                    </div>
 
-                    {/* ── Mobile: language + theme + hamburger ── */}
-                    <div className="md:hidden flex items-center gap-1.5">
-                        <div className="relative" ref={undefined}>
-                            <button
-                                onClick={() => setLangMenuOpen(!langMenuOpen)}
-                                className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 transition-all"
-                                aria-label={t('common_change_language')}
-                            >
-                                {flagMap[language].flag}
-                            </button>
-                            <AnimatePresence>
-                                {langMenuOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 6, scale: 0.96 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 6, scale: 0.96 }}
-                                        transition={{ duration: 0.12 }}
-                                        className="absolute right-0 mt-2 w-36 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-white/10 py-1.5 overflow-hidden z-50"
-                                    >
-                                        {languageOptions.map((lang) => (
-                                            <button
-                                                key={lang}
-                                                onClick={() => { setLanguage(lang); setLangMenuOpen(false); }}
-                                                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors ${
-                                                    language === lang
-                                                        ? 'text-brand-500 dark:text-brand-400 bg-brand-400/5'
-                                                        : 'text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-white/5'
-                                                }`}
-                                            >
-                                                {flagMap[lang].flag}
-                                                <span>{lang === 'pt-BR' ? 'Português' : lang === 'en' ? 'English' : 'Español'}</span>
-                                            </button>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-
+                        {/* Hamburger — mobile only */}
                         <button
-                            onClick={toggleTheme}
-                            className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-zinc-400 hover:text-brand-400 transition-all"
-                        >
-                            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                        </button>
-                        <button
-                            className="p-2 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+                            className="md:hidden p-2 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
                             onClick={() => setMobileOpen(!mobileOpen)}
                         >
                             {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
