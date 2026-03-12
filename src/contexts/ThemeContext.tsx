@@ -17,7 +17,8 @@ const ThemeContext = createContext<ThemeContextType>({
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setTheme] = useState<Theme>(() => {
         const saved = localStorage.getItem('sulmotors-theme');
-        return (saved === 'dark' || saved === 'light') ? saved : 'light';
+        // Default to dark theme if no preference is saved
+        return (saved === 'dark' || saved === 'light') ? saved : 'dark';
     });
 
     useEffect(() => {
