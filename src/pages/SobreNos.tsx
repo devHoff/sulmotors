@@ -139,12 +139,20 @@ export default function SobreNos() {
                     <h2 className="text-3xl md:text-4xl font-black text-white mb-6 tracking-tight">{t.sobre_contact_title}</h2>
                     <p className="text-zinc-400 mb-10 text-sm">{t.sobre_contact_sub}</p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-10">
-                        {[{ icon: MapPin, text: 'Porto Alegre, RS' }, { icon: Phone, text: '(51) 9226-3188' }, { icon: Mail, text: 'bandasleonardo@gmail.com' }].map(({ icon: Icon, text }) => (
+                        {[
+                            { icon: MapPin, text: 'Porto Alegre, RS', href: null },
+                            { icon: Phone,  text: '(51) 9226-3188',   href: 'https://wa.me/555192263188' },
+                            { icon: Mail,   text: 'bandasleonardo@gmail.com', href: 'mailto:bandasleonardo@gmail.com' },
+                        ].map(({ icon: Icon, text, href }) => (
                             <div key={text} className="flex items-center gap-2.5 text-zinc-300 text-sm">
                                 <div className="w-8 h-8 bg-brand-400/10 border border-brand-400/20 rounded-lg flex items-center justify-center">
                                     <Icon className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
                                 </div>
-                                {text}
+                                {href ? (
+                                    <a href={href} target="_blank" rel="noopener noreferrer" className="hover:text-brand-400 transition-colors">{text}</a>
+                                ) : (
+                                    <span>{text}</span>
+                                )}
                             </div>
                         ))}
                     </div>

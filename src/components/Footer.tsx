@@ -30,7 +30,7 @@ export default function Footer() {
     const socials = [
         {
             label: 'WhatsApp',
-            href: 'https://wa.me/5551922631888',
+            href: 'https://wa.me/555192263188',
             icon: <WhatsAppIcon />,
         },
         {
@@ -138,7 +138,7 @@ export default function Footer() {
                                     <Phone className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
                                 </div>
                                 <a
-                                    href="https://wa.me/5551922631888"
+                                    href="https://wa.me/555192263188"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-sm text-slate-600 dark:text-zinc-400 hover:text-brand-400 transition-colors"

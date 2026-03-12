@@ -13,14 +13,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // ── Internal contact helper ───────────────────────────────────────────────────
-const CONTACT_EMAIL = 'contato@sulmotor.com.br';
+const WHATSAPP_NUMBER = '555192263188';
 function contactLink(car: Car) {
     const priceStr = new Intl.NumberFormat('pt-BR', {
         style: 'currency', currency: 'BRL', minimumFractionDigits: 0
     }).format(car.preco);
-    const subject = encodeURIComponent(`Interesse: ${car.marca} ${car.modelo} ${car.ano}`);
-    const body = encodeURIComponent(`Olá,\n\nTenho interesse no seguinte veículo anunciado na SulMotor:\n\nModelo: ${car.marca} ${car.modelo} ${car.ano}\nPreço: ${priceStr}\nLink: ${window.location.href}\n\nAguardo retorno.`);
-    return `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+    const msg = encodeURIComponent(`Olá! Tenho interesse no veículo anunciado na SulMotor:\n\n🚗 ${car.marca} ${car.modelo} ${car.ano}\n💰 ${priceStr}\n🔗 ${window.location.href}\n\nAguardo retorno!`);
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
 }
 
 // ── Financing calculator ──────────────────────────────────────────────────────
