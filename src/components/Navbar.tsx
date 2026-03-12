@@ -87,10 +87,10 @@ export default function Navbar() {
             <div className="h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent opacity-60" />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
+                <div className="relative flex items-center justify-between h-16">
 
                     {/* ── Logo ── */}
-                    <Link to="/" className="flex items-center group">
+                    <Link to="/" className="flex items-center group flex-shrink-0">
                         <img
                             src={isDark ? '/logo-light.png' : '/logo-dark.png'}
                             alt="SulMotor"
@@ -98,8 +98,8 @@ export default function Navbar() {
                         />
                     </Link>
 
-                    {/* ── Desktop nav ── */}
-                    <div className="hidden md:flex items-center gap-1">
+                    {/* ── Desktop nav — absolutely centred ── */}
+                    <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
                         {links.map((link) => (
                             <Link
                                 key={link.to}
@@ -123,7 +123,7 @@ export default function Navbar() {
                     </div>
 
                     {/* ── Desktop right controls ── */}
-                    <div className="hidden md:flex items-center gap-2">
+                    <div className="hidden md:flex items-center gap-2 flex-shrink-0">
 
                         {/* Language selector */}
                         <div className="relative" ref={langRef}>
