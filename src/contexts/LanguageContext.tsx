@@ -33,6 +33,7 @@ import {
 
 import ptDict from '../locales/pt.json';
 import enDict from '../locales/en.json';
+import esDict from '../locales/es.json';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ export type Translations = Dict;
 const LOCALES: Record<Language, Dict> = {
     'pt-BR': ptDict as unknown as Dict,
     'en':    enDict as unknown as Dict,
-    'es':    ptDict as unknown as Dict,   // fallback to PT until ES dict is available
+    'es':    esDict as unknown as Dict,
 };
 
 const STORAGE_KEY  = 'sm_language';
