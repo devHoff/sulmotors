@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
                     periodo_key,
                     dias: String(dias),
                 },
-                payer: { email: user_email || 'comprador@sulmotors.com.br' },
+                payer: { email: user_email || 'bandasleonardo@gmail.com' },
             };
 
             const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
                     periodo_key,
                     dias: String(dias),
                 },
-                payer: { email: user_email || 'comprador@sulmotors.com.br' },
+                payer: { email: user_email || 'bandasleonardo@gmail.com' },
                 ...(issuer_id ? { issuer_id: String(issuer_id) } : {}),
             };
 
@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
                 currency_id: 'BRL',
                 category_id: 'services',
             }],
-            payer: { email: user_email || 'comprador@sulmotors.com.br' },
+            payer: { email: user_email || 'bandasleonardo@gmail.com' },
             back_urls: {
                 success: `${baseUrl}/impulsionar/sucesso?pagamento_id=${pagamentoId ?? ''}&anuncio_id=${anuncio_id}`,
                 failure: `${baseUrl}/impulsionar/${anuncio_id}?erro=pagamento_falhou`,

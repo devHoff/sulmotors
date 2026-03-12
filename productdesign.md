@@ -1,7 +1,7 @@
-# SulMotors Product Design
+# SulMotor Product Design
 
 ## 1. Overview
-SulMotors is a modern, interactive car resale marketplace designed to streamline the buying and selling process. It offers a fully functional responsive experience with authentication, car listing management, AI photo enhancement, and a featured promotion system.
+SulMotor is a modern, interactive car resale marketplace designed to streamline the buying and selling process. It offers a fully functional responsive experience with authentication, car listing management, AI photo enhancement, and a featured promotion system.
 
 ## 2. Technology Stack
 - **Frontend**: React

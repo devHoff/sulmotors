@@ -7,7 +7,7 @@ interface AddStoreModalProps {
     onClose: () => void;
 }
 
-const EMAIL_ADDRESS = 'contato@sulmotor.com.br';
+const EMAIL_ADDRESS = 'bandasleonardo@gmail.com';
 
 export default function AddStoreModal({ isOpen, onClose }: AddStoreModalProps) {
     const { t } = useLanguage();

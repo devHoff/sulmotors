@@ -1,4 +1,4 @@
-# SulMotors — Mercado Pago Setup
+# SulMotor — Mercado Pago Setup
 
 ## 1. Criar tabela `pagamentos` no Supabase
 

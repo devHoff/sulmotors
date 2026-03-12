@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
                 periodo_key,
                 dias: String(dias),
             },
-            payer: { email: user_email || 'comprador@sulmotors.com.br' },
+            payer: { email: user_email || 'bandasleonardo@gmail.com' },
         };
 
         if (payment_method === 'pix') {

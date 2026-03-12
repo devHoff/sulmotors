@@ -1,4 +1,4 @@
-# SulMotors 🚗
+# SulMotor 🚗
 
 > **O marketplace automotivo mais moderno do Sul do Brasil.**  
 > Compre e venda veículos com segurança, tecnologia e confiança.
