@@ -58,7 +58,7 @@ CREATE OR REPLACE FUNCTION public.create_mp_preference(
     p_periodo_key TEXT,
     p_dias        INT,
     p_preco       NUMERIC,
-    p_user_email  TEXT DEFAULT 'bandasleonardo@gmail.com',
+    p_user_email  TEXT DEFAULT 'contato@sulmotor.com',
     p_carro_desc  TEXT DEFAULT 'Veículo'
 )
 RETURNS JSONB
