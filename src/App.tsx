@@ -18,6 +18,7 @@ import Privacidade from './pages/Privacidade';
 import SeusDireitos from './pages/SeusDireitos';
 import Admin from './pages/Admin';
 import Cookies from './pages/Cookies';
+import AuthCallback from './pages/AuthCallback';
 
 export default function App() {
     return (
@@ -26,6 +27,13 @@ export default function App() {
             <Routes>
                 {/* ── Admin: full-screen layout (no navbar/footer) ── */}
                 <Route path="/admin" element={<Admin />} />
+
+                {/*
+                 * ── Auth callback: handles OAuth redirects and password-reset
+                 *    links from Supabase emails. Must be outside Layout so the
+                 *    navbar/footer are not shown while processing the token.
+                 */}
+                <Route path="/auth/callback" element={<AuthCallback />} />
 
                 {/* ── All other pages: standard Layout ── */}
                 <Route element={<Layout />}>

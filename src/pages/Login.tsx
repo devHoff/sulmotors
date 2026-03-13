@@ -11,6 +11,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { smToast } from '../utils/toast';
 import { useLanguage } from '../contexts/LanguageContext';
 
+// Providers enabled in this project's Supabase Dashboard.
+// Add 'apple' | 'facebook' here only after configuring them in the Dashboard.
+const ENABLED_SOCIAL_PROVIDERS = ['google'] as const;
+type EnabledProvider = typeof ENABLED_SOCIAL_PROVIDERS[number];
+
 // ── Step types for registration flow ─────────────────────────────────────────
 type RegStep = 'form' | 'legal' | 'otp';
 
@@ -28,6 +33,10 @@ function mapAuthError(error: any, t: (k: string) => string): string {
     }
     if (msg.includes('too many') || msg.includes('rate limit')) {
         return t('login_error_too_many');
+    }
+    // Supabase 400 – provider not enabled in the Dashboard
+    if (msg.includes('unsupported provider') || msg.includes('provider is not enabled') || msg.includes('validation failed')) {
+        return 'Este método de login ainda não está disponível. Use e-mail e senha ou entre com Google.';
     }
     return error?.message || t('common_error');
 }
@@ -58,12 +67,12 @@ const FacebookIcon = () => (
 
 export default function Login() {
     const navigate = useNavigate();
-    const { signInWithEmail, signInWithGoogle, signInWithApple, signInWithFacebook, resetPassword, signUp } = useAuth();
+    const { signInWithEmail, signInWithGoogle, resetPassword, signUp } = useAuth();
     const { t } = useLanguage();
 
     const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
-    const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | 'facebook' | null>(null);
+    const [socialLoading, setSocialLoading] = useState<EnabledProvider | null>(null);
     const [showPass, setShowPass] = useState(false);
     const [loginError, setLoginError] = useState('');
     const [forgotMode, setForgotMode] = useState(false);
@@ -104,13 +113,11 @@ export default function Login() {
         }
     };
 
-    // ── Social login ─────────────────────────────────────────────────────────
-    const handleSocialLogin = async (provider: 'google' | 'apple' | 'facebook') => {
+    // ── Social login (only Google is enabled) ───────────────────────────────
+    const handleSocialLogin = async (provider: EnabledProvider) => {
         setSocialLoading(provider);
         try {
             if (provider === 'google') await signInWithGoogle();
-            else if (provider === 'apple') await signInWithApple();
-            else await signInWithFacebook();
         } catch (error: any) {
             toast.error(mapAuthError(error, t));
         } finally {
@@ -323,34 +330,22 @@ export default function Login() {
                                     <p className="text-slate-500 dark:text-zinc-500 text-sm">{t('login_login_sub')}</p>
                                 </div>
 
-                                {/* Social login buttons */}
-                                <div className="space-y-2 mb-6">
-                                    <button type="button" onClick={() => handleSocialLogin('google')} disabled={!!socialLoading}
+                                {/* Social login — only Google is enabled */}
+                                <div className="mb-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSocialLogin('google')}
+                                        disabled={!!socialLoading}
                                         aria-label="Continuar com Google"
                                         className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/10 rounded-xl text-slate-700 dark:text-zinc-200 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-zinc-700 transition-all disabled:opacity-60"
                                         style={{ transition: 'transform 0.15s ease, background-color 0.2s' }}
-                                        onMouseEnter={btnEnter} onMouseLeave={btnLeave}>
-                                        {socialLoading === 'google' ? <Loader2 className="w-5 h-5 animate-spin" /> : <GoogleIcon />}
+                                        onMouseEnter={btnEnter} onMouseLeave={btnLeave}
+                                    >
+                                        {socialLoading === 'google'
+                                            ? <Loader2 className="w-5 h-5 animate-spin" />
+                                            : <GoogleIcon />}
                                         Continuar com Google
                                     </button>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button type="button" onClick={() => handleSocialLogin('apple')} disabled={!!socialLoading}
-                                            aria-label="Continuar com Apple"
-                                            className="flex items-center justify-center gap-2 py-3 px-4 bg-black dark:bg-zinc-800 border border-transparent rounded-xl text-white text-sm font-semibold hover:bg-zinc-900 dark:hover:bg-zinc-700 transition-all disabled:opacity-60"
-                                            style={{ transition: 'transform 0.15s ease, background-color 0.2s' }}
-                                            onMouseEnter={btnEnter} onMouseLeave={btnLeave}>
-                                            {socialLoading === 'apple' ? <Loader2 className="w-4 h-4 animate-spin" /> : <AppleIcon />}
-                                            Apple
-                                        </button>
-                                        <button type="button" onClick={() => handleSocialLogin('facebook')} disabled={!!socialLoading}
-                                            aria-label="Continuar com Facebook"
-                                            className="flex items-center justify-center gap-2 py-3 px-4 bg-[#1877F2] border border-transparent rounded-xl text-white text-sm font-semibold hover:bg-[#166FE5] transition-all disabled:opacity-60"
-                                            style={{ transition: 'transform 0.15s ease, background-color 0.2s' }}
-                                            onMouseEnter={btnEnter} onMouseLeave={btnLeave}>
-                                            {socialLoading === 'facebook' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FacebookIcon />}
-                                            Facebook
-                                        </button>
-                                    </div>
                                 </div>
 
                                 {/* Divider */}
