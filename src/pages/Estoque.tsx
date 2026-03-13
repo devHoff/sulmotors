@@ -56,36 +56,92 @@ export default function Estoque() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Fetch cars from Supabase
+    // Fetch cars from Supabase with active boost priority
     useEffect(() => {
         const fetchCars = async () => {
             setLoading(true);
-            const { data, error } = await supabasePublic.from('anuncios').select('*');
-            if (!error && data) {
-                const mapped: CarType[] = data.map((d: any) => ({
-                    id: d.id, marca: d.marca, modelo: d.modelo, ano: Number(d.ano),
-                    preco: Number(d.preco), quilometragem: d.quilometragem,
-                    telefone: d.telefone, descricao: d.descricao || '',
-                    combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
-                    cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
-                    imagens: d.imagens || [], destaque: d.destaque ?? false,
-                    impulsionado: d.impulsionado ?? false,
-                    impulsionado_ate: d.impulsionado_ate || undefined,
-                    prioridade: d.prioridade ?? 0, modelo_3d: false,
-                    created_at: d.created_at, user_id: d.user_id, loja: d.loja,
-                }));
-                setSupabaseCars(mapped);
-                // Compute DB min/max
-                if (mapped.length > 0) {
-                    const prices = mapped.map(c => c.preco);
-                    const dbMin = Math.floor(Math.min(...prices));
-                    const dbMax = Math.ceil(Math.max(...prices));
-                    setMinPriceInDB(dbMin);
-                    setMaxPriceInDB(dbMax);
-                    setPriceMin(dbMin);
-                    setPriceMax(dbMax);
-                    setPriceMinInput(String(dbMin));
-                    setPriceMaxInput(String(dbMax));
+            try {
+                // Fetch listings alongside their active boosts for priority sorting
+                const { data, error } = await supabasePublic
+                    .from('anuncios')
+                    .select(`
+                        *,
+                        listing_boosts!left(
+                            priority_level,
+                            active,
+                            end_date
+                        )
+                    `);
+
+                if (!error && data) {
+                    const now = new Date().toISOString();
+                    const mapped: CarType[] = data.map((d: any) => {
+                        // Find highest active boost priority for this listing
+                        const activeBoosts = (d.listing_boosts ?? []).filter(
+                            (b: any) => b.active && b.end_date > now
+                        );
+                        const boostPriority = activeBoosts.length > 0
+                            ? Math.max(...activeBoosts.map((b: any) => Number(b.priority_level ?? 0)))
+                            : 0;
+
+                        // Use boost priority (×10 scale) if higher than stored prioridade
+                        const effectivePriority = Math.max(
+                            Number(d.prioridade ?? 0),
+                            boostPriority * 10
+                        );
+
+                        return {
+                            id: d.id, marca: d.marca, modelo: d.modelo, ano: Number(d.ano),
+                            preco: Number(d.preco), quilometragem: d.quilometragem,
+                            telefone: d.telefone, descricao: d.descricao || '',
+                            combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
+                            cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
+                            imagens: d.imagens || [], destaque: d.destaque ?? false,
+                            impulsionado: (d.impulsionado ?? false) || activeBoosts.length > 0,
+                            impulsionado_ate: d.impulsionado_ate || undefined,
+                            prioridade: effectivePriority, modelo_3d: false,
+                            created_at: d.created_at, user_id: d.user_id, loja: d.loja,
+                        };
+                    });
+                    setSupabaseCars(mapped);
+                    // Compute DB min/max
+                    if (mapped.length > 0) {
+                        const prices = mapped.map(c => c.preco);
+                        const dbMin = Math.floor(Math.min(...prices));
+                        const dbMax = Math.ceil(Math.max(...prices));
+                        setMinPriceInDB(dbMin);
+                        setMaxPriceInDB(dbMax);
+                        setPriceMin(dbMin);
+                        setPriceMax(dbMax);
+                        setPriceMinInput(String(dbMin));
+                        setPriceMaxInput(String(dbMax));
+                    }
+                }
+            } catch (err) {
+                // Fallback to simple query if join fails (e.g. listing_boosts table doesn't exist yet)
+                const { data, error } = await supabasePublic.from('anuncios').select('*');
+                if (!error && data) {
+                    const mapped: CarType[] = data.map((d: any) => ({
+                        id: d.id, marca: d.marca, modelo: d.modelo, ano: Number(d.ano),
+                        preco: Number(d.preco), quilometragem: d.quilometragem,
+                        telefone: d.telefone, descricao: d.descricao || '',
+                        combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
+                        cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
+                        imagens: d.imagens || [], destaque: d.destaque ?? false,
+                        impulsionado: d.impulsionado ?? false,
+                        impulsionado_ate: d.impulsionado_ate || undefined,
+                        prioridade: d.prioridade ?? 0, modelo_3d: false,
+                        created_at: d.created_at, user_id: d.user_id, loja: d.loja,
+                    }));
+                    setSupabaseCars(mapped);
+                    if (mapped.length > 0) {
+                        const prices = mapped.map(c => c.preco);
+                        const dbMin = Math.floor(Math.min(...prices));
+                        const dbMax = Math.ceil(Math.max(...prices));
+                        setMinPriceInDB(dbMin); setMaxPriceInDB(dbMax);
+                        setPriceMin(dbMin); setPriceMax(dbMax);
+                        setPriceMinInput(String(dbMin)); setPriceMaxInput(String(dbMax));
+                    }
                 }
             }
             setLoading(false);

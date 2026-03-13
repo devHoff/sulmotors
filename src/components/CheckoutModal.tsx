@@ -5,16 +5,18 @@ import {
     X, QrCode, CreditCard, Copy, Check, Loader2,
     Clock, CheckCircle2, XCircle, RefreshCw,
     ShieldCheck, Lock, AlertTriangle, Rocket,
-    FileText, ExternalLink,
+    FileText, ExternalLink, Shield, Star, Zap, Crown,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface CheckoutOrder {
-    amount:            number;   // BRL, e.g. 19.90
-    description:       string;   // e.g. "Impulsionar – Honda Civic 2022"
-    periodLabel:       string;   // e.g. "1 semana"
-    perDay:            number;   // e.g. 2.84
-    externalReference: string;   // e.g. "uuid:7"
+    amount:            number;   // BRL
+    description:       string;
+    periodLabel:       string;   // e.g. "Premium"
+    durationDays?:     number;   // e.g. 15
+    perDay:            number;
+    planName?:         string;   // e.g. "premium_boost"
+    externalReference: string;
     payerEmail:        string;
     payerName:         string;
 }
@@ -25,6 +27,16 @@ interface CheckoutModalProps {
     onClose:    () => void;
     onApproved: (paymentId: string) => void;
 }
+
+type PayMethod = 'pix' | 'card' | 'boleto';
+type Stage =
+    | 'select'          // choose method
+    | 'creating'        // waiting for backend
+    | 'pix_waiting'     // QR shown, polling
+    | 'card_processing' // card payment in progress
+    | 'boleto_waiting'  // boleto shown
+    | 'approved'
+    | 'rejected';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -48,11 +60,11 @@ const fmtCPF = (v: string) => {
 
 function detectBrand(num: string): string | null {
     const n = num.replace(/\s/g, '');
-    if (/^4/.test(n))                return 'visa';
-    if (/^5[1-5]/.test(n))           return 'master';
-    if (/^3[47]/.test(n))            return 'amex';
-    if (/^6(?:011|5)/.test(n))       return 'elo';
-    if (/^(?:606282|3841)/.test(n))  return 'hipercard';
+    if (/^4/.test(n))               return 'visa';
+    if (/^5[1-5]/.test(n))          return 'master';
+    if (/^3[47]/.test(n))           return 'amex';
+    if (/^6(?:011|5)/.test(n))      return 'elo';
+    if (/^(?:606282|3841)/.test(n)) return 'hipercard';
     return null;
 }
 
@@ -65,6 +77,12 @@ const BRAND_LABELS: Record<string, string> = {
 };
 const brandToMethodId = (b: string | null) =>
     ({ visa: 'visa', master: 'master', amex: 'amex', elo: 'elo', hipercard: 'hipercard' })[b ?? ''] ?? 'visa';
+
+const PLAN_ICONS: Record<string, React.ElementType> = {
+    basic_boost: Zap,
+    premium_boost: Star,
+    ultra_boost: Crown,
+};
 
 // ── Countdown ─────────────────────────────────────────────────────────────────
 function Countdown({ expiresAt }: { expiresAt: string | null }) {
@@ -102,33 +120,53 @@ function QRImg({ base64, code }: { base64?: string | null; code?: string | null 
     );
 }
 
-// ── Brand badge ───────────────────────────────────────────────────────────────
-function BrandBadge({ brand }: { brand: string | null }) {
-    if (!brand) return null;
+// ── Plan summary card ─────────────────────────────────────────────────────────
+function PlanSummary({ order }: { order: CheckoutOrder }) {
+    const PlanIcon = PLAN_ICONS[order.planName ?? ''] ?? Rocket;
     return (
-        <span
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black px-2 py-0.5 rounded"
-            style={{ background: BRAND_COLORS[brand] ?? '#555', color: '#fff' }}
-        >
-            {BRAND_LABELS[brand] ?? brand.toUpperCase()}
-        </span>
+        <div className="bg-zinc-800/60 border border-white/8 rounded-2xl p-4 mb-4">
+            <p className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-3">Resumo do pedido</p>
+            <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-brand-400/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <PlanIcon className="w-5 h-5 text-brand-400" strokeWidth={1.5} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-white font-black text-sm">Impulsionar Anúncio</p>
+                    <p className="text-zinc-400 text-xs mt-0.5">
+                        Plano <span className="text-brand-400 font-bold">{order.periodLabel}</span>
+                        {order.durationDays && ` · ${order.durationDays} dias de destaque`}
+                    </p>
+                    <p className="text-zinc-500 text-xs mt-0.5">{fmt(order.perDay)}/dia</p>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                    <p className="text-2xl font-black text-white">{fmt(order.amount)}</p>
+                    <p className="text-zinc-600 text-xs">BRL</p>
+                </div>
+            </div>
+            {/* Security badges */}
+            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/5">
+                <div className="flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} />
+                    <span className="text-xs text-zinc-500">SSL 256-bit</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-brand-400" strokeWidth={1.5} />
+                    <span className="text-xs text-zinc-500">Mercado Pago</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-zinc-500" strokeWidth={1.5} />
+                    <span className="text-xs text-zinc-500">Pagamento seguro</span>
+                </div>
+            </div>
+        </div>
     );
 }
 
-// ── Global MP SDK type ────────────────────────────────────────────────────────
-declare global {
-    interface Window { MercadoPago: any; }
-}
-
-// ── Payment tabs and stages ───────────────────────────────────────────────────
-type Tab   = 'pix' | 'card' | 'boleto';
-type Stage = 'select' | 'creating' | 'pix_waiting' | 'boleto_waiting' | 'card_processing' | 'approved' | 'rejected';
-
-// ── Main modal ────────────────────────────────────────────────────────────────
+// ── Main Modal ────────────────────────────────────────────────────────────────
 export default function CheckoutModal({ open, order, onClose, onApproved }: CheckoutModalProps) {
-    const [tab,   setTab]   = useState<Tab>('pix');
-    const [stage, setStage] = useState<Stage>('select');
-    const [error, setError] = useState('');
+    const [tab,    setTab]    = useState<PayMethod>('pix');
+    const [stage,  setStage]  = useState<Stage>('select');
+    const [error,  setError]  = useState('');
 
     // PIX state
     const [pixId,     setPixId]     = useState('');
@@ -142,56 +180,54 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
     const [boletoUrl,     setBoletoUrl]     = useState<string | null>(null);
     const [boletoBarcode, setBoletoBarcode] = useState<string | null>(null);
     const [boletoExp,     setBoletoExp]     = useState<string | null>(null);
-    const [barcodeCopied, setBarcodeCopied] = useState(false);
 
     // Card state
     const [cardNumber,  setCardNumber]  = useState('');
     const [cardName,    setCardName]    = useState('');
     const [cardExpiry,  setCardExpiry]  = useState('');
     const [cardCVV,     setCardCVV]     = useState('');
-    const [cardInstall, setCardInstall] = useState(1);
     const [cardCPF,     setCardCPF]     = useState('');
+    const [cardInstall, setCardInstall] = useState(1);
     const [cardBrand,   setCardBrand]   = useState<string | null>(null);
 
     const pollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
     const createdRef = useRef(false);
-    const mpPubKey   = (import.meta.env.VITE_MP_PUBLIC_KEY as string) || '';
-    const apiBase    = (import.meta.env.VITE_PAYMENT_API_URL as string) || '';
 
-    // ── Scroll lock ───────────────────────────────────────────────────────────
+    const apiBase = import.meta.env.VITE_PAYMENT_API_URL || '';
+
+    // Reset on close
+    useEffect(() => {
+        if (!open) {
+            setTab('pix'); setStage('select'); setError('');
+            setPixId(''); setQrBase64(null); setQrCode(null);
+            setTicketUrl(null); setExpiresAt(null); setCopied(false);
+            setBoletoUrl(null); setBoletoBarcode(null); setBoletoExp(null);
+            setCardNumber(''); setCardName(''); setCardExpiry('');
+            setCardCVV(''); setCardCPF(''); setCardInstall(1); setCardBrand(null);
+            createdRef.current = false;
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+        }
+    }, [open]);
+
+    // Body scroll lock
     useEffect(() => {
         document.body.style.overflow = open ? 'hidden' : '';
         return () => { document.body.style.overflow = ''; };
     }, [open]);
 
-    // ── Reset on close ────────────────────────────────────────────────────────
-    useEffect(() => {
-        if (!open) {
-            if (pollRef.current) clearInterval(pollRef.current);
-            createdRef.current = false;
-            setTab('pix'); setStage('select'); setError('');
-            setPixId(''); setQrBase64(null); setQrCode(null);
-            setTicketUrl(null); setExpiresAt(null); setCopied(false);
-            setBoletoUrl(null); setBoletoBarcode(null); setBoletoExp(null); setBarcodeCopied(false);
-            setCardNumber(''); setCardName(''); setCardExpiry('');
-            setCardCVV(''); setCardInstall(1); setCardCPF(''); setCardBrand(null);
-        }
-    }, [open]);
-
-    // ── Cleanup on unmount ────────────────────────────────────────────────────
+    // Cleanup polling on unmount
     useEffect(() => () => {
         if (pollRef.current) clearInterval(pollRef.current);
-        document.body.style.overflow = '';
     }, []);
 
-    // ── Load MP SDK ───────────────────────────────────────────────────────────
+    // Load MP SDK
     useEffect(() => {
-        if (window.MercadoPago) return;
+        if (!open || window.MercadoPago) return;
         const s = document.createElement('script');
         s.src = 'https://sdk.mercadopago.com/js/v2';
         s.async = true;
         document.head.appendChild(s);
-    }, []);
+    }, [open]);
 
     // ── API helper ────────────────────────────────────────────────────────────
     const post = useCallback(async (path: string, body: object) => {
@@ -208,7 +244,6 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
     // ── PIX flow ──────────────────────────────────────────────────────────────
     const createPix = useCallback(async () => {
         if (createdRef.current) return;
-        // Guard: require a payer email before sending to backend
         if (!order.payerEmail || !order.payerEmail.includes('@')) {
             setError('Faça login para continuar com o pagamento.');
             setStage('rejected');
@@ -232,7 +267,6 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
             setExpiresAt(data.pix_expiration ?? null);
             setStage('pix_waiting');
 
-            // Poll every 4s
             if (pollRef.current) clearInterval(pollRef.current);
             pollRef.current = setInterval(async () => {
                 try {
@@ -244,10 +278,10 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                         setTimeout(() => onApproved(data.payment_id), 600);
                     } else if (s.status === 'rejected' || s.status === 'cancelled') {
                         clearInterval(pollRef.current!);
-                        setError('Pagamento recusado ou cancelado pelo banco.');
+                        setError('Pagamento recusado ou cancelado.');
                         setStage('rejected');
                     }
-                } catch { /* keep polling on transient network error */ }
+                } catch { /* keep polling on transient error */ }
             }, 4000);
 
         } catch (e: unknown) {
@@ -287,12 +321,11 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
         }
     }, [order, post]);
 
-    // ── Wait for MP SDK ───────────────────────────────────────────────────────
+    // ── Wait for SDK ──────────────────────────────────────────────────────────
     const waitForSDK = (): Promise<void> =>
         new Promise((resolve, reject) => {
             if (window.MercadoPago) { resolve(); return; }
-            const timeout = setTimeout(() =>
-                reject(new Error('SDK do Mercado Pago não carregou. Recarregue a página.')), 12000);
+            const timeout  = setTimeout(() => reject(new Error('SDK do Mercado Pago não carregou. Recarregue a página.')), 12000);
             const interval = setInterval(() => {
                 if (window.MercadoPago) { clearInterval(interval); clearTimeout(timeout); resolve(); }
             }, 100);
@@ -300,29 +333,29 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
 
     // ── Card payment flow ─────────────────────────────────────────────────────
     const handleCard = async () => {
-        if (!order.payerEmail || !order.payerEmail.includes('@')) { setError('Faça login para continuar com o pagamento.'); return; }
+        if (!order.payerEmail || !order.payerEmail.includes('@')) { setError('Faça login para continuar.'); return; }
         const rawNum = cardNumber.replace(/\s/g, '');
-        if (rawNum.length < 13)    { setError('Número do cartão inválido.'); return; }
-        if (!cardName.trim())       { setError('Nome no cartão obrigatório.'); return; }
-        if (cardExpiry.length < 5)  { setError('Validade inválida (MM/AA).'); return; }
-        if (cardCVV.length < 3)     { setError('CVV inválido.'); return; }
+        if (rawNum.length < 13)   { setError('Número do cartão inválido.'); return; }
+        if (!cardName.trim())      { setError('Nome no cartão obrigatório.'); return; }
+        if (cardExpiry.length < 5) { setError('Validade inválida (MM/AA).'); return; }
+        if (cardCVV.length < 3)    { setError('CVV inválido.'); return; }
         const rawCPF = cardCPF.replace(/\D/g, '');
-        if (rawCPF.length < 11)     { setError('CPF inválido (11 dígitos).'); return; }
+        if (rawCPF.length < 11)    { setError('CPF inválido (11 dígitos).'); return; }
 
         const [mStr, yStr] = cardExpiry.split('/');
         const expMonth = Number(mStr);
         const expYear  = Number(yStr?.length === 2 ? `20${yStr}` : (yStr ?? '99'));
-        if (expMonth < 1 || expMonth > 12)           { setError('Mês de validade inválido.'); return; }
-        if (expYear < new Date().getFullYear())       { setError('Cartão expirado.'); return; }
+        if (expMonth < 1 || expMonth > 12)      { setError('Mês de validade inválido.'); return; }
+        if (expYear < new Date().getFullYear())  { setError('Cartão expirado.'); return; }
 
         setStage('card_processing'); setError('');
-        try {
-            if (!mpPubKey) throw new Error('Chave pública do Mercado Pago não configurada.');
-            await waitForSDK();
 
-            // Tokenise card via MP SDK (card data never touches our server)
-            const mp = new window.MercadoPago(mpPubKey, { locale: 'pt-BR' });
-            let tokenId: string;
+        let tokenId = '';
+        try {
+            await waitForSDK();
+            const MPClass = window.MercadoPago;
+            if (!MPClass) throw new Error('SDK do Mercado Pago não carregou. Recarregue a página.');
+            const mp = new MPClass(import.meta.env.VITE_MP_PUBLIC_KEY || '');
             try {
                 const tr = await mp.createCardToken({
                     cardNumber:           rawNum,
@@ -340,13 +373,12 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                 tokenId = tr.id;
             } catch (te: unknown) {
                 const msg = te instanceof Error ? te.message : String(te);
-                if (/cardNumber|card_number/i.test(msg))          throw new Error('Número do cartão inválido.');
-                if (/expiration/i.test(msg))                       throw new Error('Data de validade inválida.');
-                if (/securityCode|security_code|cvv/i.test(msg))  throw new Error('CVV inválido.');
+                if (/cardNumber|card_number/i.test(msg))         throw new Error('Número do cartão inválido.');
+                if (/expiration/i.test(msg))                      throw new Error('Data de validade inválida.');
+                if (/securityCode|security_code|cvv/i.test(msg)) throw new Error('CVV inválido.');
                 throw new Error(msg || 'Erro ao processar cartão.');
             }
 
-            // Post token + order info to backend (access token stays server-side)
             const result = await post('/api/payments/create', {
                 payment_method:     'credit_card',
                 transaction_amount: order.amount,
@@ -357,481 +389,394 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                 payment_method_id:  brandToMethodId(cardBrand),
                 external_reference: order.externalReference,
                 installments:       cardInstall,
-                token:              tokenId,   // card token, not access token
+                token:              tokenId,
             });
 
             if (result.status === 'approved' || result.status === 'in_process' || result.status === 'pending') {
                 setStage('approved');
                 setTimeout(() => onApproved(String(result.payment_id)), 600);
             } else {
-                const d = (result.status_detail ?? '') as string;
-                let msg = 'Pagamento recusado. Tente outro cartão.';
-                if (/insufficient|funds/i.test(d))      msg = 'Saldo insuficiente no cartão.';
-                else if (/bad_filled|invalid/i.test(d)) msg = 'Dados do cartão inválidos.';
-                else if (/security_code/i.test(d))      msg = 'CVV inválido.';
-                else if (/blacklist|high_risk/i.test(d))msg = 'Cartão não autorizado. Tente outro.';
+                const detailMsg: Record<string, string> = {
+                    'cc_rejected_insufficient_amount': 'Saldo insuficiente no cartão.',
+                    'cc_rejected_bad_filled_security_code': 'CVV inválido.',
+                    'cc_rejected_bad_filled_date': 'Data de validade inválida.',
+                    'cc_rejected_bad_filled_other': 'Dados do cartão incorretos.',
+                    'cc_rejected_card_disabled': 'Cartão desabilitado. Contate seu banco.',
+                    'cc_rejected_duplicated_payment': 'Pagamento duplicado.',
+                    'cc_rejected_high_risk': 'Recusado por segurança. Tente outro cartão.',
+                    'cc_rejected_invalid_installments': 'Número de parcelas inválido.',
+                };
+                const msg = detailMsg[result.status_detail] ?? `Pagamento recusado: ${result.status_detail ?? result.status}.`;
                 setError(msg);
                 setStage('rejected');
             }
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : 'Erro ao processar cartão.');
+            setError(e instanceof Error ? e.message : 'Erro no pagamento com cartão.');
             setStage('rejected');
         }
     };
 
-    const copyPix = async () => {
-        const text = qrCode ?? ticketUrl ?? '';
-        if (!text) return;
-        await navigator.clipboard.writeText(text).catch(() => {});
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
-    };
-
-    const copyBarcode = async () => {
-        if (!boletoBarcode) return;
-        await navigator.clipboard.writeText(boletoBarcode).catch(() => {});
-        setBarcodeCopied(true);
-        setTimeout(() => setBarcodeCopied(false), 2500);
-    };
-
-    const retry = () => {
-        createdRef.current = false;
-        if (pollRef.current) clearInterval(pollRef.current);
-        setPixId(''); setQrBase64(null); setQrCode(null);
-        setTicketUrl(null); setExpiresAt(null);
-        setBoletoUrl(null); setBoletoBarcode(null); setBoletoExp(null);
-        setError(''); setStage('select');
-    };
+    // ── Handle tab buttons ────────────────────────────────────────────────────
+    const handlePixButton   = () => createPix();
+    const handleBoletoButton = () => createBoleto();
 
     if (!open) return null;
-    const isProcessing = stage === 'creating' || stage === 'card_processing';
-
-    const iClass = "w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 focus:ring-1 focus:ring-brand-400/20 transition-all";
 
     return (
         <AnimatePresence>
             {open && (
-                <motion.div
-                    key="checkout-backdrop"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm"
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget && !isProcessing && stage !== 'pix_waiting') onClose();
-                    }}
-                >
+                <>
+                    {/* Backdrop */}
                     <motion.div
-                        key="checkout-panel"
-                        initial={{ opacity: 0, y: 80, scale: 0.97 }}
-                        animate={{ opacity: 1, y: 0,  scale: 1 }}
-                        exit={{ opacity: 0,  y: 60,  scale: 0.97 }}
-                        transition={{ type: 'spring', stiffness: 340, damping: 32 }}
-                        className="relative w-full sm:max-w-md bg-zinc-900 border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[96vh]"
+                        key="backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+                        onClick={stage !== 'creating' && stage !== 'card_processing' ? onClose : undefined}
+                    />
+
+                    {/* Modal */}
+                    <motion.div
+                        key="modal"
+                        initial={{ opacity: 0, scale: 0.94, y: 20 }}
+                        animate={{ opacity: 1, scale: 1,    y: 0  }}
+                        exit={{ opacity: 0, scale: 0.94,    y: 20 }}
+                        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
                     >
-                        {/* ── Header ── */}
-                        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/8 flex-shrink-0">
-                            <div>
-                                <h2 className="text-lg font-black text-white tracking-tight">Finalizar pagamento</h2>
-                                <p className="text-zinc-500 text-xs mt-0.5">Impulsionamento de anúncio</p>
+                        <div
+                            className="pointer-events-auto w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 flex-shrink-0">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 bg-brand-400/15 rounded-xl flex items-center justify-center">
+                                        <Rocket className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
+                                    </div>
+                                    <div>
+                                        <p className="text-white font-black text-sm leading-tight">Impulsionar anúncio</p>
+                                        <p className="text-zinc-500 text-[11px]">Checkout seguro</p>
+                                    </div>
+                                </div>
+                                {stage !== 'creating' && stage !== 'card_processing' && (
+                                    <button onClick={onClose}
+                                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                                        aria-label="Fechar">
+                                        <X className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
+                                    </button>
+                                )}
                             </div>
-                            {!isProcessing && stage !== 'approved' && (
-                                <button onClick={onClose} aria-label="Fechar"
-                                    className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors">
-                                    <X className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
-                                </button>
+
+                            {/* Scrollable body */}
+                            <div className="flex-1 overflow-y-auto px-5 py-4">
+
+                                {/* Plan summary (always visible) */}
+                                <PlanSummary order={order} />
+
+                                {/* ── SELECT / FORMS ── */}
+                                {(stage === 'select' || stage === 'pix_waiting' || stage === 'boleto_waiting' || stage === 'card_processing' || stage === 'creating') && (
+                                    <>
+                                        {/* Tab selector */}
+                                        {stage === 'select' && (
+                                            <div className="flex gap-2 mb-4">
+                                                {([
+                                                    { id: 'pix'   as PayMethod, label: 'PIX',    icon: QrCode,    ring: 'ring-emerald-400' },
+                                                    { id: 'card'  as PayMethod, label: 'Cartão', icon: CreditCard,ring: 'ring-blue-400' },
+                                                    { id: 'boleto'as PayMethod, label: 'Boleto', icon: FileText,  ring: 'ring-amber-400' },
+                                                ] as const).map(({ id, label, icon: Icon, ring }) => (
+                                                    <button key={id} onClick={() => setTab(id)}
+                                                        className={`flex-1 flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 text-xs font-bold transition-all ${
+                                                            tab === id
+                                                                ? `ring-1 ${ring} border-white/20 bg-zinc-800 text-white`
+                                                                : 'border-white/8 bg-zinc-800/40 text-zinc-500 hover:border-white/15'
+                                                        }`}>
+                                                        <Icon className="w-4 h-4" strokeWidth={1.5} />
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* ── PIX ── */}
+                                        {(tab === 'pix' && (stage === 'select' || stage === 'creating')) && (
+                                            <div className="space-y-3">
+                                                <div className="bg-emerald-500/8 border border-emerald-500/20 rounded-xl p-4">
+                                                    <p className="text-emerald-400 text-xs font-bold mb-1">PIX — Pagamento Instantâneo</p>
+                                                    <ul className="text-zinc-400 text-xs space-y-1">
+                                                        <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-emerald-400" strokeWidth={2.5} />Confirmação em segundos</li>
+                                                        <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-emerald-400" strokeWidth={2.5} />Sem taxas adicionais</li>
+                                                        <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-emerald-400" strokeWidth={2.5} />QR Code expira em 30 min</li>
+                                                    </ul>
+                                                </div>
+                                                <button
+                                                    onClick={handlePixButton}
+                                                    disabled={stage === 'creating'}
+                                                    className="w-full flex items-center justify-center gap-2.5 py-4 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-white font-black rounded-xl transition-all active:scale-[0.98]"
+                                                >
+                                                    {stage === 'creating'
+                                                        ? <><Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />Gerando QR Code…</>
+                                                        : <><QrCode className="w-5 h-5" strokeWidth={1.5} />Gerar QR Code PIX</>
+                                                    }
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* ── PIX WAITING ── */}
+                                        {stage === 'pix_waiting' && (
+                                            <div className="text-center space-y-4">
+                                                <div className="flex justify-center">
+                                                    <div className="bg-white p-3 rounded-2xl shadow-lg ring-4 ring-emerald-400/10">
+                                                        <QRImg base64={qrBase64} code={qrCode} />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <p className="text-white font-black text-sm mb-1">Escaneie o QR Code</p>
+                                                    <p className="text-zinc-500 text-xs">Abra o app do seu banco → PIX → Ler QR Code</p>
+                                                </div>
+                                                {expiresAt && (
+                                                    <div className="flex items-center justify-center gap-2 text-xs text-zinc-500">
+                                                        <Clock className="w-3.5 h-3.5" strokeWidth={1.5} />
+                                                        Expira em <Countdown expiresAt={expiresAt} />
+                                                    </div>
+                                                )}
+                                                {qrCode && (
+                                                    <button
+                                                        onClick={() => { navigator.clipboard.writeText(qrCode); setCopied(true); setTimeout(() => setCopied(false), 2500); }}
+                                                        className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-xl text-sm font-semibold text-zinc-300 transition-all"
+                                                    >
+                                                        {copied ? <><Check className="w-4 h-4 text-emerald-400" strokeWidth={2.5} />Copiado!</> : <><Copy className="w-4 h-4" strokeWidth={1.5} />Copiar código PIX</>}
+                                                    </button>
+                                                )}
+                                                {ticketUrl && (
+                                                    <a href={ticketUrl} target="_blank" rel="noreferrer"
+                                                        className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-xl text-sm font-semibold text-zinc-300 transition-all">
+                                                        <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
+                                                        Abrir no app Mercado Pago
+                                                    </a>
+                                                )}
+                                                <div className="flex items-center justify-center gap-1.5 text-xs text-yellow-400 font-bold py-2">
+                                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
+                                                    Aguardando pagamento…
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* ── CARD ── */}
+                                        {tab === 'card' && stage === 'select' && (
+                                            <div className="space-y-3">
+                                                {/* Card number */}
+                                                <div>
+                                                    <label className="text-xs text-zinc-400 font-semibold mb-1.5 block">Número do cartão</label>
+                                                    <div className="relative">
+                                                        <input
+                                                            className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 focus:ring-1 focus:ring-brand-400/20 transition-all pr-16"
+                                                            placeholder="0000 0000 0000 0000"
+                                                            value={cardNumber}
+                                                            onChange={e => { const f = fmtCard(e.target.value); setCardNumber(f); setCardBrand(detectBrand(f)); if (error) setError(''); }}
+                                                            inputMode="numeric"
+                                                        />
+                                                        {cardBrand && (
+                                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded text-[10px] font-black text-white"
+                                                                style={{ background: BRAND_COLORS[cardBrand] ?? '#333' }}>
+                                                                {BRAND_LABELS[cardBrand]}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-zinc-400 font-semibold mb-1.5 block">Nome no cartão</label>
+                                                    <input className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 focus:ring-1 focus:ring-brand-400/20 transition-all" placeholder="NOME COMPLETO" value={cardName} onChange={e => { setCardName(e.target.value.toUpperCase()); if (error) setError(''); }} />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="text-xs text-zinc-400 font-semibold mb-1.5 block">Validade</label>
+                                                        <input className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 focus:ring-1 focus:ring-brand-400/20 transition-all" placeholder="MM/AA" value={cardExpiry} onChange={e => { setCardExpiry(fmtExpiry(e.target.value)); if (error) setError(''); }} inputMode="numeric" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs text-zinc-400 font-semibold mb-1.5 block flex items-center gap-1">
+                                                            CVV <Lock className="w-3 h-3 text-zinc-600" strokeWidth={1.5} />
+                                                        </label>
+                                                        <input className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 focus:ring-1 focus:ring-brand-400/20 transition-all" placeholder="123" value={cardCVV} onChange={e => { setCardCVV(e.target.value.replace(/\D/g, '').slice(0, 4)); if (error) setError(''); }} inputMode="numeric" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-zinc-400 font-semibold mb-1.5 block">CPF do titular</label>
+                                                    <input className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 focus:ring-1 focus:ring-brand-400/20 transition-all" placeholder="000.000.000-00" value={cardCPF} onChange={e => { setCardCPF(fmtCPF(e.target.value)); if (error) setError(''); }} inputMode="numeric" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-zinc-400 font-semibold mb-1.5 block">Parcelas</label>
+                                                    <select className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-400/50 transition-all" value={cardInstall} onChange={e => setCardInstall(Number(e.target.value))}>
+                                                        {[1,2,3,6,12].map(n => (
+                                                            <option key={n} value={n}>
+                                                                {n}× {fmt(order.amount / n)} {n === 1 ? '(à vista)' : '(sem juros)'}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                {error && (
+                                                    <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-400/25 rounded-xl">
+                                                        <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+                                                        <p className="text-red-400 text-xs">{error}</p>
+                                                    </div>
+                                                )}
+                                                <button onClick={handleCard}
+                                                    className="w-full flex items-center justify-center gap-2.5 py-4 bg-blue-500 hover:bg-blue-400 text-white font-black rounded-xl transition-all active:scale-[0.98]">
+                                                    <CreditCard className="w-5 h-5" strokeWidth={1.5} />
+                                                    Pagar {fmt(order.amount)}
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* ── CARD PROCESSING ── */}
+                                        {stage === 'card_processing' && (
+                                            <div className="flex flex-col items-center gap-4 py-6 text-center">
+                                                <div className="w-16 h-16 rounded-full border-2 border-blue-400/20 border-t-blue-400 animate-spin" />
+                                                <p className="text-white font-bold">Processando pagamento…</p>
+                                                <p className="text-zinc-500 text-xs">Aguarde, não feche esta janela.</p>
+                                            </div>
+                                        )}
+
+                                        {/* ── BOLETO ── */}
+                                        {tab === 'boleto' && (stage === 'select' || stage === 'creating') && (
+                                            <div className="space-y-3">
+                                                <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl p-4">
+                                                    <p className="text-amber-400 text-xs font-bold mb-1">Boleto Bancário</p>
+                                                    <ul className="text-zinc-400 text-xs space-y-1">
+                                                        <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-amber-400" strokeWidth={2.5} />Vence em 3 dias úteis</li>
+                                                        <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-amber-400" strokeWidth={2.5} />Confirmação em 1–2 dias úteis</li>
+                                                        <li className="flex items-center gap-1.5"><Check className="w-3 h-3 text-amber-400" strokeWidth={2.5} />Impresso ou pago no app</li>
+                                                    </ul>
+                                                </div>
+                                                <button onClick={handleBoletoButton}
+                                                    disabled={stage === 'creating'}
+                                                    className="w-full flex items-center justify-center gap-2.5 py-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-zinc-950 font-black rounded-xl transition-all active:scale-[0.98]">
+                                                    {stage === 'creating'
+                                                        ? <><Loader2 className="w-5 h-5 animate-spin" />Gerando boleto…</>
+                                                        : <><FileText className="w-5 h-5" strokeWidth={1.5} />Gerar Boleto</>
+                                                    }
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* ── BOLETO WAITING ── */}
+                                        {stage === 'boleto_waiting' && (
+                                            <div className="space-y-3">
+                                                <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl p-4 text-center">
+                                                    <FileText className="w-8 h-8 text-amber-400 mx-auto mb-2" strokeWidth={1.5} />
+                                                    <p className="text-white font-black text-sm mb-1">Boleto gerado!</p>
+                                                    {boletoExp && (
+                                                        <p className="text-zinc-500 text-xs">
+                                                            Vence em: {new Date(boletoExp).toLocaleDateString('pt-BR')}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                {boletoBarcode && (
+                                                    <button
+                                                        onClick={() => { navigator.clipboard.writeText(boletoBarcode); setCopied(true); setTimeout(() => setCopied(false), 2500); }}
+                                                        className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-xl text-sm font-semibold text-zinc-300 transition-all"
+                                                    >
+                                                        {copied ? <><Check className="w-4 h-4 text-emerald-400" strokeWidth={2.5} />Copiado!</> : <><Copy className="w-4 h-4" strokeWidth={1.5} />Copiar código de barras</>}
+                                                    </button>
+                                                )}
+                                                {boletoUrl && (
+                                                    <a href={boletoUrl} target="_blank" rel="noreferrer"
+                                                        className="w-full flex items-center justify-center gap-2 py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black rounded-xl transition-all text-sm">
+                                                        <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
+                                                        Visualizar / Imprimir Boleto
+                                                    </a>
+                                                )}
+                                                <p className="text-center text-zinc-500 text-xs">
+                                                    Após o pagamento, o boost será ativado em até 2 dias úteis.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* ── APPROVED ── */}
+                                {stage === 'approved' && (
+                                    <div className="flex flex-col items-center gap-4 text-center py-4">
+                                        <motion.div
+                                            initial={{ scale: 0.5, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            transition={{ type: 'spring', stiffness: 280, damping: 18 }}
+                                            className="w-20 h-20 bg-emerald-500/15 border border-emerald-500/30 rounded-3xl flex items-center justify-center"
+                                        >
+                                            <CheckCircle2 className="w-10 h-10 text-emerald-400" strokeWidth={1.5} />
+                                        </motion.div>
+                                        <h2 className="text-2xl font-black text-white">Pagamento aprovado!</h2>
+                                        <p className="text-zinc-400 text-sm">
+                                            Seu anúncio está sendo impulsionado com o plano{' '}
+                                            <span className="text-brand-400 font-bold">{order.periodLabel}</span>.
+                                        </p>
+                                        <div className="w-full bg-emerald-500/8 border border-emerald-500/20 rounded-xl p-3 text-left">
+                                            {[
+                                                `Plano ${order.periodLabel}`,
+                                                order.durationDays ? `${order.durationDays} dias de destaque` : undefined,
+                                                `Valor: ${fmt(order.amount)}`,
+                                            ].filter(Boolean).map(l => (
+                                                <div key={l} className="flex items-center gap-2 text-xs text-zinc-300 mb-1 last:mb-0">
+                                                    <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" strokeWidth={2.5} />
+                                                    {l}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button onClick={onClose}
+                                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all">
+                                            <Rocket className="w-5 h-5" strokeWidth={1.5} />
+                                            Ver meus anúncios
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* ── REJECTED ── */}
+                                {stage === 'rejected' && (
+                                    <div className="flex flex-col items-center gap-4 text-center py-4">
+                                        <div className="w-20 h-20 bg-red-500/15 border border-red-500/30 rounded-3xl flex items-center justify-center">
+                                            <XCircle className="w-10 h-10 text-red-400" strokeWidth={1.5} />
+                                        </div>
+                                        <h2 className="text-2xl font-black text-white">Pagamento não realizado</h2>
+                                        {error && (
+                                            <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-400/25 rounded-xl w-full text-left">
+                                                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+                                                <p className="text-red-400 text-xs">{error}</p>
+                                            </div>
+                                        )}
+                                        <button onClick={() => { setStage('select'); setError(''); createdRef.current = false; }}
+                                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-white font-bold rounded-xl transition-all">
+                                            <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
+                                            Tentar novamente
+                                        </button>
+                                        <button onClick={onClose}
+                                            className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer trust line */}
+                            {(stage === 'select' || stage === 'pix_waiting' || stage === 'boleto_waiting') && (
+                                <div className="px-5 py-3 border-t border-white/5 flex-shrink-0">
+                                    <div className="flex items-center justify-center gap-4 flex-wrap">
+                                        <span className="flex items-center gap-1 text-[11px] text-zinc-600">
+                                            <Shield className="w-3 h-3" strokeWidth={1.5} />SSL 256-bit
+                                        </span>
+                                        <span className="flex items-center gap-1 text-[11px] text-zinc-600">
+                                            <ShieldCheck className="w-3 h-3" strokeWidth={1.5} />Mercado Pago
+                                        </span>
+                                        <span className="flex items-center gap-1 text-[11px] text-zinc-600">
+                                            <Lock className="w-3 h-3" strokeWidth={1.5} />Checkout Transparente
+                                        </span>
+                                    </div>
+                                </div>
                             )}
                         </div>
-
-                        {/* ── Order summary ── */}
-                        {(stage === 'select' || stage === 'creating') && (
-                            <div className="mx-5 mt-4 mb-1 p-3.5 bg-zinc-800/60 border border-white/8 rounded-2xl flex items-center justify-between flex-shrink-0">
-                                <div>
-                                    <p className="text-white text-sm font-bold">Impulsionamento · {order.periodLabel}</p>
-                                    <p className="text-zinc-500 text-xs mt-0.5">{fmt(order.perDay)}/dia</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-2xl font-black text-white">{fmt(order.amount)}</p>
-                                    <p className="text-zinc-500 text-[11px]">único pagamento</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ── Scrollable body ── */}
-                        <div className="overflow-y-auto flex-1 min-h-0">
-
-                            {/* ══ SELECT / CREATE ══ */}
-                            {(stage === 'select' || stage === 'creating') && (
-                                <div className="px-5 pt-4 pb-6 space-y-4">
-                                    {/* Payment method tabs */}
-                                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-zinc-800 rounded-2xl">
-                                        {([
-                                            { id: 'pix',    label: 'PIX',    icon: QrCode,     ring: 'ring-emerald-400' },
-                                            { id: 'card',   label: 'Cartão', icon: CreditCard, ring: 'ring-blue-400' },
-                                            { id: 'boleto', label: 'Boleto', icon: FileText,   ring: 'ring-amber-400' },
-                                        ] as const).map(({ id, label, icon: Icon, ring }) => (
-                                            <button key={id}
-                                                onClick={() => { if (stage === 'select') setTab(id); }}
-                                                disabled={stage === 'creating'}
-                                                className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all
-                                                    ${tab === id
-                                                        ? `${ring} ring-1 bg-zinc-700 text-white`
-                                                        : 'text-zinc-500 hover:text-zinc-300'
-                                                    }`}
-                                            >
-                                                <Icon className="w-4 h-4" strokeWidth={1.5} />
-                                                {label}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {/* ── PIX TAB ── */}
-                                    {tab === 'pix' && (
-                                        <>
-                                            {stage === 'creating' ? (
-                                                <div className="flex flex-col items-center gap-4 py-8">
-                                                    <div className="w-14 h-14 rounded-full border-2 border-emerald-400/20 border-t-emerald-400 animate-spin" />
-                                                    <p className="text-white font-bold text-sm">Gerando QR Code PIX…</p>
-                                                    <p className="text-zinc-500 text-xs">Conectando ao Mercado Pago</p>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div className="p-4 bg-emerald-500/8 border border-emerald-500/15 rounded-2xl space-y-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-8 h-8 bg-emerald-500/15 border border-emerald-500/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                                <QrCode className="w-4 h-4 text-emerald-400" strokeWidth={1.5} />
-                                                            </div>
-                                                            <p className="text-emerald-300 text-sm font-bold">Pague com PIX</p>
-                                                        </div>
-                                                        <ul className="text-zinc-400 text-xs space-y-1 pl-1">
-                                                            <li>✓ QR Code gerado instantaneamente</li>
-                                                            <li>✓ Aprovação em segundos</li>
-                                                            <li>✓ Sem dados de cartão necessários</li>
-                                                        </ul>
-                                                    </div>
-                                                    <button onClick={() => createPix()}
-                                                        className="w-full flex items-center justify-center gap-2.5 py-4 bg-emerald-500 hover:bg-emerald-400 text-white font-black rounded-xl transition-all active:scale-[0.98] text-base shadow-lg shadow-emerald-500/20">
-                                                        <QrCode className="w-5 h-5" strokeWidth={1.5} />
-                                                        Gerar QR Code PIX · {fmt(order.amount)}
-                                                    </button>
-                                                </>
-                                            )}
-                                        </>
-                                    )}
-
-                                    {/* ── CARD TAB ── */}
-                                    {tab === 'card' && (
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label className="text-xs text-zinc-400 font-semibold mb-1.5 block">Número do cartão</label>
-                                                <div className="relative">
-                                                    <input type="text" inputMode="numeric" placeholder="0000 0000 0000 0000"
-                                                        value={cardNumber} autoComplete="cc-number" disabled={isProcessing}
-                                                        onChange={(e) => { const f = fmtCard(e.target.value); setCardNumber(f); setCardBrand(detectBrand(f)); if (error) setError(''); }}
-                                                        className={`${iClass} pr-20 font-mono tracking-widest`}
-                                                    />
-                                                    <BrandBadge brand={cardBrand} />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-zinc-400 font-semibold mb-1.5 block">Nome no cartão</label>
-                                                <input type="text" placeholder="NOME COMO NO CARTÃO"
-                                                    value={cardName} autoComplete="cc-name" disabled={isProcessing}
-                                                    onChange={(e) => { setCardName(e.target.value.toUpperCase()); if (error) setError(''); }}
-                                                    className={`${iClass} uppercase`}
-                                                />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="text-xs text-zinc-400 font-semibold mb-1.5 block">Validade</label>
-                                                    <input type="text" inputMode="numeric" placeholder="MM/AA"
-                                                        value={cardExpiry} autoComplete="cc-exp" disabled={isProcessing}
-                                                        onChange={(e) => { setCardExpiry(fmtExpiry(e.target.value)); if (error) setError(''); }}
-                                                        className={`${iClass} font-mono`}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs text-zinc-400 font-semibold mb-1.5 block flex items-center gap-1">
-                                                        CVV <Lock className="w-3 h-3 text-zinc-600" strokeWidth={1.5} />
-                                                    </label>
-                                                    <input type="password" inputMode="numeric" placeholder="•••"
-                                                        value={cardCVV} autoComplete="cc-csc" disabled={isProcessing}
-                                                        onChange={(e) => { setCardCVV(e.target.value.replace(/\D/g, '').slice(0, 4)); if (error) setError(''); }}
-                                                        className={`${iClass} font-mono`}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-zinc-400 font-semibold mb-1.5 block">CPF do titular</label>
-                                                <input type="text" inputMode="numeric" placeholder="000.000.000-00"
-                                                    value={cardCPF} autoComplete="off" disabled={isProcessing}
-                                                    onChange={(e) => { setCardCPF(fmtCPF(e.target.value)); if (error) setError(''); }}
-                                                    className={`${iClass} font-mono`}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-zinc-400 font-semibold mb-1.5 block">Parcelas</label>
-                                                <select value={cardInstall} disabled={isProcessing}
-                                                    onChange={(e) => setCardInstall(Number(e.target.value))}
-                                                    className={`${iClass} appearance-none cursor-pointer`}
-                                                >
-                                                    {[1, 2, 3, 6, 12].map((n) => (
-                                                        <option key={n} value={n}>
-                                                            {n === 1 ? `1x de ${fmt(order.amount)} (sem juros)` : `${n}x de ${fmt(order.amount / n)}`}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            {error && (
-                                                <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-400/25 rounded-xl">
-                                                    <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
-                                                    <p className="text-red-400 text-xs">{error}</p>
-                                                </div>
-                                            )}
-
-                                            <button onClick={handleCard} disabled={isProcessing}
-                                                className="w-full flex items-center justify-center gap-2.5 py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black rounded-xl transition-all active:scale-[0.98] text-base shadow-lg shadow-blue-600/20 mt-1">
-                                                {isProcessing
-                                                    ? <><Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />Processando…</>
-                                                    : <><CreditCard className="w-5 h-5" strokeWidth={1.5} />Pagar {fmt(order.amount)}</>
-                                                }
-                                            </button>
-                                            <p className="text-[11px] text-zinc-600 text-center">
-                                                Dados tokenizados via SDK Mercado Pago. Não armazenamos dados do cartão.
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {/* ── BOLETO TAB ── */}
-                                    {tab === 'boleto' && (
-                                        <>
-                                            {stage === 'creating' ? (
-                                                <div className="flex flex-col items-center gap-4 py-8">
-                                                    <div className="w-14 h-14 rounded-full border-2 border-amber-400/20 border-t-amber-400 animate-spin" />
-                                                    <p className="text-white font-bold text-sm">Gerando boleto…</p>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <div className="p-4 bg-amber-500/8 border border-amber-500/15 rounded-2xl space-y-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-8 h-8 bg-amber-500/15 border border-amber-500/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                                <FileText className="w-4 h-4 text-amber-400" strokeWidth={1.5} />
-                                                            </div>
-                                                            <p className="text-amber-300 text-sm font-bold">Pague com Boleto</p>
-                                                        </div>
-                                                        <ul className="text-zinc-400 text-xs space-y-1 pl-1">
-                                                            <li>⚠️ Aprovação em até 3 dias úteis</li>
-                                                            <li>✓ Sem cartão necessário</li>
-                                                            <li>✓ Pague em qualquer banco ou lotérica</li>
-                                                        </ul>
-                                                    </div>
-                                                    <button onClick={() => createBoleto()}
-                                                        className="w-full flex items-center justify-center gap-2.5 py-4 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black rounded-xl transition-all active:scale-[0.98] text-base">
-                                                        <FileText className="w-5 h-5" strokeWidth={1.5} />
-                                                        Gerar Boleto · {fmt(order.amount)}
-                                                    </button>
-                                                </>
-                                            )}
-                                        </>
-                                    )}
-
-                                    {/* Security footer */}
-                                    <div className="flex items-center justify-center gap-1.5 pt-1">
-                                        <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" strokeWidth={1.5} />
-                                        <span className="text-[11px] text-zinc-600">Pagamento seguro · SSL · Mercado Pago</span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ══ PIX WAITING ══ */}
-                            {stage === 'pix_waiting' && (
-                                <div className="px-5 py-5 flex flex-col items-center gap-4">
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/15 border border-yellow-500/30 rounded-full">
-                                        <RefreshCw className="w-3.5 h-3.5 text-yellow-400 animate-spin" strokeWidth={1.5} />
-                                        <span className="text-xs text-yellow-400 font-bold">Aguardando pagamento…</span>
-                                        {expiresAt && (
-                                            <><span className="text-yellow-600 text-xs">·</span>
-                                            <Clock className="w-3 h-3 text-yellow-600" strokeWidth={1.5} />
-                                            <Countdown expiresAt={expiresAt} /></>
-                                        )}
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-3xl font-black text-white">{fmt(order.amount)}</p>
-                                        <p className="text-zinc-500 text-xs mt-0.5">Impulsionamento · {order.periodLabel}</p>
-                                    </div>
-                                    <div className="bg-white p-3 rounded-2xl shadow-lg ring-4 ring-emerald-400/10">
-                                        <QRImg base64={qrBase64} code={qrCode} />
-                                    </div>
-                                    <ol className="w-full text-xs text-zinc-400 space-y-1.5 list-decimal list-inside bg-zinc-800/50 border border-white/6 rounded-xl p-4">
-                                        <li>Abra o app do seu banco</li>
-                                        <li>Selecione <strong className="text-white">PIX → Ler QR Code</strong></li>
-                                        <li>Escaneie o código acima</li>
-                                        <li>Confirme o pagamento de <strong className="text-brand-400">{fmt(order.amount)}</strong></li>
-                                    </ol>
-                                    {(qrCode ?? ticketUrl) && (
-                                        <div className="w-full space-y-2">
-                                            <p className="text-xs text-zinc-500 font-medium text-center">PIX Copia e Cola:</p>
-                                            <div className="flex gap-2 items-stretch">
-                                                <div className="flex-1 min-w-0 bg-zinc-800 border border-white/8 rounded-xl px-3 py-2.5">
-                                                    <p className="text-zinc-300 text-[11px] font-mono break-all leading-relaxed line-clamp-3">
-                                                        {qrCode ?? ticketUrl}
-                                                    </p>
-                                                </div>
-                                                <button onClick={copyPix} aria-label="Copiar código PIX"
-                                                    className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 px-3 rounded-xl text-[11px] font-bold transition-all border
-                                                        ${copied ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-zinc-800 border-white/10 text-zinc-300 hover:text-white'}`}>
-                                                    {copied
-                                                        ? <><Check className="w-4 h-4" strokeWidth={1.5} /><span>Copiado</span></>
-                                                        : <><Copy className="w-4 h-4" strokeWidth={1.5} /><span>Copiar</span></>
-                                                    }
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {ticketUrl && (
-                                        <a href={ticketUrl} target="_blank" rel="noopener noreferrer"
-                                            className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold rounded-xl hover:bg-emerald-500/25 transition-all text-sm">
-                                            Abrir no app Mercado Pago
-                                        </a>
-                                    )}
-                                    <p className="text-zinc-600 text-xs text-center">
-                                        Esta tela atualiza automaticamente. Não feche este modal.
-                                    </p>
-                                    <button onClick={onClose} className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors">
-                                        Cancelar e fechar
-                                    </button>
-                                    <div className="flex items-center gap-1.5">
-                                        <ShieldCheck className="w-3.5 h-3.5 text-zinc-600" strokeWidth={1.5} />
-                                        <span className="text-[11px] text-zinc-600">Pagamento seguro · Mercado Pago</span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ══ BOLETO WAITING ══ */}
-                            {stage === 'boleto_waiting' && (
-                                <div className="px-5 py-6 flex flex-col items-center gap-4 text-center">
-                                    <div className="w-20 h-20 bg-amber-500/15 border border-amber-500/30 rounded-3xl flex items-center justify-center">
-                                        <FileText className="w-10 h-10 text-amber-400" strokeWidth={1.5} />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl font-black text-white">Boleto gerado!</h3>
-                                        <p className="text-zinc-400 text-sm mt-1">
-                                            Vencimento em 3 dias úteis.{' '}
-                                            {boletoExp && (
-                                                <span className="text-amber-400 font-semibold">
-                                                    Até {new Date(boletoExp).toLocaleDateString('pt-BR')}
-                                                </span>
-                                            )}
-                                        </p>
-                                    </div>
-                                    {boletoBarcode && (
-                                        <div className="w-full space-y-2">
-                                            <p className="text-xs text-zinc-500 font-medium">Código de barras:</p>
-                                            <div className="flex gap-2 items-stretch">
-                                                <div className="flex-1 min-w-0 bg-zinc-800 border border-white/8 rounded-xl px-3 py-2.5">
-                                                    <p className="text-zinc-300 text-[11px] font-mono break-all leading-relaxed">
-                                                        {boletoBarcode}
-                                                    </p>
-                                                </div>
-                                                <button onClick={copyBarcode} aria-label="Copiar código de barras"
-                                                    className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 px-3 rounded-xl text-[11px] font-bold transition-all border
-                                                        ${barcodeCopied ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-zinc-800 border-white/10 text-zinc-300 hover:text-white'}`}>
-                                                    {barcodeCopied
-                                                        ? <><Check className="w-4 h-4" strokeWidth={1.5} /><span>Copiado</span></>
-                                                        : <><Copy className="w-4 h-4" strokeWidth={1.5} /><span>Copiar</span></>
-                                                    }
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {boletoUrl && (
-                                        <a href={boletoUrl} target="_blank" rel="noopener noreferrer"
-                                            className="w-full flex items-center justify-center gap-2 py-3 bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold rounded-xl hover:bg-amber-500/25 transition-all text-sm">
-                                            <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
-                                            Imprimir / visualizar boleto
-                                        </a>
-                                    )}
-                                    <div className="text-xs text-zinc-500 bg-zinc-800/50 border border-white/6 rounded-xl p-3 text-left w-full space-y-1">
-                                        <p>⚠️ O impulsionamento só é ativado <strong className="text-white">após a confirmação</strong> do pagamento (até 3 dias úteis).</p>
-                                        <p>✓ Você receberá uma notificação quando o pagamento for confirmado.</p>
-                                    </div>
-                                    <button onClick={onClose}
-                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all">
-                                        <CheckCircle2 className="w-5 h-5" strokeWidth={1.5} />
-                                        Entendido, fechar
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* ══ CARD PROCESSING ══ */}
-                            {stage === 'card_processing' && (
-                                <div className="px-5 py-14 flex flex-col items-center gap-4">
-                                    <div className="w-16 h-16 rounded-full border-2 border-blue-400/20 border-t-blue-400 animate-spin" />
-                                    <p className="text-white font-bold">Processando pagamento…</p>
-                                    <p className="text-zinc-500 text-sm text-center">Validando dados do cartão com segurança.</p>
-                                </div>
-                            )}
-
-                            {/* ══ APPROVED ══ */}
-                            {stage === 'approved' && (
-                                <div className="px-6 py-10 flex flex-col items-center gap-5 text-center">
-                                    <motion.div
-                                        initial={{ scale: 0.4, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        transition={{ type: 'spring', stiffness: 280, damping: 18 }}
-                                        className="w-24 h-24 bg-emerald-500/15 border border-emerald-500/30 rounded-3xl flex items-center justify-center">
-                                        <CheckCircle2 className="w-12 h-12 text-emerald-400" strokeWidth={1.5} />
-                                    </motion.div>
-                                    <div>
-                                        <h3 className="text-2xl font-black text-white mb-2">Pagamento aprovado!</h3>
-                                        <p className="text-zinc-400 text-sm leading-relaxed">
-                                            Seu anúncio já está sendo impulsionado. Ele aparecerá no topo das buscas imediatamente.
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                                        <Rocket className="w-4 h-4 text-emerald-400" strokeWidth={1.5} />
-                                        <span className="text-emerald-400 text-sm font-bold">Boost ativo por {order.periodLabel}</span>
-                                    </div>
-                                    <button onClick={onClose}
-                                        className="w-full flex items-center justify-center gap-2 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all text-base mt-1 shadow-lg shadow-brand-400/20">
-                                        <Rocket className="w-5 h-5" strokeWidth={1.5} />
-                                        Ver Meus Anúncios
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* ══ REJECTED ══ */}
-                            {stage === 'rejected' && (
-                                <div className="px-6 py-10 flex flex-col items-center gap-4 text-center">
-                                    <div className="w-20 h-20 bg-red-500/15 border border-red-500/30 rounded-3xl flex items-center justify-center">
-                                        <XCircle className="w-10 h-10 text-red-400" strokeWidth={1.5} />
-                                    </div>
-                                    <h3 className="text-xl font-black text-white">Pagamento não realizado</h3>
-                                    {error && (
-                                        <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-400/25 rounded-xl w-full text-left">
-                                            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
-                                            <p className="text-red-400 text-xs">{error}</p>
-                                        </div>
-                                    )}
-                                    <button onClick={retry}
-                                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-zinc-800 hover:bg-zinc-700 border border-white/8 text-white font-bold rounded-xl transition-all">
-                                        <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
-                                        Tentar novamente
-                                    </button>
-                                    <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
-                                        Cancelar
-                                    </button>
-                                </div>
-                            )}
-
-                        </div>{/* end scrollable body */}
                     </motion.div>
-                </motion.div>
+                </>
             )}
         </AnimatePresence>
     );
 }
-
-export type { Tab, Stage };

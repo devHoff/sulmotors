@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Car, Zap } from 'lucide-react';
+import { Plus, Car, Zap, CreditCard } from 'lucide-react';
 import { toast } from '../utils/toast';
 import CarCard from '../components/CarCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,13 +60,22 @@ export default function MeusAnuncios() {
                         <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{t.mads_title}</h1>
                         <p className="text-slate-500 dark:text-zinc-500 mt-1 text-sm">{t.mads_subtitle}</p>
                     </div>
-                    <button
-                        onClick={() => navigate('/anunciar')}
-                        className="flex items-center gap-2 px-5 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 text-sm font-black rounded-xl transition-all hover:shadow-glow"
-                    >
-                        <Plus className="w-4 h-4" strokeWidth={1.5} />
-                        {t.mads_new}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <Link
+                            to="/dashboard/payments"
+                            className="flex items-center gap-2 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-300 hover:text-white text-sm font-bold rounded-xl transition-all border border-white/8"
+                        >
+                            <CreditCard className="w-4 h-4" strokeWidth={1.5} />
+                            Pagamentos
+                        </Link>
+                        <button
+                            onClick={() => navigate('/anunciar')}
+                            className="flex items-center gap-2 px-5 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 text-sm font-black rounded-xl transition-all hover:shadow-glow"
+                        >
+                            <Plus className="w-4 h-4" strokeWidth={1.5} />
+                            {t.mads_new}
+                        </button>
+                    </div>
                 </motion.div>
 
                 {myCars.length > 0 ? (

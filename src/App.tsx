@@ -20,6 +20,7 @@ import Admin from './pages/Admin';
 import Cookies from './pages/Cookies';
 import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
+import DashboardPayments from './pages/DashboardPayments';
 
 export default function App() {
     return (
@@ -47,6 +48,7 @@ export default function App() {
                     <Route path="/meu-perfil"          element={<MeuPerfil />} />
                     <Route path="/impulsionar/sucesso" element={<ImpulsionarSucesso />} />
                     <Route path="/impulsionar/:id"     element={<Impulsionar />} />
+                    <Route path="/dashboard/payments"  element={<DashboardPayments />} />
                     <Route path="/carro/:id"           element={<DetalheCarro />} />
                     <Route path="/sobre-nos"           element={<SobreNos />} />
                     <Route path="/login"               element={<Login />} />
