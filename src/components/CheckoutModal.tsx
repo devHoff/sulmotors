@@ -216,7 +216,7 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                 payment_method:     'pix',
                 transaction_amount: order.amount,
                 description:        order.description,
-                payer_email:        order.payerEmail || 'cliente@sulmotor.com.br',
+                payer_email:        order.payerEmail || '',
                 payer_name:         order.payerName,
                 external_reference: order.externalReference,
             });
@@ -320,7 +320,7 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                 payment_method:     'credit_card',
                 transaction_amount: order.amount,
                 description:        order.description,
-                payer_email:        order.payerEmail || 'cliente@sulmotor.com.br',
+                payer_email:        order.payerEmail || '',
                 payer_name:         cardName.trim(),
                 payer_cpf:          rawCPF,
                 payment_method_id:  brandToMethodId(cardBrand),

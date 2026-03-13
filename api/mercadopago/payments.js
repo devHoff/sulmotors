@@ -29,18 +29,23 @@ const { MercadoPagoConfig, Payment } = require('mercadopago');
 
 // ── Sanitise payer email ───────────────────────────────────────────────────────
 // Never use the seller/merchant MP account email as payer – that causes error 4390.
-// Only block the actual merchant account email associated with the MP credentials.
+// If the payer IS the seller (e.g. store owner testing their own listing),
+// substitute a safe fallback. In production, real user emails always pass through.
+//
+// All emails listed here belong to the MP merchant account (Leonardo Bandas de Oliveira).
 const SELLER_EMAILS = [
     'contato@sulmotor.com',
-    // Add other MP merchant account emails here if needed
+    'bandasleonardo@gmail.com',
+    // Add any other MP merchant account emails here if needed
 ];
+
 function sanitiseEmail(email) {
     if (!email || typeof email !== 'string') return null;
     const lower = email.toLowerCase().trim();
-    // Reject if it matches any seller/merchant email exactly
-    if (SELLER_EMAILS.some(s => lower === s.toLowerCase())) return null;
     // Basic RFC format check
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lower)) return null;
+    // If it matches a seller/merchant email, return null so we can inform the user
+    if (SELLER_EMAILS.some(s => lower === s.toLowerCase())) return null;
     return lower;
 }
 
@@ -61,7 +66,9 @@ function friendlyError(err) {
         const code = String(c.code ?? '');
         const desc = String(c.description ?? '').toLowerCase();
         if (code === '4390' || desc.includes('forbidden'))
-            return 'E-mail do pagador não permitido. Use um e-mail diferente para teste.';
+            return 'E-mail do pagador não permitido. Use um e-mail diferente para o pagamento.';
+        if (code === '2034' || desc.includes('invalid users involved') || desc.includes('invalid users'))
+            return 'E-mail do pagador não pode ser o mesmo da conta do vendedor. Use outro e-mail.';
         if (desc.includes('invalid card token') || desc.includes('token'))
             return 'Token do cartão inválido ou expirado. Insira os dados do cartão novamente.';
         if (desc.includes('invalid expiration') || desc.includes('expiration_month'))
@@ -78,6 +85,7 @@ function friendlyError(err) {
             return 'Token do cartão inválido. Insira os dados novamente.';
     }
     const msg = (err?.message ?? '').toLowerCase();
+    if (msg.includes('invalid users involved')) return 'E-mail do pagador inválido para este pagamento.';
     if (msg.includes('forbidden'))           return 'E-mail do pagador não permitido.';
     if (msg.includes('network') || msg.includes('timeout'))
         return 'Timeout ao conectar ao Mercado Pago. Tente novamente.';
@@ -111,9 +119,14 @@ async function createPaymentHandler(req, res) {
             return res.status(400).json({ error: 'description ausente.' });
         }
 
+        // sanitiseEmail returns null for seller/invalid emails
         const safeEmail = sanitiseEmail(payer_email);
         if (!safeEmail) {
-            return res.status(400).json({ error: 'payer_email inválido ou não permitido.' });
+            // If payer IS the store owner (merchant account email), reject gracefully
+            // Logged-in store owners should not be able to pay themselves (MP rule)
+            return res.status(400).json({
+                error: 'Este e-mail não pode ser usado como pagador. Por favor, use outro e-mail para realizar o pagamento.',
+            });
         }
 
         const cardToken = token ?? card_token;

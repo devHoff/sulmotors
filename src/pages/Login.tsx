@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Mail, Lock, Loader2, User, Phone, ArrowRight,
+    Mail, Loader2, User, Phone, ArrowRight,
     Eye, EyeOff, Shield, CheckCircle2, AlertTriangle,
     ShieldCheck, X, ChevronRight, KeyRound, Car,
 } from 'lucide-react';
@@ -417,7 +417,6 @@ export default function Login() {
                                             </button>
                                         </div>
                                         <div className="relative">
-                                            <Lock className={iconClass} strokeWidth={1.5} aria-hidden="true" />
                                             <input
                                                 id="login-password"
                                                 type={showPass ? 'text' : 'password'}
@@ -426,7 +425,7 @@ export default function Login() {
                                                 value={form.password}
                                                 onChange={e => { setForm({ ...form, password: e.target.value }); setLoginError(''); }}
                                                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleLogin(e as any); } }}
-                                                className="w-full pl-10 pr-12 py-3.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 text-sm outline-none transition-all"
+                                                className="w-full px-4 pr-12 py-3.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 text-sm outline-none transition-all"
                                                 placeholder="••••••••"
                                                 minLength={6}
                                                 aria-describedby={loginError ? 'login-error' : undefined}
@@ -513,10 +512,9 @@ export default function Login() {
                                     <div>
                                         <label htmlFor="reg-password" className={lClass}>{t('login_password')}</label>
                                         <div className="relative">
-                                            <Lock className={iconClass} strokeWidth={1.5} aria-hidden="true" />
                                             <input id="reg-password" type={showPass ? 'text' : 'password'} required autoComplete="new-password"
                                                 value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                                                className="w-full pl-10 pr-12 py-3.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 text-sm outline-none transition-all"
+                                                className="w-full px-4 pr-12 py-3.5 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-brand-400/60 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 text-sm outline-none transition-all"
                                                 placeholder="Min. 6 caracteres" minLength={6} />
                                             <button type="button" onClick={() => setShowPass(v => !v)}
                                                 aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'}

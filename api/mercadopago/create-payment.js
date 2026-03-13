@@ -22,6 +22,20 @@
 
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 
+// MP merchant account emails — must never be used as payer (causes error 4390)
+const SELLER_EMAILS = [
+    'contato@sulmotor.com',
+    'bandasleonardo@gmail.com',
+];
+
+function sanitisePayerEmail(email) {
+    if (!email || typeof email !== 'string') return null;
+    const lower = email.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lower)) return null;
+    if (SELLER_EMAILS.some(s => lower === s.toLowerCase())) return null;
+    return lower;
+}
+
 function getMPClient() {
     const token = process.env.MP_ACCESS_TOKEN;
     if (!token) throw new Error('MP_ACCESS_TOKEN não configurado.');
@@ -43,6 +57,8 @@ function friendlyError(err) {
 
         if (code === '4390' || desc.includes('forbidden'))
             return 'E-mail do pagador não permitido no ambiente de teste. Use um e-mail de usuário de teste do Mercado Pago.';
+        if (code === '2034' || desc.includes('invalid users involved') || desc.includes('invalid users'))
+            return 'E-mail do pagador não pode ser o mesmo da conta do vendedor. Use outro e-mail.';
         if (desc.includes('invalid card token') || desc.includes('token'))
             return 'Token do cartão inválido ou expirado. Por favor, insira os dados do cartão novamente.';
         if (desc.includes('invalid expiration') || desc.includes('expiration_month'))
@@ -87,8 +103,9 @@ async function createPaymentHandler(req, res) {
         if (!description || typeof description !== 'string') {
             return res.status(400).json({ error: 'description ausente.' });
         }
-        if (!payer_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payer_email)) {
-            return res.status(400).json({ error: 'payer_email inválido.' });
+        const safePayerEmail = sanitisePayerEmail(payer_email);
+        if (!safePayerEmail) {
+            return res.status(400).json({ error: 'E-mail do pagador inválido ou não permitido para este pagamento.' });
         }
 
         const nameParts  = payer_name.trim().split(/\s+/);
@@ -102,7 +119,7 @@ async function createPaymentHandler(req, res) {
             payment_method_id,
             installments:       Number(installments) || 1,
             payer: {
-                email:      payer_email,
+                email:      safePayerEmail,
                 first_name: firstName,
                 last_name:  lastName,
                 identification: {
@@ -131,7 +148,7 @@ async function createPaymentHandler(req, res) {
         const idempotencyKey = `sm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const mp = getMPClient();
 
-        console.log(`[create-payment] Creating ${payment_method_id.toUpperCase()} R$${amount} payer=${payer_email}`);
+        console.log(`[create-payment] Creating ${payment_method_id.toUpperCase()} R$${amount} payer=${safePayerEmail}`);
 
         const r = await mp.create({ body, requestOptions: { idempotencyKey } });
 
