@@ -4,11 +4,13 @@
  * api/server.js  –  SulMotor Payment API
  *
  * Routes:
- *   POST /api/create-payment              → Create PIX or card payment
- *   GET  /api/payment-status/:payment_id  → Poll payment status
- *   POST /api/webhook/mercadopago         → MP event notifications
- *   GET  /api/mp-public-key               → Return MP public key to frontend
- *   GET  /api/health                      → Liveness probe
+ *   POST /api/payments/create              → Unified PIX + card payment (new)
+ *   POST /api/create-payment               → Legacy alias → same handler
+ *   GET  /api/payment-status/:payment_id   → Poll payment status
+ *   POST /api/webhooks/mercadopago         → MP event notifications (new)
+ *   POST /api/webhook/mercadopago          → Legacy alias → same handler
+ *   GET  /api/mp-public-key                → Return MP public key to frontend
+ *   GET  /api/health                       → Liveness probe
  */
 
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env.server') });
@@ -17,9 +19,12 @@ const express = require('express');
 const cors    = require('cors');
 const helmet  = require('helmet');
 
-const { createPaymentHandler } = require('./mercadopago/create-payment');
-const { paymentStatusHandler } = require('./mercadopago/payment-status');
-const { webhookHandler }       = require('./mercadopago/webhook');
+// ── Handlers ───────────────────────────────────────────────────────────────────
+const { createPaymentHandler: legacyCreatePayment } = require('./mercadopago/create-payment');
+const { createPaymentHandler: newCreatePayment }     = require('./mercadopago/payments');
+const { paymentStatusHandler }                       = require('./mercadopago/payment-status');
+const { webhookHandler: legacyWebhook }              = require('./mercadopago/webhook');
+const { webhookHandler: newWebhook }                 = require('./mercadopago/webhooks');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -27,17 +32,18 @@ const PORT = process.env.PORT || 3001;
 // ── Security headers ───────────────────────────────────────────────────────────
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
-// ── CORS — allow ALL origins (sandbox + production) ───────────────────────────
-// We trust the Vite proxy in dev, and nginx/cloudflare in prod.
-// The MP API token is server-side only, so open CORS is safe here.
+// ── CORS — allow ALL origins ───────────────────────────────────────────────────
+// Access Token is server-side only; public key is intentionally public.
+// Vite proxies /api → localhost:3001 in dev; nginx/cloudflare handles prod.
 app.use(cors({
-    origin: true,           // reflect any origin
-    methods: ['GET', 'POST', 'OPTIONS'],
+    origin:      true,    // reflect any origin
+    methods:     ['GET', 'POST', 'OPTIONS'],
     credentials: true,
 }));
 app.options('*', cors());   // handle pre-flight for all routes
 
-// ── Raw body capture for webhook signature + JSON parser ──────────────────────
+// ── Raw body + JSON parser ────────────────────────────────────────────────────
+// Needed for webhook HMAC verification (raw body) + JSON routes.
 app.use((req, res, next) => {
     let data = '';
     req.on('data', chunk => { data += chunk; });
@@ -71,17 +77,25 @@ app.get('/api/health', (_req, res) => {
     });
 });
 
-// ── MP Public Key (safe to expose) ────────────────────────────────────────────
+// ── MP Public Key (safe to expose to frontend) ────────────────────────────────
 app.get('/api/mp-public-key', (_req, res) => {
     const key = process.env.MP_PUBLIC_KEY;
     if (!key) return res.status(503).json({ error: 'MP_PUBLIC_KEY não configurado.' });
     res.json({ public_key: key });
 });
 
-// ── Payment routes ────────────────────────────────────────────────────────────
-app.post('/api/create-payment',            createPaymentHandler);
+// ── Primary payment endpoint (Transparent Checkout) ──────────────────────────
+app.post('/api/payments/create', newCreatePayment);
+
+// ── Legacy endpoint (kept for backward compat) ───────────────────────────────
+app.post('/api/create-payment', legacyCreatePayment);
+
+// ── Payment status polling ────────────────────────────────────────────────────
 app.get('/api/payment-status/:payment_id', paymentStatusHandler);
-app.post('/api/webhook/mercadopago',       webhookHandler);
+
+// ── Webhook endpoints ─────────────────────────────────────────────────────────
+app.post('/api/webhooks/mercadopago', newWebhook);      // new canonical path
+app.post('/api/webhook/mercadopago',  legacyWebhook);   // old path (legacy)
 
 // ── 404 ────────────────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Endpoint não encontrado.' }));
@@ -90,20 +104,18 @@ app.use((_req, res) => res.status(404).json({ error: 'Endpoint não encontrado.'
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
     console.error('[server] Unhandled error:', err?.message ?? err);
-    // Never return CORS error as 500 — return proper status
-    if (err?.message?.includes('CORS') || err?.message?.includes('not allowed')) {
-        return res.status(403).json({ error: err.message });
-    }
     res.status(500).json({ error: 'Erro interno do servidor.' });
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 SulMotor Payment API  →  http://0.0.0.0:${PORT}`);
-    console.log(`   Health  : GET  /api/health`);
-    console.log(`   PIX/Card: POST /api/create-payment`);
-    console.log(`   Status  : GET  /api/payment-status/:id`);
-    console.log(`   Webhook : POST /api/webhook/mercadopago\n`);
+    console.log(`   Health    : GET  /api/health`);
+    console.log(`   Payments  : POST /api/payments/create     ← primary`);
+    console.log(`   Legacy    : POST /api/create-payment      ← compat`);
+    console.log(`   Status    : GET  /api/payment-status/:id`);
+    console.log(`   Webhook   : POST /api/webhooks/mercadopago  ← primary`);
+    console.log(`   Webhook   : POST /api/webhook/mercadopago   ← legacy\n`);
     if (!process.env.MP_ACCESS_TOKEN) console.warn('⚠️  MP_ACCESS_TOKEN not set');
 });
 
