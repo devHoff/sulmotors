@@ -2,75 +2,86 @@
 
 /**
  * api/mercadopago/create-payment.js
- * ─────────────────────────────────────────────────────────────────────────────
  * POST /api/create-payment
  *
- * Creates a Mercado Pago PIX payment (expandable to card/boleto).
+ * Handles PIX and credit-card payments via Mercado Pago SDK v2.
  *
- * Request body:
- *   {
- *     transaction_amount : number   – amount in BRL (e.g. 59.90)
- *     description        : string   – e.g. "Impulsionar anúncio – Honda Civic 2022"
- *     payer_email        : string   – buyer email
- *     payer_name?        : string   – buyer full name (optional)
- *     payment_method_id? : string   – default: "pix"
- *     external_reference?: string   – your internal ID (anuncio_id, order_id, etc.)
- *     installments?      : number   – card only (default 1)
- *     card_token?        : string   – card only (tokenized via MP SDK)
- *     issuer_id?         : string   – card only
- *   }
+ * PIX flow:
+ *   → creates payment with method_id "pix"
+ *   → returns qr_code + qr_code_base64 + ticket_url + expiration
  *
- * Success response:
- *   {
- *     payment_id      : string
- *     status          : string        – "pending" | "approved" | "rejected"
- *     status_detail   : string
- *     qr_code?        : string        – PIX copy-paste string
- *     qr_code_base64? : string        – PNG base64 for <img>
- *     ticket_url?     : string        – PIX link
- *     pix_expiration? : string        – ISO timestamp
- *   }
+ * Card flow (MP Brick / SDK token):
+ *   → frontend tokenises card with mp.createCardToken(formEl)
+ *   → sends token here
+ *   → we create the payment with the token
  *
- * Env vars required:
- *   MP_ACCESS_TOKEN
+ * IMPORTANT (sandbox):
+ *   - payer_email must be a TEST USER email, never the seller account email.
+ *   - In production payer_email is always the real logged-in user email.
  */
 
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 
-/**
- * Returns a configured MP Payment client.
- * Throws if MP_ACCESS_TOKEN is missing.
- */
 function getMPClient() {
     const token = process.env.MP_ACCESS_TOKEN;
     if (!token) throw new Error('MP_ACCESS_TOKEN não configurado.');
-    const client = new MercadoPagoConfig({ accessToken: token, options: { timeout: 10000 } });
-    return new Payment(client);
+    return new Payment(new MercadoPagoConfig({
+        accessToken: token,
+        options: { timeout: 15000 },
+    }));
 }
 
 /**
- * Express route handler – called by server.js as:
- *   app.post('/api/create-payment', createPaymentHandler);
- *
- * @param {import('express').Request}  req
- * @param {import('express').Response} res
+ * Map MP error cause array → user-friendly Portuguese message.
  */
+function friendlyError(err) {
+    const causes = err?.cause ?? [];
+
+    for (const c of causes) {
+        const code = String(c.code ?? '');
+        const desc = String(c.description ?? '').toLowerCase();
+
+        if (code === '4390' || desc.includes('forbidden'))
+            return 'E-mail do pagador não permitido no ambiente de teste. Use um e-mail de usuário de teste do Mercado Pago.';
+        if (desc.includes('invalid card token') || desc.includes('token'))
+            return 'Token do cartão inválido ou expirado. Por favor, insira os dados do cartão novamente.';
+        if (desc.includes('invalid expiration') || desc.includes('expiration_month'))
+            return 'Validade do cartão inválida.';
+        if (desc.includes('insufficient amount') || desc.includes('insufficient funds'))
+            return 'Saldo insuficiente no cartão.';
+        if (desc.includes('security_code'))
+            return 'CVV inválido.';
+        if (desc.includes('blacklist') || desc.includes('high_risk'))
+            return 'Pagamento recusado por risco. Tente outro método de pagamento.';
+        if (desc.includes('bad_filled'))
+            return 'Dados do cartão inválidos. Verifique o número, validade e CVV.';
+    }
+
+    const msg = (err?.message ?? '').toLowerCase();
+    if (msg.includes('forbidden')) return 'E-mail do pagador não permitido.';
+    if (msg.includes('network') || msg.includes('timeout')) return 'Timeout ao conectar ao Mercado Pago. Tente novamente.';
+
+    return err?.message || 'Erro ao processar pagamento. Tente novamente.';
+}
+
 async function createPaymentHandler(req, res) {
     try {
         const {
             transaction_amount,
             description,
             payer_email,
-            payer_name        = '',
-            payment_method_id = 'pix',
+            payer_name         = '',
+            payer_cpf          = '00000000000',
+            payment_method_id  = 'pix',
             external_reference = '',
             installments       = 1,
             card_token,
             issuer_id,
-        } = req.body;
+        } = req.body ?? {};
 
-        // ── Input validation ────────────────────────────────────────────────
-        if (!transaction_amount || isNaN(Number(transaction_amount))) {
+        // ── Validation ──────────────────────────────────────────────────────
+        const amount = parseFloat(transaction_amount);
+        if (!amount || isNaN(amount) || amount <= 0) {
             return res.status(400).json({ error: 'transaction_amount inválido ou ausente.' });
         }
         if (!description || typeof description !== 'string') {
@@ -80,76 +91,71 @@ async function createPaymentHandler(req, res) {
             return res.status(400).json({ error: 'payer_email inválido.' });
         }
 
-        const amount = Number(Number(transaction_amount).toFixed(2));
+        const nameParts  = payer_name.trim().split(/\s+/);
+        const firstName  = nameParts[0]  || 'Cliente';
+        const lastName   = nameParts.slice(1).join(' ') || 'SulMotor';
 
-        // ── Build MP payment body ───────────────────────────────────────────
-        const paymentBody = {
-            transaction_amount: amount,
-            description:        String(description).slice(0, 255),
+        // ── Build body ──────────────────────────────────────────────────────
+        const body = {
+            transaction_amount: parseFloat(amount.toFixed(2)),
+            description:        description.slice(0, 255),
             payment_method_id,
+            installments:       Number(installments) || 1,
             payer: {
-                email:            payer_email,
-                first_name:       payer_name.split(' ')[0]  || 'Cliente',
-                last_name:        payer_name.split(' ').slice(1).join(' ') || 'SulMotor',
+                email:      payer_email,
+                first_name: firstName,
+                last_name:  lastName,
                 identification: {
                     type:   'CPF',
-                    number: '00000000000', // placeholder – user didn't provide
+                    number: payer_cpf.replace(/\D/g, '') || '00000000000',
                 },
             },
             external_reference: String(external_reference),
         };
 
-        // ── PIX-specific fields ────────────────────────────────────────────
+        // PIX — set expiry 30 min
         if (payment_method_id === 'pix') {
-            // PIX payments expire in 30 minutes by default
-            const expiry = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-            paymentBody.date_of_expiration = expiry;
+            body.date_of_expiration = new Date(Date.now() + 30 * 60 * 1000).toISOString();
         }
 
-        // ── Card-specific fields ───────────────────────────────────────────
-        if (payment_method_id !== 'pix' && card_token) {
-            paymentBody.token        = card_token;
-            paymentBody.installments = Number(installments) || 1;
-            if (issuer_id) paymentBody.issuer_id = String(issuer_id);
+        // Card — attach token + issuer
+        if (payment_method_id !== 'pix') {
+            if (!card_token) {
+                return res.status(400).json({ error: 'card_token ausente para pagamento com cartão.' });
+            }
+            body.token        = card_token;
+            body.capture      = true;
+            if (issuer_id) body.issuer_id = String(issuer_id);
         }
 
-        // ── Call Mercado Pago API ──────────────────────────────────────────
-        const paymentClient = getMPClient();
+        const idempotencyKey = `sm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const mp = getMPClient();
 
-        // Idempotency key prevents duplicate charges on retry
-        const idempotencyKey = `sulmtr-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        console.log(`[create-payment] Creating ${payment_method_id.toUpperCase()} R$${amount} payer=${payer_email}`);
 
-        const mpResponse = await paymentClient.create({
-            body:            paymentBody,
-            requestOptions:  { idempotencyKey },
-        });
+        const r = await mp.create({ body, requestOptions: { idempotencyKey } });
 
-        // ── Extract PIX QR code data ────────────────────────────────────────
-        const pixData = mpResponse.point_of_interaction?.transaction_data ?? {};
+        const pixData = r.point_of_interaction?.transaction_data ?? {};
 
         const response = {
-            payment_id:      String(mpResponse.id),
-            status:          mpResponse.status,
-            status_detail:   mpResponse.status_detail,
-            qr_code:         pixData.qr_code         ?? null,
-            qr_code_base64:  pixData.qr_code_base64  ?? null,
-            ticket_url:      pixData.ticket_url       ?? null,
-            pix_expiration:  mpResponse.date_of_expiration ?? null,
+            payment_id:     String(r.id),
+            status:         r.status,
+            status_detail:  r.status_detail,
+            // PIX fields
+            qr_code:        pixData.qr_code         ?? null,
+            qr_code_base64: pixData.qr_code_base64  ?? null,
+            ticket_url:     pixData.ticket_url       ?? null,
+            pix_expiration: r.date_of_expiration     ?? null,
         };
 
-        console.log(`[create-payment] ${payment_method_id.toUpperCase()} created → id=${response.payment_id} status=${response.status}`);
+        console.log(`[create-payment] ✅ id=${response.payment_id} status=${response.status} detail=${response.status_detail}`);
         return res.status(201).json(response);
 
     } catch (err) {
-        console.error('[create-payment] Error:', err?.message ?? err);
+        console.error('[create-payment] ❌ Error:', err?.message);
+        if (err?.cause?.length) console.error('[create-payment] Cause:', JSON.stringify(err.cause));
 
-        // Surface the MP error detail if available
-        const detail = err?.cause?.[0]?.description
-            ?? err?.response?.data?.message
-            ?? err?.message
-            ?? 'Erro interno ao criar pagamento.';
-
-        return res.status(502).json({ error: detail });
+        return res.status(502).json({ error: friendlyError(err) });
     }
 }
 

@@ -28,7 +28,12 @@ Deno.serve(async (req) => {
 
     const mpToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
     if (!mpToken) {
-        return new Response('Token não configurado', { status: 500 });
+        // Always 200 to prevent MP retries
+        console.warn('[mp-webhook] MERCADOPAGO_ACCESS_TOKEN not configured');
+        return new Response(JSON.stringify({ ok: true, warning: 'token_not_configured' }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
     }
 
     const supabase = createClient(

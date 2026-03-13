@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Eye, Users, Zap, Rocket, ArrowLeft, QrCode,
     ShieldCheck, CreditCard, Copy, Check, RefreshCw,
-    CheckCircle2, XCircle, Clock, X, ExternalLink,
+    CheckCircle2, XCircle, Clock, X, ExternalLink, AlertTriangle, Loader2,
 } from 'lucide-react';
 import PixPaymentModal from '../components/PixPaymentModal';
 import { toast } from '../utils/toast';
@@ -28,21 +28,20 @@ const periodLabels: Record<string, Record<string, string>> = {
     'pt-BR': { '1_semana': '1 semana',  '2_semanas': '2 semanas', '1_mes': '1 mês',   '3_meses': '3 meses',  '6_meses': '6 meses',  '1_ano': '1 ano' },
     'en':    { '1_semana': '1 week',    '2_semanas': '2 weeks',   '1_mes': '1 month', '3_meses': '3 months', '6_meses': '6 months', '1_ano': '1 year' },
     'es':    { '1_semana': '1 semana',  '2_semanas': '2 semanas', '1_mes': '1 mes',   '3_meses': '3 meses',  '6_meses': '6 meses',  '1_ano': '1 año' },
-};
+];
 
 // ── Slider geometry ───────────────────────────────────────────────────────────
-const DOT_D  = 20;
-const DOT_R  = DOT_D / 2;
+const DOT_D   = 20;
+const DOT_R   = DOT_D / 2;
 const TRACK_H = 2;
 const WRAP_H  = 28;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type PayMethod = 'pix' | 'credit_card' | 'mercadopago';
-type PayStatus = 'idle' | 'loading' | 'pix_waiting' | 'card_form' | 'mp_redirect' | 'approved' | 'rejected';
+type PayStatus = 'idle' | 'loading' | 'pix_waiting' | 'mp_redirect' | 'approved' | 'rejected';
 
 interface PaymentResult {
     payment_id:          string;
-    pagamento_id:        string | null;
     status:              string;
     status_detail:       string;
     pix_qr_code?:        string | null;
@@ -50,7 +49,6 @@ interface PaymentResult {
     pix_expiration?:     string | null;
     init_point?:         string | null;
     preference_id?:      string | null;
-    _mock?:              boolean;
 }
 
 // ── Card input helpers ────────────────────────────────────────────────────────
@@ -63,17 +61,9 @@ const fmtExpiry = (v: string) => {
 
 // ── QR Code renderer ──────────────────────────────────────────────────────────
 function QRImage({ base64, code, url }: { base64?: string | null; code?: string | null; url?: string | null }) {
-    if (base64) {
-        return (
-            <img
-                src={`data:image/png;base64,${base64}`}
-                alt="PIX QR Code"
-                className="w-48 h-48 mx-auto"
-            />
-        );
-    }
-    if (code) return <QRCodeSVG value={code} size={192} bgColor="#ffffff" fgColor="#18181b" level="M" />;
-    if (url)  return <QRCodeSVG value={url}  size={192} bgColor="#ffffff" fgColor="#18181b" level="M" />;
+    if (base64) return <img src={`data:image/png;base64,${base64}`} alt="PIX QR Code" className="w-48 h-48 mx-auto" />;
+    if (code)   return <QRCodeSVG value={code} size={192} bgColor="#ffffff" fgColor="#18181b" level="M" />;
+    if (url)    return <QRCodeSVG value={url}  size={192} bgColor="#ffffff" fgColor="#18181b" level="M" />;
     return (
         <div className="w-48 h-48 bg-white rounded-xl flex items-center justify-center">
             <QrCode className="w-32 h-32 text-zinc-800" strokeWidth={1} />
@@ -81,13 +71,11 @@ function QRImage({ base64, code, url }: { base64?: string | null; code?: string 
     );
 }
 
-// ── Declare MercadoPago global (loaded from CDN) ──────────────────────────────
+// ── Declare MercadoPago global ────────────────────────────────────────────────
 declare global {
     interface Window {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         MercadoPago: any;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        cardFormInstance: any;
     }
 }
 
@@ -98,18 +86,19 @@ export default function Impulsionar() {
     const { user } = useAuth();
     const { t, language } = useLanguage();
 
-    const [car, setCar]             = useState<Car | null>(null);
-    const [loading, setLoading]     = useState(true);
+    const [car, setCar]           = useState<Car | null>(null);
+    const [loading, setLoading]   = useState(true);
     const [selectedPeriod, setSelectedPeriod] = useState(2);
 
     // Payment modal
-    const [showModal, setShowModal] = useState(false);
-    const [payMethod, setPayMethod] = useState<PayMethod>('pix');
-    const [payStatus, setPayStatus] = useState<PayStatus>('idle');
-    const [payResult, setPayResult] = useState<PaymentResult | null>(null);
-    const [copied, setCopied]       = useState(false);
+    const [showModal, setShowModal]     = useState(false);
+    const [payMethod, setPayMethod]     = useState<PayMethod>('pix');
+    const [payStatus, setPayStatus]     = useState<PayStatus>('idle');
+    const [payResult, setPayResult]     = useState<PaymentResult | null>(null);
+    const [payError, setPayError]       = useState('');
+    const [copied, setCopied]           = useState(false);
 
-    // Credit card form (own fields — tokenized via MP SDK)
+    // Card form (manual fields → tokenised via MP SDK)
     const [cardNumber, setCardNumber]   = useState('');
     const [cardName, setCardName]       = useState('');
     const [cardExpiry, setCardExpiry]   = useState('');
@@ -126,10 +115,10 @@ export default function Impulsionar() {
     // PIX polling
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // Mercado Pago checkout URL (for the external-redirect / mp tab)
-    const [mpCheckoutUrl, setMpCheckoutUrl]   = useState<string | null>(null);
+    // MP Checkout URL
+    const [mpCheckoutUrl, setMpCheckoutUrl] = useState<string | null>(null);
 
-    // ── New PIX modal (calls Express /api/create-payment) ─────────────────────
+    // Dedicated PIX modal
     const [showPixModal, setShowPixModal] = useState(false);
 
     const labels = periodLabels[language] ?? periodLabels['pt-BR'];
@@ -152,13 +141,13 @@ export default function Impulsionar() {
     // Cleanup poll on unmount
     useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-    // ── Load MP SDK once ───────────────────────────────────────────────────────
+    // ── Load MP SDK ────────────────────────────────────────────────────────────
     useEffect(() => {
         if (window.MercadoPago) return;
-        const script = document.createElement('script');
-        script.src = 'https://sdk.mercadopago.com/js/v2';
-        script.async = true;
-        document.head.appendChild(script);
+        const s = document.createElement('script');
+        s.src   = 'https://sdk.mercadopago.com/js/v2';
+        s.async = true;
+        document.head.appendChild(s);
     }, []);
 
     // ── Slider helpers ─────────────────────────────────────────────────────────
@@ -187,25 +176,25 @@ export default function Impulsionar() {
         setSelectedPeriod(xToSnap(e.clientX));
     }, [xToSnap]);
 
-    // ── Local Express API caller (/api → proxied to localhost:3001) ─────────────
+    // ── API call helper ────────────────────────────────────────────────────────
     const callApi = async (path: string, body: object) => {
         const base = (import.meta.env.VITE_PAYMENT_API_URL as string) || '';
-        const res = await fetch(`${base}${path}`, {
-            method: 'POST',
+        const res  = await fetch(`${base}${path}`, {
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
+            body:    JSON.stringify(body),
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok || data?.error) throw new Error(data?.error ?? data?.message ?? `Erro ${res.status}`);
+        if (!res.ok || data?.error) throw new Error(data?.error ?? `Erro ${res.status}`);
         return data;
     };
 
-    // ── Supabase edge function caller (kept for card brand detection) ──────────
+    // ── Supabase edge function (Checkout Pro preference) ──────────────────────
     const callFn = async (fnName: string, body: object) => {
         const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL as string;
         const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
         const res = await fetch(`${supabaseUrl}/functions/v1/${fnName}`, {
-            method: 'POST',
+            method:  'POST',
             headers: {
                 'Content-Type':  'application/json',
                 'apikey':        supabaseAnon,
@@ -214,34 +203,30 @@ export default function Impulsionar() {
             body: JSON.stringify(body),
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok || data?.error) throw new Error(data?.error ?? data?.message ?? `Erro ${res.status}`);
+        if (!res.ok || data?.error) throw new Error(data?.error ?? `Erro ${res.status}`);
         return data;
     };
 
-    // ── Activate boost in DB after successful payment ─────────────────────────
+    // ── Activate boost in Supabase after approved payment ────────────────────
     const activateBoost = async (days: number) => {
         if (!id) return;
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + days);
-        try {
-            await supabase.from('anuncios').update({
-                destaque:        true,
-                impulsionado:    true,
-                impulsionado_ate: expiresAt.toISOString(),
-                prioridade:      10,
-            }).eq('id', id);
-        } catch (err) {
-            console.error('activateBoost error:', err);
-        }
+        await supabase.from('anuncios').update({
+            destaque:         true,
+            impulsionado:     true,
+            impulsionado_ate: expiresAt.toISOString(),
+            prioridade:       10,
+        }).eq('id', id);
     };
 
-    // ── PIX polling — uses local /api/payment-status endpoint ────────────────
+    // ── PIX polling ────────────────────────────────────────────────────────────
     const startPolling = (mpPaymentId: string) => {
         if (pollRef.current) clearInterval(pollRef.current);
         pollRef.current = setInterval(async () => {
             try {
                 const base = (import.meta.env.VITE_PAYMENT_API_URL as string) || '';
-                const r = await fetch(`${base}/api/payment-status/${mpPaymentId}`);
+                const r    = await fetch(`${base}/api/payment-status/${mpPaymentId}`);
                 const data = await r.json().catch(() => ({}));
                 if (data.status === 'approved') {
                     clearInterval(pollRef.current!);
@@ -250,108 +235,23 @@ export default function Impulsionar() {
                 } else if (data.status === 'rejected' || data.status === 'cancelled') {
                     clearInterval(pollRef.current!);
                     setPayStatus('rejected');
+                    setPayError('Pagamento recusado ou cancelado.');
                 }
-            } catch (_) { /* keep polling */ }
+            } catch { /* keep polling */ }
         }, 4000);
     };
 
-    // ── Handle PIX — delegates to the dedicated PixPaymentModal ──────────────
-    const handlePix = () => {
-        closeModal();
-        setShowPixModal(true);
-    };
+    // ── Wait for MP SDK to load ────────────────────────────────────────────────
+    const waitForMPSDK = (): Promise<void> =>
+        new Promise((resolve, reject) => {
+            if (window.MercadoPago) { resolve(); return; }
+            const t = setTimeout(() => reject(new Error('SDK do Mercado Pago não carregou. Recarregue a página.')), 8000);
+            const i = setInterval(() => {
+                if (window.MercadoPago) { clearInterval(i); clearTimeout(t); resolve(); }
+            }, 100);
+        });
 
-    // ── Handle Card — tokenize via MP SDK, then call local /api/create-payment ─
-    const handleCard = async () => {
-        if (!id || !user || !car) return;
-
-        const rawNum = cardNumber.replace(/\s/g, '');
-        if (rawNum.length < 13)     { toast.error('Número do cartão inválido.'); return; }
-        if (!cardName.trim())        { toast.error('Nome no cartão obrigatório.'); return; }
-        if (cardExpiry.length < 5)  { toast.error('Validade inválida (MM/AA).'); return; }
-        if (cardCVV.length < 3)     { toast.error('CVV inválido.'); return; }
-
-        setCardProcessing(true);
-        setPayStatus('loading');
-
-        try {
-            const period = periods[selectedPeriod];
-            const [expMonthStr, expYearStr] = cardExpiry.split('/');
-            const expMonth = Number(expMonthStr);
-            const expYear  = Number(`20${expYearStr}`);
-
-            // ── Step 1: tokenize card via MP JS SDK ────────────────────────────
-            const mpPubKey = import.meta.env.VITE_MP_PUBLIC_KEY as string;
-
-            // Wait for MP SDK to load if it hasn't yet
-            let mp = window.MercadoPago;
-            if (!mp) {
-                await new Promise<void>((resolve, reject) => {
-                    const t = setTimeout(() => reject(new Error('MP SDK não carregou. Tente novamente.')), 8000);
-                    const check = setInterval(() => {
-                        if (window.MercadoPago) { clearInterval(check); clearTimeout(t); resolve(); }
-                    }, 100);
-                });
-                mp = window.MercadoPago;
-            }
-
-            const mpInstance = new mp(mpPubKey, { locale: 'pt-BR' });
-
-            // Create card token using the MP SDK
-            const tokenResult = await mpInstance.createCardToken({
-                cardNumber:      rawNum,
-                cardholderName:  cardName.trim().toUpperCase(),
-                cardExpirationMonth: String(expMonth).padStart(2, '0'),
-                cardExpirationYear:  String(expYear),
-                securityCode:    cardCVV,
-                identificationType: 'CPF',
-                identificationNumber: '00000000000',
-            });
-
-            if (!tokenResult?.id) {
-                throw new Error(tokenResult?.cause?.[0]?.description ?? 'Erro ao tokenizar cartão. Verifique os dados.');
-            }
-
-            // ── Step 2: send token to local /api/create-payment ───────────────
-            const result = await callApi('/api/create-payment', {
-                transaction_amount: period.price,
-                description:        `SulMotor – Impulsionar ${car.marca} ${car.modelo} ${car.ano} (${period.key})`,
-                payer_email:        user.email ?? 'bandasleonardo@gmail.com',
-                payer_name:         user?.user_metadata?.full_name ?? '',
-                payment_method_id:  cardBrand ?? 'visa',
-                external_reference: `${id}:${period.days}`,
-                installments:       cardInstall,
-                card_token:         tokenResult.id,
-            });
-
-            setPayResult({
-                payment_id:    String(result.payment_id ?? result.preference_id ?? ''),
-                pagamento_id:  result.pagamento_id  ?? null,
-                status:        result.status         ?? 'pending',
-                status_detail: result.status_detail  ?? '',
-                _mock:         result._mock ?? false,
-            });
-
-            // Always stay in-page — never redirect to Mercado Pago for card payments.
-            if (result.status === 'approved' || result._mock) {
-                await activateBoost(periods[selectedPeriod].days);
-                setPayStatus('approved');
-            } else if (result.status === 'rejected') {
-                setPayStatus('rejected');
-            } else {
-                // in_process / pending → treat as approved pending confirmation
-                await activateBoost(periods[selectedPeriod].days);
-                setPayStatus('approved');
-            }
-        } catch (err: unknown) {
-            setPayStatus('idle');
-            toast.error(err instanceof Error ? err.message : 'Erro ao processar cartão.');
-        } finally {
-            setCardProcessing(false);
-        }
-    };
-
-    // ── Detect card brand from first digits ───────────────────────────────────
+    // ── Detect card brand ─────────────────────────────────────────────────────
     const detectBrand = (num: string): string | null => {
         const n = num.replace(/\s/g, '');
         if (/^4/.test(n)) return 'visa';
@@ -361,71 +261,207 @@ export default function Impulsionar() {
         if (/^(?:606282|3841)/.test(n)) return 'hipercard';
         return null;
     };
-
     const onCardNumberChange = (val: string) => {
-        const formatted = fmtCardNumber(val);
-        setCardNumber(formatted);
-        setCardBrand(detectBrand(formatted));
+        const f = fmtCardNumber(val);
+        setCardNumber(f);
+        setCardBrand(detectBrand(f));
     };
 
-    // ── Handle Mercado Pago redirect tab ──────────────────────────────────────
+    // ── Map card brand → Mercado Pago payment_method_id ─────────────────────
+    const brandToMpMethodId = (brand: string | null): string => {
+        const map: Record<string, string> = {
+            visa:      'visa',
+            master:    'master',
+            amex:      'amex',
+            elo:       'elo',
+            hipercard: 'hipercard',
+        };
+        return map[brand ?? ''] ?? 'visa';
+    };
+
+    // ── Card payment handler ───────────────────────────────────────────────────
+    const handleCard = async () => {
+        if (!id || !user || !car) return;
+
+        const rawNum = cardNumber.replace(/\s/g, '');
+        if (rawNum.length < 13)    { toast.error('Número do cartão inválido.'); return; }
+        if (!cardName.trim())       { toast.error('Nome no cartão obrigatório.'); return; }
+        if (cardExpiry.length < 5) { toast.error('Validade inválida (MM/AA).'); return; }
+        if (cardCVV.length < 3)    { toast.error('CVV inválido.'); return; }
+
+        const [expMonthStr, expYearStr] = cardExpiry.split('/');
+        const expMonth = Number(expMonthStr);
+        const expYear  = Number(expYearStr && expYearStr.length === 2 ? `20${expYearStr}` : expYearStr ?? '99');
+
+        if (expMonth < 1 || expMonth > 12) { toast.error('Mês de validade inválido.'); return; }
+        if (expYear < new Date().getFullYear()) { toast.error('Cartão expirado.'); return; }
+
+        setCardProcessing(true);
+        setPayStatus('loading');
+        setPayError('');
+
+        try {
+            const period   = periods[selectedPeriod];
+            const mpPubKey = import.meta.env.VITE_MP_PUBLIC_KEY as string;
+
+            if (!mpPubKey) {
+                throw new Error('Chave pública do Mercado Pago não configurada.');
+            }
+
+            // ── Step 1: Wait for MP SDK ──────────────────────────────────────
+            await waitForMPSDK();
+
+            // ── Step 2: Tokenize card via MP SDK ─────────────────────────────
+            // The MP SDK v2 createCardToken requires an HTMLFormElement or raw fields
+            // We use the raw fields approach with the public key
+            let tokenId: string;
+            try {
+                const mpInstance = new window.MercadoPago(mpPubKey, { locale: 'pt-BR' });
+
+                // createCardToken with raw data (MP SDK v2 format)
+                const tokenResult = await mpInstance.createCardToken({
+                    cardNumber:           rawNum,
+                    cardholderName:       cardName.trim().toUpperCase(),
+                    cardExpirationMonth:  String(expMonth).padStart(2, '0'),
+                    cardExpirationYear:   String(expYear),
+                    securityCode:         cardCVV,
+                    identificationType:   'CPF',
+                    identificationNumber: '00000000000',
+                });
+
+                if (!tokenResult?.id) {
+                    const causes = (tokenResult?.cause ?? []) as Array<{ description?: string; code?: string }>;
+                    const causeMsg = causes[0]?.description
+                        ?? 'Dados do cartão inválidos. Verifique número, validade e CVV.';
+                    throw new Error(causeMsg);
+                }
+                tokenId = tokenResult.id;
+            } catch (tokenErr: unknown) {
+                const raw = tokenErr instanceof Error ? tokenErr.message : String(tokenErr);
+                // Translate common MP SDK error messages to Portuguese
+                if (/cardNumber|card_number/i.test(raw))  throw new Error('Número do cartão inválido.');
+                if (/expiration/i.test(raw))               throw new Error('Data de validade inválida.');
+                if (/securityCode|cvv/i.test(raw))         throw new Error('CVV inválido.');
+                throw new Error(raw || 'Erro ao tokenizar cartão.');
+            }
+
+            // ── Step 3: Send token to backend ─────────────────────────────────
+            const mpMethodId = brandToMpMethodId(cardBrand);
+
+            const result = await callApi('/api/create-payment', {
+                transaction_amount: period.price,
+                description:        `SulMotor – Impulsionar ${car.marca} ${car.modelo} ${car.ano} (${period.key})`,
+                payer_email:        user.email ?? '',
+                payer_name:         user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'Cliente',
+                payment_method_id:  mpMethodId,
+                external_reference: `${id}:${period.days}`,
+                installments:       cardInstall,
+                card_token:         tokenId,
+            });
+
+            setPayResult({
+                payment_id:    String(result.payment_id ?? ''),
+                status:        result.status         ?? 'pending',
+                status_detail: result.status_detail  ?? '',
+            });
+
+            if (result.status === 'approved') {
+                await activateBoost(period.days);
+                setPayStatus('approved');
+            } else if (result.status === 'rejected') {
+                // Map common rejection reason codes to user messages
+                const detail = (result.status_detail ?? '') as string;
+                let errMsg = 'Pagamento recusado. Tente outro cartão ou método de pagamento.';
+                if (/insufficient|funds/i.test(detail)) errMsg = 'Saldo insuficiente no cartão.';
+                else if (/invalid|bad_filled/i.test(detail)) errMsg = 'Dados do cartão inválidos.';
+                else if (/blacklist|high_risk/i.test(detail)) errMsg = 'Pagamento não autorizado. Tente outro cartão.';
+                else if (/security_code/i.test(detail)) errMsg = 'CVV inválido.';
+                setPayError(errMsg);
+                setPayStatus('rejected');
+            } else {
+                // in_process / pending — boost will activate via webhook
+                await activateBoost(period.days);
+                setPayStatus('approved');
+            }
+
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Erro ao processar cartão.';
+            setPayError(msg);
+            setPayStatus('rejected');
+        } finally {
+            setCardProcessing(false);
+        }
+    };
+
+    // ── Mercado Pago Checkout Pro ─────────────────────────────────────────────
     const handleMercadoPago = async () => {
         if (!id || !user || !car) return;
         setPayStatus('loading');
+        setPayError('');
         try {
             const period = periods[selectedPeriod];
-            const data = await callFn('create-mp-preference', {
+            const data   = await callFn('create-mp-preference', {
                 anuncio_id:  id,
                 user_id:     user.id,
-                user_email:  user.email ?? 'bandasleonardo@gmail.com',
+                user_email:  user.email ?? '',
                 periodo_key: period.key,
                 dias:        period.days,
                 preco:       period.price,
                 carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
+                payment_method: 'redirect',
             });
-            const url = data.sandbox_init_point ?? data.init_point;
-            if (!url) throw new Error('URL de pagamento não retornada.');
+
+            // Prefer production URL; fall back to sandbox URL for test accounts
+            // The MP access token starting with "APP_USR" is a production token → use init_point
+            // Test tokens (TEST-...) → use sandbox_init_point
+            const mpKey = import.meta.env.VITE_MP_PUBLIC_KEY as string ?? '';
+            const isSandbox = mpKey.startsWith('TEST-');
+            const url = isSandbox
+                ? (data.sandbox_init_point ?? data.init_point)
+                : (data.init_point ?? data.sandbox_init_point);
+
+            if (!url) throw new Error('URL de pagamento não retornada pelo Mercado Pago.');
             setMpCheckoutUrl(url);
             setPayStatus('mp_redirect');
         } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Erro ao gerar link de pagamento.';
+            setPayError(msg);
             setPayStatus('idle');
-            toast.error(err instanceof Error ? err.message : 'Erro ao gerar link.');
+            toast.error(msg);
         }
     };
 
-    // ── Copy helper ───────────────────────────────────────────────────────────
     const copyText = async (text: string) => {
         await navigator.clipboard.writeText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 2500);
     };
 
-    // ── Close / reset modal ────────────────────────────────────────────────────
     const closeModal = () => {
         if (pollRef.current) clearInterval(pollRef.current);
         setShowModal(false);
         setPayStatus('idle');
         setPayResult(null);
+        setPayError('');
         setMpCheckoutUrl(null);
         setCopied(false);
         setCardNumber(''); setCardName(''); setCardExpiry('');
-        setCardCVV(''); setCardBrand(null);
+        setCardCVV(''); setCardBrand(null); setCardInstall(1);
     };
 
     const openModal = () => {
         setPayStatus('idle');
         setPayResult(null);
+        setPayError('');
         setMpCheckoutUrl(null);
         setPayMethod('pix');
         setShowModal(true);
     };
 
-    // ── Called when PIX modal confirms payment approved ───────────────────────
     const handlePixApproved = async (paymentId: string) => {
         console.log('[Impulsionar] PIX approved, paymentId=', paymentId);
         await activateBoost(periods[selectedPeriod].days);
         setShowPixModal(false);
-        // Show success in existing modal
         setShowModal(true);
         setPayStatus('approved');
     };
@@ -442,7 +478,6 @@ export default function Impulsionar() {
     const periodLabel = labels[period.key];
     const railTop     = WRAP_H / 2;
 
-    // ── Render ─────────────────────────────────────────────────────────────────
     return (
         <div className="bg-zinc-950 min-h-screen py-12">
             <div className="max-w-xl mx-auto px-4">
@@ -495,7 +530,6 @@ export default function Impulsionar() {
                     <div className="mb-10" style={{ paddingLeft: DOT_R, paddingRight: DOT_R }}>
                         <div ref={trackRef} className="relative select-none cursor-pointer" style={{ height: WRAP_H }}
                             onClick={(e) => { if (!isDragging.current) setSelectedPeriod(xToSnap(e.clientX)); }}>
-
                             <div className="absolute left-0 right-0 rounded-full bg-zinc-700"
                                 style={{ top: railTop - TRACK_H / 2, height: TRACK_H }} />
                             <motion.div className="absolute left-0 rounded-full bg-brand-400 origin-left"
@@ -523,7 +557,6 @@ export default function Impulsionar() {
                                 onPointerDown={onPointerDown} onPointerMove={onPointerMove}
                                 onPointerUp={onPointerUp} onPointerCancel={onPointerUp} />
                         </div>
-
                         <div className="relative mt-3" style={{ height: 20 }}>
                             {periods.map((p, i) => (
                                 <button key={i} onClick={() => setSelectedPeriod(i)}
@@ -609,12 +642,9 @@ export default function Impulsionar() {
                             className="w-full max-w-sm bg-zinc-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl max-h-[92vh] overflow-y-auto"
                         >
 
-                            {/* ────────────────────────────────────────────────────────
-                                IDLE — method selector + forms
-                            ──────────────────────────────────────────────────────── */}
+                            {/* ── IDLE ── */}
                             {payStatus === 'idle' && (
                                 <>
-                                    {/* Header */}
                                     <div className="flex items-center justify-between p-5 border-b border-white/8">
                                         <div>
                                             <h2 className="text-lg font-black text-white">Finalizar pagamento</h2>
@@ -636,10 +666,7 @@ export default function Impulsionar() {
                                         ] as { id: PayMethod; label: string; icon: React.ElementType; active: string }[]).map(({ id: mId, label, icon: Icon, active }) => (
                                             <button key={mId} onClick={() => setPayMethod(mId)}
                                                 className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-xl text-[11px] font-bold transition-all
-                                                    ${payMethod === mId
-                                                        ? `border ${active}`
-                                                        : 'bg-zinc-800 border border-transparent text-zinc-500 hover:text-zinc-300'
-                                                    }`}>
+                                                    ${payMethod === mId ? `border ${active}` : 'bg-zinc-800 border border-transparent text-zinc-500 hover:text-zinc-300'}`}>
                                                 <Icon className="w-4 h-4" strokeWidth={1.5} />
                                                 {label}
                                             </button>
@@ -648,13 +675,13 @@ export default function Impulsionar() {
 
                                     <div className="p-4 space-y-3">
 
-                                        {/* ── PIX tab — opens dedicated PixPaymentModal ── */}
+                                        {/* ── PIX tab ── */}
                                         {payMethod === 'pix' && (
                                             <>
                                                 <div className="p-4 bg-emerald-500/8 border border-emerald-500/15 rounded-2xl text-center">
                                                     <QrCode className="w-10 h-10 text-emerald-400 mx-auto mb-2" strokeWidth={1.5} />
                                                     <p className="text-emerald-300 text-sm font-bold mb-1">Pague com PIX</p>
-                                                    <p className="text-zinc-400 text-xs">QR Code gerado na próxima tela. Aprovação em segundos.</p>
+                                                    <p className="text-zinc-400 text-xs">QR Code gerado na próxima tela. Aprovação instantânea.</p>
                                                 </div>
                                                 <div className="flex items-center justify-between text-sm py-1">
                                                     <span className="text-zinc-400">Período</span>
@@ -677,7 +704,7 @@ export default function Impulsionar() {
                                         {payMethod === 'credit_card' && (
                                             <>
                                                 <div className="space-y-3">
-                                                    {/* Card number + brand */}
+                                                    {/* Card number */}
                                                     <div>
                                                         <label className="text-xs text-zinc-400 font-medium mb-1 block">Número do cartão</label>
                                                         <div className="relative">
@@ -686,6 +713,7 @@ export default function Impulsionar() {
                                                                 value={cardNumber}
                                                                 onChange={(e) => onCardNumberChange(e.target.value)}
                                                                 className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 font-mono tracking-widest pr-16"
+                                                                autoComplete="cc-number"
                                                             />
                                                             {cardBrand && (
                                                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400 uppercase">{cardBrand}</span>
@@ -700,6 +728,7 @@ export default function Impulsionar() {
                                                             value={cardName}
                                                             onChange={(e) => setCardName(e.target.value.toUpperCase())}
                                                             className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 uppercase"
+                                                            autoComplete="cc-name"
                                                         />
                                                     </div>
                                                     {/* Expiry + CVV */}
@@ -711,6 +740,7 @@ export default function Impulsionar() {
                                                                 value={cardExpiry}
                                                                 onChange={(e) => setCardExpiry(fmtExpiry(e.target.value))}
                                                                 className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 font-mono"
+                                                                autoComplete="cc-exp"
                                                             />
                                                         </div>
                                                         <div>
@@ -720,6 +750,7 @@ export default function Impulsionar() {
                                                                 value={cardCVV}
                                                                 onChange={(e) => setCardCVV(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                                                 className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-brand-400/50 font-mono"
+                                                                autoComplete="cc-csc"
                                                             />
                                                         </div>
                                                     </div>
@@ -742,14 +773,17 @@ export default function Impulsionar() {
                                                 <button onClick={handleCard} disabled={cardProcessing}
                                                     className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black rounded-xl transition-all active:scale-[0.98] mt-1">
                                                     {cardProcessing
-                                                        ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processando…</>
+                                                        ? <><Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />Processando…</>
                                                         : <><CreditCard className="w-5 h-5" strokeWidth={1.5} />Pagar {fmt(period.price)}</>
                                                     }
                                                 </button>
+                                                <p className="text-[11px] text-zinc-600 text-center">
+                                                    Seus dados são tokenizados pelo SDK do Mercado Pago. Não armazenamos dados do cartão.
+                                                </p>
                                             </>
                                         )}
 
-                                        {/* ── Mercado Pago tab ── */}
+                                        {/* ── Mercado Pago Checkout Pro tab ── */}
                                         {payMethod === 'mercadopago' && (
                                             <>
                                                 <div className="p-4 bg-brand-400/8 border border-brand-400/15 rounded-2xl text-center">
@@ -781,20 +815,16 @@ export default function Impulsionar() {
                                 </>
                             )}
 
-                            {/* ────────────────────────────────────────────────────────
-                                LOADING
-                            ──────────────────────────────────────────────────────── */}
+                            {/* ── LOADING ── */}
                             {payStatus === 'loading' && (
                                 <div className="p-12 flex flex-col items-center gap-4">
-                                    <div className="w-16 h-16 rounded-full border-2 border-brand-400/20 border-t-brand-400 animate-spin" />
+                                    <Loader2 className="w-14 h-14 text-brand-400 animate-spin" strokeWidth={1.5} />
                                     <p className="text-white font-bold">Processando pagamento…</p>
-                                    <p className="text-zinc-500 text-sm text-center">Aguarde, estamos se comunicando com o Mercado Pago.</p>
+                                    <p className="text-zinc-500 text-sm text-center">Aguarde, estamos processando com segurança.</p>
                                 </div>
                             )}
 
-                            {/* ────────────────────────────────────────────────────────
-                                PIX WAITING — QR Code + copia e cola
-                            ──────────────────────────────────────────────────────── */}
+                            {/* ── PIX WAITING ── */}
                             {payStatus === 'pix_waiting' && payResult && (
                                 <>
                                     <div className="flex items-center justify-between p-5 border-b border-white/8">
@@ -807,85 +837,34 @@ export default function Impulsionar() {
                                             <span className="text-xs text-yellow-400 font-bold">Aguardando</span>
                                         </div>
                                     </div>
-
                                     <div className="p-6 flex flex-col items-center gap-5">
-                                        {/* QR image */}
                                         <div className="bg-white p-3 rounded-2xl shadow-lg">
-                                            <QRImage
-                                                base64={payResult.pix_qr_code_base64}
-                                                code={payResult.pix_qr_code}
-                                                url={payResult.init_point}
-                                            />
+                                            <QRImage base64={payResult.pix_qr_code_base64} code={payResult.pix_qr_code} url={payResult.init_point} />
                                         </div>
-
-                                        {/* Notice when using MP checkout URL as QR */}
-                                        {!payResult.pix_qr_code && !payResult.pix_qr_code_base64 && payResult.init_point && (
-                                            <p className="text-yellow-400/80 text-xs text-center px-2">
-                                                Escaneie para abrir o checkout Mercado Pago e selecione PIX para pagar.
-                                            </p>
-                                        )}
-
-                                        {/* Polling indicator — only when we have a real payment ID */}
-                                        {!payResult.preference_id && (
-                                            <div className="flex items-center gap-2 text-zinc-400 text-xs">
-                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
-                                                Verificando pagamento automaticamente…
-                                            </div>
-                                        )}
-
-                                        {/* ── PIX Copia e Cola ── always shown when there's any code/url */}
                                         {(payResult.pix_qr_code || payResult.init_point) && (() => {
                                             const pixCode = payResult.pix_qr_code ?? payResult.init_point ?? '';
-                                            const label   = payResult.pix_qr_code
-                                                ? 'Chave PIX copia e cola:'
-                                                : 'Ou acesse o link de pagamento:';
                                             return (
                                                 <div className="w-full space-y-2">
-                                                    <p className="text-zinc-400 text-xs font-medium text-center">{label}</p>
+                                                    <p className="text-zinc-400 text-xs font-medium text-center">PIX copia e cola:</p>
                                                     <div className="flex gap-2 items-stretch">
                                                         <div className="flex-1 bg-zinc-800 border border-white/8 rounded-xl px-3 py-2.5 min-w-0">
-                                                            <p className="text-zinc-300 text-xs font-mono break-all leading-relaxed">
-                                                                {pixCode}
-                                                            </p>
+                                                            <p className="text-zinc-300 text-xs font-mono break-all leading-relaxed">{pixCode}</p>
                                                         </div>
                                                         <button onClick={() => copyText(pixCode)}
                                                             className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 px-3 rounded-xl text-xs font-bold transition-all border
-                                                                ${copied
-                                                                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                                                                    : 'bg-zinc-800 border-white/10 text-zinc-300 hover:text-white'
-                                                                }`}>
-                                                            {copied
-                                                                ? <><Check className="w-4 h-4" strokeWidth={1.5} /><span>Copiado</span></>
-                                                                : <><Copy className="w-4 h-4" strokeWidth={1.5} /><span>Copiar</span></>
-                                                            }
+                                                                ${copied ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-zinc-800 border-white/10 text-zinc-300 hover:text-white'}`}>
+                                                            {copied ? <><Check className="w-4 h-4" strokeWidth={1.5} /><span>Copiado</span></> : <><Copy className="w-4 h-4" strokeWidth={1.5} /><span>Copiar</span></>}
                                                         </button>
                                                     </div>
                                                 </div>
                                             );
                                         })()}
-
-                                        {/* Button to open MP checkout when using preference mode */}
-                                        {payResult.preference_id && payResult.init_point && (
-                                            <a href={payResult.init_point} target="_blank" rel="noopener noreferrer"
-                                                className="w-full flex items-center justify-center gap-2 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all text-sm">
-                                                <ExternalLink className="w-4 h-4" strokeWidth={1.5} />
-                                                Abrir Mercado Pago para pagar com PIX
-                                            </a>
-                                        )}
-
-                                        <p className="text-zinc-600 text-xs text-center">
-                                            {payResult.preference_id
-                                                ? 'Após pagar no Mercado Pago, o boost é ativado automaticamente.'
-                                                : 'Esta tela atualiza automaticamente. Não feche esta janela.'
-                                            }
-                                        </p>
+                                        <p className="text-zinc-600 text-xs text-center">Esta tela atualiza automaticamente. Não feche esta janela.</p>
                                     </div>
                                 </>
                             )}
 
-                            {/* ────────────────────────────────────────────────────────
-                                MP REDIRECT — show link to open in new tab
-                            ──────────────────────────────────────────────────────── */}
+                            {/* ── MP REDIRECT ── */}
                             {payStatus === 'mp_redirect' && mpCheckoutUrl && (
                                 <>
                                     <div className="flex items-center justify-between p-5 border-b border-white/8">
@@ -923,7 +902,7 @@ export default function Impulsionar() {
                                             Abrir Mercado Pago
                                         </a>
                                         <p className="text-zinc-500 text-xs text-center">
-                                            Após pagar, o boost é ativado automaticamente. Você pode fechar esta janela.
+                                            Após pagar, o boost é ativado automaticamente.
                                         </p>
                                         <div className="flex items-center justify-center gap-1.5">
                                             <ShieldCheck className="w-3 h-3 text-zinc-600" strokeWidth={1.5} />
@@ -933,9 +912,7 @@ export default function Impulsionar() {
                                 </>
                             )}
 
-                            {/* ────────────────────────────────────────────────────────
-                                APPROVED
-                            ──────────────────────────────────────────────────────── */}
+                            {/* ── APPROVED ── */}
                             {payStatus === 'approved' && (
                                 <div className="p-8 flex flex-col items-center gap-4 text-center">
                                     <motion.div
@@ -962,19 +939,20 @@ export default function Impulsionar() {
                                 </div>
                             )}
 
-                            {/* ────────────────────────────────────────────────────────
-                                REJECTED
-                            ──────────────────────────────────────────────────────── */}
+                            {/* ── REJECTED / ERROR ── */}
                             {payStatus === 'rejected' && (
                                 <div className="p-8 flex flex-col items-center gap-4 text-center">
                                     <div className="w-20 h-20 bg-red-500/15 border border-red-500/30 rounded-3xl flex items-center justify-center">
                                         <XCircle className="w-10 h-10 text-red-400" strokeWidth={1.5} />
                                     </div>
                                     <h2 className="text-2xl font-black text-white">Pagamento recusado</h2>
-                                    <p className="text-zinc-400 text-sm leading-relaxed">
-                                        Seu pagamento foi recusado. Verifique os dados do cartão e tente novamente.
-                                    </p>
-                                    <button onClick={() => setPayStatus('idle')}
+                                    {payError && (
+                                        <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-400/30 rounded-xl w-full text-left">
+                                            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+                                            <p className="text-red-400 text-xs">{payError}</p>
+                                        </div>
+                                    )}
+                                    <button onClick={() => { setPayStatus('idle'); setPayError(''); }}
                                         className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-zinc-700 border border-white/8 text-white font-bold rounded-xl transition-all text-sm">
                                         <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
                                         Tentar novamente
@@ -990,14 +968,14 @@ export default function Impulsionar() {
                 )}
             </AnimatePresence>
 
-            {/* ── Standalone PIX Payment Modal (calls Express backend) ─────────── */}
+            {/* ── Dedicated PIX Payment Modal ─────────────────────────────────────── */}
             <PixPaymentModal
                 open={showPixModal}
                 onClose={() => setShowPixModal(false)}
                 onApproved={handlePixApproved}
                 amount={periods[selectedPeriod].price}
                 description={`SulMotor – Impulsionar anúncio ${car ? `${car.marca} ${car.modelo} ${car.ano}` : ''} (${periods[selectedPeriod].key})`}
-                payerEmail={user?.email ?? 'bandasleonardo@gmail.com'}
+                payerEmail={user?.email ?? ''}
                 payerName={user?.user_metadata?.full_name ?? ''}
                 externalReference={id ?? ''}
             />

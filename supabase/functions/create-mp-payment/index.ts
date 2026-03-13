@@ -72,6 +72,12 @@ Deno.serve(async (req) => {
         const sbKey    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
         const baseUrl  = Deno.env.get('APP_URL') ?? 'https://sulmotor.com.br';
 
+        // Sanitise payer email — never use the seller's email as fallback
+        const rawEmail = (user_email ?? '').trim().toLowerCase();
+        const payerEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)
+            ? rawEmail
+            : (mpToken?.startsWith('TEST-') ? 'test_user_123456789@testuser.com' : 'pagador@sulmotor.com.br');
+
         // ── 1. Register pending pagamento in DB (best-effort) ─────────────────
         let pagamentoId: string | null = null;
         if (sbUrl && sbKey) {
@@ -135,7 +141,7 @@ Deno.serve(async (req) => {
                 periodo_key,
                 dias: String(dias),
             },
-            payer: { email: user_email || 'bandasleonardo@gmail.com' },
+            payer: { email: payerEmail },
         };
 
         if (payment_method === 'pix') {
