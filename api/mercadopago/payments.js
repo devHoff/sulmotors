@@ -31,7 +31,7 @@ const { MercadoPagoConfig, Payment } = require('mercadopago');
 // Never use the seller/merchant email as payer – that causes error 4390.
 const SELLER_EMAILS = [
     'luishenriquegrings@gmail.com',
-    'bandasleonardo@gmail.com',
+    'contato@sulmotor.com',
     'test_user_',
 ];
 function sanitiseEmail(email) {

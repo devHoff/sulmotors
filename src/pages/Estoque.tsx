@@ -479,7 +479,7 @@ export default function Estoque() {
 
                             {/* ── Contact CTA ──────────────────────────────────── */}
                             <a
-                                href="mailto:bandasleonardo@gmail.com?subject=Ajuda para encontrar veículo"
+                                href="mailto:contato@sulmotor.com?subject=Ajuda para encontrar veículo"
                                 className="flex items-center gap-2 w-full px-3 py-2.5 bg-brand-400/10 border border-brand-400/30 text-brand-500 dark:text-brand-400 rounded-xl text-xs font-bold hover:bg-brand-400/20 transition-colors">
                                 <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
                                 {t('estoque_contact_btn')}

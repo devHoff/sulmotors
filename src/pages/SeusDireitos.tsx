@@ -7,49 +7,49 @@ const rights = [
         id: '01',
         title: 'Confirmação e acesso (Art. 18, I e II)',
         desc: 'Você pode solicitar a confirmação de que tratamos seus dados e obter uma cópia completa de todos os dados pessoais que mantemos sobre você, em formato legível.',
-        action: 'Como exercer: envie e-mail para bandasleonardo@gmail.com com o assunto "Acesso aos meus dados". Responderemos em até 15 dias úteis.',
+        action: 'Como exercer: envie e-mail para contato@sulmotor.com com o assunto "Acesso aos meus dados". Responderemos em até 15 dias úteis.',
     },
     {
         id: '02',
         title: 'Correção (Art. 18, III)',
         desc: 'Você tem o direito de solicitar a correção de dados pessoais incompletos, inexatos ou desatualizados.',
-        action: 'Como exercer: acesse as configurações do seu perfil para atualizar seus dados diretamente, ou entre em contato pelo e-mail bandasleonardo@gmail.com.',
+        action: 'Como exercer: acesse as configurações do seu perfil para atualizar seus dados diretamente, ou entre em contato pelo e-mail contato@sulmotor.com.',
     },
     {
         id: '03',
         title: 'Anonimização, bloqueio ou eliminação (Art. 18, IV)',
         desc: 'Você pode solicitar a anonimização, bloqueio ou eliminação de dados desnecessários, excessivos ou tratados em desconformidade com a LGPD.',
-        action: 'Como exercer: envie e-mail para bandasleonardo@gmail.com com o assunto "Eliminação de dados". Processaremos sua solicitação em até 15 dias úteis, salvo obrigação legal de retenção.',
+        action: 'Como exercer: envie e-mail para contato@sulmotor.com com o assunto "Eliminação de dados". Processaremos sua solicitação em até 15 dias úteis, salvo obrigação legal de retenção.',
     },
     {
         id: '04',
         title: 'Portabilidade (Art. 18, V)',
         desc: 'Você pode solicitar a portabilidade dos seus dados pessoais para outro fornecedor de serviço ou produto, mediante requisição expressa, em formato interoperável.',
-        action: 'Como exercer: envie e-mail para bandasleonardo@gmail.com com o assunto "Portabilidade de dados". Forneceremos os dados em formato JSON ou CSV.',
+        action: 'Como exercer: envie e-mail para contato@sulmotor.com com o assunto "Portabilidade de dados". Forneceremos os dados em formato JSON ou CSV.',
     },
     {
         id: '05',
         title: 'Eliminação dos dados tratados com consentimento (Art. 18, VI)',
         desc: 'Quando o tratamento dos seus dados for baseado em consentimento, você pode solicitar a eliminação desses dados a qualquer momento.',
-        action: 'Como exercer: envie e-mail para bandasleonardo@gmail.com com o assunto "Revogar consentimento e excluir dados". Processaremos em até 15 dias úteis.',
+        action: 'Como exercer: envie e-mail para contato@sulmotor.com com o assunto "Revogar consentimento e excluir dados". Processaremos em até 15 dias úteis.',
     },
     {
         id: '06',
         title: 'Informação sobre compartilhamento (Art. 18, VII)',
         desc: 'Você tem o direito de saber com quais entidades públicas e privadas o SulMotor compartilha seus dados pessoais.',
-        action: 'Essa informação está disponível na seção 6 da nossa Política de Privacidade. Para detalhes adicionais, escreva para bandasleonardo@gmail.com.',
+        action: 'Essa informação está disponível na seção 6 da nossa Política de Privacidade. Para detalhes adicionais, escreva para contato@sulmotor.com.',
     },
     {
         id: '07',
         title: 'Revogação do consentimento (Art. 18, IX)',
         desc: 'Nos casos em que o tratamento é baseado em consentimento, você pode revogá-lo a qualquer momento, sem prejudicar a licitude do tratamento realizado anteriormente.',
-        action: 'Como exercer: envie e-mail para bandasleonardo@gmail.com com o assunto "Revogar consentimento" ou ajuste suas preferências nas configurações da conta.',
+        action: 'Como exercer: envie e-mail para contato@sulmotor.com com o assunto "Revogar consentimento" ou ajuste suas preferências nas configurações da conta.',
     },
     {
         id: '08',
         title: 'Oposição ao tratamento (Art. 18, § 2º)',
         desc: 'Você pode se opor ao tratamento realizado com fundamento em uma das hipóteses de dispensa de consentimento, em caso de descumprimento da LGPD.',
-        action: 'Como exercer: envie e-mail para bandasleonardo@gmail.com com o assunto "Oposição ao tratamento de dados", descrevendo os dados e o motivo da oposição.',
+        action: 'Como exercer: envie e-mail para contato@sulmotor.com com o assunto "Oposição ao tratamento de dados", descrevendo os dados e o motivo da oposição.',
     },
     {
         id: '09',
@@ -126,11 +126,11 @@ export default function SeusDireitos() {
                         Respondemos em até <strong className="text-white">15 dias úteis</strong>, conforme a LGPD.
                     </p>
                     <a
-                        href="mailto:bandasleonardo@gmail.com?subject=Exercer%20direito%20LGPD"
+                        href="mailto:contato@sulmotor.com?subject=Exercer%20direito%20LGPD"
                         className="inline-flex items-center gap-2.5 px-8 py-4 bg-brand-400 hover:bg-brand-300 text-zinc-950 font-black rounded-xl transition-all hover:shadow-glow"
                     >
                         <Mail className="w-4 h-4" strokeWidth={1.5} />
-                        bandasleonardo@gmail.com
+                        contato@sulmotor.com
                     </a>
                     <p className="text-zinc-600 text-xs mt-4">Você também pode peticionar à ANPD: gov.br/anpd</p>
                 </motion.div>

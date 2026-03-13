@@ -142,7 +142,7 @@ export default function SobreNos() {
                         {[
                             { icon: MapPin, text: 'Porto Alegre, RS', href: null },
                             { icon: Phone,  text: '(51) 9226-3188',   href: 'https://wa.me/555192263188' },
-                            { icon: Mail,   text: 'bandasleonardo@gmail.com', href: 'mailto:bandasleonardo@gmail.com' },
+                            { icon: Mail,   text: 'contato@sulmotor.com', href: 'mailto:contato@sulmotor.com' },
                         ].map(({ icon: Icon, text, href }) => (
                             <div key={text} className="flex items-center gap-2.5 text-zinc-300 text-sm">
                                 <div className="w-8 h-8 bg-brand-400/10 border border-brand-400/20 rounded-lg flex items-center justify-center">

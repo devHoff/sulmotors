@@ -145,9 +145,9 @@ export default function Cookies() {
                         </div>
                         <div>
                             <p className="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">E-mail de privacidade</p>
-                            <a href="mailto:bandasleonardo@gmail.com"
+                            <a href="mailto:contato@sulmotor.com"
                                 className="text-sm font-bold text-brand-500 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-300 transition-colors">
-                                bandasleonardo@gmail.com
+                                contato@sulmotor.com
                             </a>
                         </div>
                     </div>

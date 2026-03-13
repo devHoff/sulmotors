@@ -40,7 +40,7 @@ export default function Footer() {
         },
         {
             label: 'Email',
-            href: 'mailto:bandasleonardo@gmail.com',
+            href: 'mailto:contato@sulmotor.com',
             icon: <Mail className="w-4 h-4" strokeWidth={1.5} />,
         },
     ];
@@ -151,10 +151,10 @@ export default function Footer() {
                                     <Mail className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
                                 </div>
                                 <a
-                                    href="mailto:bandasleonardo@gmail.com"
+                                    href="mailto:contato@sulmotor.com"
                                     className="text-sm text-slate-600 dark:text-zinc-400 hover:text-brand-400 transition-colors"
                                 >
-                                    bandasleonardo@gmail.com
+                                    contato@sulmotor.com
                                 </a>
                             </li>
                         </ul>

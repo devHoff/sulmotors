@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 const sections = [
     {
         title: '1. Quem somos e como nos contatar',
-        content: `SulMotor é uma plataforma de marketplace automotivo operada no Brasil. Somos o controlador dos dados pessoais coletados em nossa Plataforma nos termos da Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018). Contato do encarregado (DPO): bandasleonardo@gmail.com — Porto Alegre, RS, Brasil.`,
+        content: `SulMotor é uma plataforma de marketplace automotivo operada no Brasil. Somos o controlador dos dados pessoais coletados em nossa Plataforma nos termos da Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018). Contato do encarregado (DPO): contato@sulmotor.com — Porto Alegre, RS, Brasil.`,
     },
     {
         title: '2. Quais dados coletamos',
@@ -49,7 +49,7 @@ const sections = [
     },
     {
         title: '12. Contato e encarregado (DPO)',
-        content: `Para exercer seus direitos ou tirar dúvidas sobre o tratamento de seus dados, entre em contato com nosso encarregado de proteção de dados: bandasleonardo@gmail.com. Responderemos em até 15 dias úteis, conforme prazo previsto na LGPD.`,
+        content: `Para exercer seus direitos ou tirar dúvidas sobre o tratamento de seus dados, entre em contato com nosso encarregado de proteção de dados: contato@sulmotor.com. Responderemos em até 15 dias úteis, conforme prazo previsto na LGPD.`,
     },
 ];
 

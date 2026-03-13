@@ -23,7 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase, supabasePublic } from '../lib/supabase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const ADMIN_EMAIL = 'bandasleonardo@gmail.com';
+const ADMIN_EMAIL = 'contato@sulmotor.com';
 const ADMIN_2FA_CODE = '834221';
 
 type AdminSection =

@@ -41,7 +41,7 @@ const sections = [
     },
     {
         title: '10. Rescisão',
-        content: `O SulMotor reserva-se o direito de suspender ou encerrar sua conta a qualquer momento, com ou sem aviso prévio, caso haja violação destes Termos de Uso ou comportamento que prejudique outros usuários ou a integridade da Plataforma. Você pode encerrar sua conta a qualquer momento através das configurações do seu perfil ou solicitando ao suporte em bandasleonardo@gmail.com.`,
+        content: `O SulMotor reserva-se o direito de suspender ou encerrar sua conta a qualquer momento, com ou sem aviso prévio, caso haja violação destes Termos de Uso ou comportamento que prejudique outros usuários ou a integridade da Plataforma. Você pode encerrar sua conta a qualquer momento através das configurações do seu perfil ou solicitando ao suporte em contato@sulmotor.com.`,
     },
     {
         title: '11. Lei Aplicável e Foro',
@@ -49,7 +49,7 @@ const sections = [
     },
     {
         title: '12. Contato',
-        content: `Para dúvidas sobre estes Termos de Uso, entre em contato: bandasleonardo@gmail.com — SulMotor — Porto Alegre, RS, Brasil.`,
+        content: `Para dúvidas sobre estes Termos de Uso, entre em contato: contato@sulmotor.com — SulMotor — Porto Alegre, RS, Brasil.`,
     },
 ];
 
