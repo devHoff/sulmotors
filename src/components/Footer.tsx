@@ -35,7 +35,7 @@ export default function Footer() {
         },
         {
             label: 'Instagram',
-            href: 'https://instagram.com/sulmotors',
+            href: 'https://www.instagram.com/sul.motor/',
             icon: <Instagram className="w-4 h-4" strokeWidth={1.5} />,
         },
         {
