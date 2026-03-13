@@ -136,13 +136,6 @@ export default function DetalheCarro() {
         touchStartX.current = null; touchStartY.current = null;
     };
 
-    // Financing calculation
-    const dp = parseFloat(downPayment) || 0;
-    const financed = Math.max(0, car.preco - dp);
-    const monthlyRate = annualRate / 100;
-    const monthly = financed > 0 ? calcPMT(financed, monthlyRate, months) : 0;
-    const total = monthly * months + dp;
-
     const specs = [
         { icon: Calendar, label: t('detail_year'), value: String(car.ano) },
         { icon: Gauge,    label: t('detail_km'),   value: formatKm(car.quilometragem) },
