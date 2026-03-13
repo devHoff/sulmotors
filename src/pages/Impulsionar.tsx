@@ -7,6 +7,7 @@ import {
     ShieldCheck, CreditCard, Copy, Check, RefreshCw,
     CheckCircle2, XCircle, Clock, X, ExternalLink,
 } from 'lucide-react';
+import PixPaymentModal from '../components/PixPaymentModal';
 import { toast } from '../utils/toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -126,7 +127,10 @@ export default function Impulsionar() {
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Mercado Pago checkout URL (for the external-redirect / mp tab)
-    const [mpCheckoutUrl, setMpCheckoutUrl] = useState<string | null>(null);
+    const [mpCheckoutUrl, setMpCheckoutUrl]   = useState<string | null>(null);
+
+    // ── New PIX modal (calls Express /api/create-payment) ─────────────────────
+    const [showPixModal, setShowPixModal] = useState(false);
 
     const labels = periodLabels[language] ?? periodLabels['pt-BR'];
     const fmt = (p: number) =>
@@ -183,7 +187,20 @@ export default function Impulsionar() {
         setSelectedPeriod(xToSnap(e.clientX));
     }, [xToSnap]);
 
-    // ── Edge function caller ───────────────────────────────────────────────────
+    // ── Local Express API caller (/api → proxied to localhost:3001) ─────────────
+    const callApi = async (path: string, body: object) => {
+        const base = (import.meta.env.VITE_PAYMENT_API_URL as string) || '';
+        const res = await fetch(`${base}${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data?.error) throw new Error(data?.error ?? data?.message ?? `Erro ${res.status}`);
+        return data;
+    };
+
+    // ── Supabase edge function caller (kept for card brand detection) ──────────
     const callFn = async (fnName: string, body: object) => {
         const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL as string;
         const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -218,17 +235,19 @@ export default function Impulsionar() {
         }
     };
 
-    // ── PIX polling ────────────────────────────────────────────────────────────
+    // ── PIX polling — uses local /api/payment-status endpoint ────────────────
     const startPolling = (mpPaymentId: string) => {
         if (pollRef.current) clearInterval(pollRef.current);
         pollRef.current = setInterval(async () => {
             try {
-                const r = await callFn('check-mp-payment', { mp_payment_id: mpPaymentId });
-                if (r.status === 'approved') {
+                const base = (import.meta.env.VITE_PAYMENT_API_URL as string) || '';
+                const r = await fetch(`${base}/api/payment-status/${mpPaymentId}`);
+                const data = await r.json().catch(() => ({}));
+                if (data.status === 'approved') {
                     clearInterval(pollRef.current!);
                     await activateBoost(periods[selectedPeriod].days);
                     setPayStatus('approved');
-                } else if (r.status === 'rejected' || r.status === 'cancelled') {
+                } else if (data.status === 'rejected' || data.status === 'cancelled') {
                     clearInterval(pollRef.current!);
                     setPayStatus('rejected');
                 }
@@ -236,78 +255,13 @@ export default function Impulsionar() {
         }, 4000);
     };
 
-    // ── Handle PIX ────────────────────────────────────────────────────────────
-    // Calls create-mp-payment (the correct function for real PIX QR codes).
-    // Falls back to create-mp-preference (checkout redirect) only if the
-    // payment function is still returning a server error.
-    const handlePix = async () => {
-        if (!id || !user || !car) return;
-        setPayStatus('loading');
-        try {
-            const period = periods[selectedPeriod];
-            const payload = {
-                payment_method: 'pix',
-                anuncio_id:     id,
-                user_id:        user.id,
-                user_email:     user.email ?? 'bandasleonardo@gmail.com',
-                periodo_key:    period.key,
-                dias:           period.days,
-                preco:          period.price,
-                carro_desc:     `${car.marca} ${car.modelo} ${car.ano}`,
-            };
-
-            // Try create-mp-payment first (returns real pix_qr_code + pix_qr_code_base64)
-            let raw: Record<string, unknown>;
-            try {
-                raw = await callFn('create-mp-payment', payload);
-            } catch (primaryErr) {
-                // If the deployed function is still broken, fall back to
-                // create-mp-preference (returns init_point for checkout redirect)
-                console.warn('create-mp-payment failed, falling back:', primaryErr);
-                const fallback = await callFn('create-mp-preference', {
-                    anuncio_id:  id,
-                    user_id:     user.id,
-                    user_email:  user.email ?? 'bandasleonardo@gmail.com',
-                    periodo_key: period.key,
-                    dias:        period.days,
-                    preco:       period.price,
-                    carro_desc:  `${car.marca} ${car.modelo} ${car.ano}`,
-                });
-                raw = fallback;
-            }
-
-            const result: PaymentResult = {
-                payment_id:         String(raw.payment_id   ?? raw.preference_id ?? 'mp-checkout'),
-                pagamento_id:       (raw.pagamento_id as string) ?? null,
-                status:             String(raw.status        ?? 'pending'),
-                status_detail:      String(raw.status_detail ?? 'waiting_transfer'),
-                pix_qr_code:        (raw.pix_qr_code        as string) ?? null,
-                pix_qr_code_base64: (raw.pix_qr_code_base64 as string) ?? null,
-                pix_expiration:     (raw.pix_expiration     as string) ?? null,
-                init_point:         (raw.sandbox_init_point as string) ?? (raw.init_point as string) ?? null,
-                preference_id:      (raw.preference_id      as string) ?? null,
-                _mock:              Boolean(raw._mock),
-            };
-
-            setPayResult(result);
-            setPayStatus('pix_waiting');
-
-            if (result.payment_id && !result._mock && !result.preference_id) {
-                startPolling(String(result.payment_id));
-            }
-            if (result._mock) {
-                setTimeout(async () => {
-                    await activateBoost(periods[selectedPeriod].days);
-                    setPayStatus('approved');
-                }, 8000);
-            }
-        } catch (err: unknown) {
-            setPayStatus('idle');
-            toast.error(err instanceof Error ? err.message : 'Erro ao gerar PIX.');
-        }
+    // ── Handle PIX — delegates to the dedicated PixPaymentModal ──────────────
+    const handlePix = () => {
+        closeModal();
+        setShowPixModal(true);
     };
 
-    // ── Handle Card — tokenize via MP SDK, then call edge function ────────────
+    // ── Handle Card — tokenize via MP SDK, then call local /api/create-payment ─
     const handleCard = async () => {
         if (!id || !user || !car) return;
 
@@ -358,19 +312,16 @@ export default function Impulsionar() {
                 throw new Error(tokenResult?.cause?.[0]?.description ?? 'Erro ao tokenizar cartão. Verifique os dados.');
             }
 
-            // ── Step 2: send token to create-mp-payment (correct function) ──────
-            const result = await callFn('create-mp-payment', {
-                payment_method:    'credit_card',
-                anuncio_id:        id,
-                user_id:           user.id,
-                user_email:        user.email ?? 'bandasleonardo@gmail.com',
-                periodo_key:       period.key,
-                dias:              period.days,
-                preco:             period.price,
-                carro_desc:        `${car.marca} ${car.modelo} ${car.ano}`,
-                card_token:        tokenResult.id,
-                installments:      cardInstall,
-                payment_method_id: cardBrand ?? 'visa',
+            // ── Step 2: send token to local /api/create-payment ───────────────
+            const result = await callApi('/api/create-payment', {
+                transaction_amount: period.price,
+                description:        `SulMotor – Impulsionar ${car.marca} ${car.modelo} ${car.ano} (${period.key})`,
+                payer_email:        user.email ?? 'bandasleonardo@gmail.com',
+                payer_name:         user?.user_metadata?.full_name ?? '',
+                payment_method_id:  cardBrand ?? 'visa',
+                external_reference: `${id}:${period.days}`,
+                installments:       cardInstall,
+                card_token:         tokenResult.id,
             });
 
             setPayResult({
@@ -467,6 +418,16 @@ export default function Impulsionar() {
         setMpCheckoutUrl(null);
         setPayMethod('pix');
         setShowModal(true);
+    };
+
+    // ── Called when PIX modal confirms payment approved ───────────────────────
+    const handlePixApproved = async (paymentId: string) => {
+        console.log('[Impulsionar] PIX approved, paymentId=', paymentId);
+        await activateBoost(periods[selectedPeriod].days);
+        setShowPixModal(false);
+        // Show success in existing modal
+        setShowModal(true);
+        setPayStatus('approved');
     };
 
     if (loading || !car) {
@@ -687,7 +648,7 @@ export default function Impulsionar() {
 
                                     <div className="p-4 space-y-3">
 
-                                        {/* ── PIX tab ── */}
+                                        {/* ── PIX tab — opens dedicated PixPaymentModal ── */}
                                         {payMethod === 'pix' && (
                                             <>
                                                 <div className="p-4 bg-emerald-500/8 border border-emerald-500/15 rounded-2xl text-center">
@@ -703,7 +664,8 @@ export default function Impulsionar() {
                                                     <span className="text-zinc-400">Total</span>
                                                     <span className="text-brand-400 font-black text-lg">{fmt(period.price)}</span>
                                                 </div>
-                                                <button onClick={handlePix}
+                                                <button
+                                                    onClick={() => { closeModal(); setShowPixModal(true); }}
                                                     className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-white font-black rounded-xl transition-all active:scale-[0.98]">
                                                     <QrCode className="w-5 h-5" strokeWidth={1.5} />
                                                     Gerar QR Code PIX
@@ -1027,6 +989,18 @@ export default function Impulsionar() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* ── Standalone PIX Payment Modal (calls Express backend) ─────────── */}
+            <PixPaymentModal
+                open={showPixModal}
+                onClose={() => setShowPixModal(false)}
+                onApproved={handlePixApproved}
+                amount={periods[selectedPeriod].price}
+                description={`SulMotor – Impulsionar anúncio ${car ? `${car.marca} ${car.modelo} ${car.ano}` : ''} (${periods[selectedPeriod].key})`}
+                payerEmail={user?.email ?? 'bandasleonardo@gmail.com'}
+                payerName={user?.user_metadata?.full_name ?? ''}
+                externalReference={id ?? ''}
+            />
         </div>
     );
 }

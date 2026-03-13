@@ -1,5 +1,24 @@
 node_modules/
 dist/
+
+# Secrets — never commit
 .env
 .env.local
+.env.server
+.env.production
+api/.env
+api/.env.local
+api/.env.production
+
+# Logs
 *.log
+npm-debug.log*
+logs/
+!logs/.gitkeep
+
+# API node_modules
+api/node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
