@@ -29,11 +29,17 @@ const SELLER_EMAILS = [
 ];
 
 function sanitisePayerEmail(email) {
-    if (!email || typeof email !== 'string') return null;
+    if (!email || typeof email !== 'string' || !email.trim()) {
+        return { error: 'E-mail do pagador é obrigatório.' };
+    }
     const lower = email.toLowerCase().trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lower)) return null;
-    if (SELLER_EMAILS.some(s => lower === s.toLowerCase())) return null;
-    return lower;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(lower)) {
+        return { error: 'E-mail do pagador inválido.' };
+    }
+    if (SELLER_EMAILS.some(s => lower === s.toLowerCase())) {
+        return { error: 'O e-mail da conta vendedora não pode ser usado como pagador. Use outro e-mail.' };
+    }
+    return { email: lower };
 }
 
 function getMPClient() {
@@ -103,10 +109,11 @@ async function createPaymentHandler(req, res) {
         if (!description || typeof description !== 'string') {
             return res.status(400).json({ error: 'description ausente.' });
         }
-        const safePayerEmail = sanitisePayerEmail(payer_email);
-        if (!safePayerEmail) {
-            return res.status(400).json({ error: 'E-mail do pagador inválido ou não permitido para este pagamento.' });
+        const emailResult = sanitisePayerEmail(payer_email);
+        if (emailResult.error) {
+            return res.status(400).json({ error: emailResult.error });
         }
+        const safePayerEmail = emailResult.email;
 
         const nameParts  = payer_name.trim().split(/\s+/);
         const firstName  = nameParts[0]  || 'Cliente';

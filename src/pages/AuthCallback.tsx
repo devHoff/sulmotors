@@ -44,14 +44,29 @@ export default function AuthCallback() {
 
             const accessToken  = hashParams.get('access_token');
             const refreshToken = hashParams.get('refresh_token');
-            const type         = hashParams.get('type');     // 'recovery' | 'signup' | 'magiclink'
+            const hashType     = hashParams.get('type');  // 'recovery' | 'signup' | 'magiclink'
             const errorParam   = hashParams.get('error');
             const errorDesc    = hashParams.get('error_description');
+
+            // Also check query params for type (some Supabase flows use query)
+            const queryType    = params.get('type');
+
+            // Helper for Portuguese-friendly error messages
+            const friendlyMsg = (raw: string): string => {
+                const lower = (raw || '').toLowerCase();
+                if (lower.includes('expired') || lower.includes('expir'))
+                    return 'O link de acesso expirou. Por favor, solicite um novo link de redefinição de senha.';
+                if (lower.includes('invalid') || lower.includes('inválido'))
+                    return 'Link inválido. Por favor, solicite um novo link de acesso.';
+                if (lower.includes('already') || lower.includes('used'))
+                    return 'Este link já foi utilizado. Solicite um novo link.';
+                return raw;
+            };
 
             // ── Handle hash-encoded errors from Supabase ─────────────────────
             if (errorParam) {
                 console.error('[AuthCallback] Hash error:', errorParam, errorDesc);
-                setErrorMsg(errorDesc ?? errorParam);
+                setErrorMsg(friendlyMsg(errorDesc ?? errorParam));
                 setStage('error');
                 return;
             }
@@ -59,13 +74,27 @@ export default function AuthCallback() {
             // ── 2. PKCE code exchange (code in query params) ──────────────────
             const code = params.get('code');
             if (code) {
-                const { error } = await supabase.auth.exchangeCodeForSession(code);
+                const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code);
                 if (error) {
-                    setErrorMsg(error.message);
+                    console.error('[AuthCallback] Code exchange error:', error.message);
+                    setErrorMsg(friendlyMsg(error.message));
                     setStage('error');
                     return;
                 }
-                // Successful OAuth or magic link
+
+                // Check if this is a password-recovery flow
+                const isRecovery =
+                    queryType === 'recovery' ||
+                    hashType  === 'recovery' ||
+                    (sessionData?.user?.recovery_sent_at != null &&
+                     new Date(sessionData.user.recovery_sent_at).getTime() > Date.now() - 3600_000);
+
+                if (isRecovery) {
+                    setStage('set_password');
+                    return;
+                }
+
+                // Successful OAuth login or email confirmation → go home
                 setStage('success');
                 setTimeout(() => navigate('/', { replace: true }), 1500);
                 return;
@@ -78,25 +107,27 @@ export default function AuthCallback() {
                     refresh_token: refreshToken,
                 });
                 if (error) {
-                    setErrorMsg(error.message);
+                    console.error('[AuthCallback] Set session error:', error.message);
+                    setErrorMsg(friendlyMsg(error.message));
                     setStage('error');
                     return;
                 }
 
-                if (type === 'recovery') {
+                const isRecovery = hashType === 'recovery' || queryType === 'recovery';
+                if (isRecovery) {
                     // Password-reset flow — show new-password form
                     setStage('set_password');
                     return;
                 }
 
-                // Email confirmation or other flow — go home
+                // Email confirmation or social login — go home
                 setStage('success');
                 setTimeout(() => navigate('/', { replace: true }), 1500);
                 return;
             }
 
-            // ── 4. No tokens — might be arriving from OAuth redirect ──────────
-            // Check if a session already exists (Supabase may have auto-set it)
+            // ── 4. No tokens — check for existing session ────────────────────
+            // Supabase may have auto-set the session from the URL (PKCE implicit)
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 setStage('success');
@@ -104,8 +135,8 @@ export default function AuthCallback() {
                 return;
             }
 
-            // Nothing to do
-            setErrorMsg('Link inválido ou expirado. Solicite um novo link.');
+            // Nothing recognisable — show error
+            setErrorMsg('Link inválido ou expirado. Solicite um novo link de redefinição de senha.');
             setStage('error');
         };
 

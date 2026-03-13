@@ -34,12 +34,26 @@ function mapAuthError(error: any, t: (k: string) => string): string {
         return t('login_error_too_many');
     }
     // Supabase 400 – provider not enabled in the Dashboard
-    if (msg.includes('unsupported provider') || msg.includes('provider is not enabled') || msg.includes('validation failed')) {
-        return 'Este método de login não está disponível no momento. Tente e-mail e senha ou Google.';
+    if (
+        msg.includes('unsupported provider') ||
+        msg.includes('provider is not enabled') ||
+        msg.includes('validation failed') ||
+        msg.includes('oauth') ||
+        msg.includes('provider')
+    ) {
+        return 'Este método de login não está disponível no momento. Por favor, use e-mail e senha.';
     }
-    // Facebook / Apple specific errors
-    if (msg.includes('access_denied') || msg.includes('cancelled')) {
+    // User cancelled / popup closed
+    if (msg.includes('access_denied') || msg.includes('cancelled') || msg.includes('popup_closed') || msg.includes('popup closed')) {
         return 'Login cancelado. Tente novamente.';
+    }
+    // Network / timeout
+    if (msg.includes('network') || msg.includes('timeout') || msg.includes('fetch')) {
+        return 'Erro de conexão. Verifique sua internet e tente novamente.';
+    }
+    // Already registered with different provider
+    if (msg.includes('already registered') || msg.includes('email already in use') || msg.includes('user already exists')) {
+        return 'Este e-mail já está cadastrado. Tente entrar com outro método.';
     }
     return error?.message || t('common_error');
 }
@@ -118,13 +132,19 @@ export default function Login() {
 
     // ── Social login ────────────────────────────────────────────────────────
     const handleSocialLogin = async (provider: EnabledProvider) => {
+        if (socialLoading) return; // prevent double-click
         setSocialLoading(provider);
+        setLoginError('');
         try {
             if (provider === 'google')   await signInWithGoogle();
             if (provider === 'facebook') await signInWithFacebook();
             if (provider === 'apple')    await signInWithApple();
+            // Note: successful OAuth redirects away from this page,
+            // so the code below only runs on error.
         } catch (error: any) {
-            toast.error(mapAuthError(error, t));
+            const errMsg = mapAuthError(error, t);
+            setLoginError(errMsg); // show inline error in the form
+            toast.error(errMsg);
         } finally {
             setSocialLoading(null);
         }

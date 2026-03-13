@@ -19,6 +19,7 @@ import SeusDireitos from './pages/SeusDireitos';
 import Admin from './pages/Admin';
 import Cookies from './pages/Cookies';
 import AuthCallback from './pages/AuthCallback';
+import NotFound from './pages/NotFound';
 
 export default function App() {
     return (
@@ -59,6 +60,12 @@ export default function App() {
                     <Route path="/alertas"     element={<Navigate to="/" replace />} />
                     <Route path="/toast-demo"  element={<Navigate to="/" replace />} />
                     <Route path="/performance" element={<Navigate to="/" replace />} />
+
+                    {/* Explicit 404 route */}
+                    <Route path="/404" element={<NotFound />} />
+
+                    {/* Catch-all — any unmatched path renders the 404 page */}
+                    <Route path="*" element={<NotFound />} />
                 </Route>
             </Routes>
         </>
