@@ -520,7 +520,7 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                                                         }}
                                                         className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/20 font-mono tracking-widest pr-20 transition-all"
                                                         autoComplete="cc-number"
-                                                        disabled={stage === 'card_processing'}
+                                                        disabled={isProcessing}
                                                     />
                                                     <BrandBadge brand={cardBrand} />
                                                 </div>
@@ -538,7 +538,7 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                                                     onChange={(e) => { setCardName(e.target.value.toUpperCase()); if (error) setError(''); }}
                                                     className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/20 uppercase transition-all"
                                                     autoComplete="cc-name"
-                                                    disabled={stage === 'card_processing'}
+                                                    disabled={isProcessing}
                                                 />
                                             </div>
 
@@ -554,7 +554,7 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                                                         onChange={(e) => { setCardExpiry(fmtExpiry(e.target.value)); if (error) setError(''); }}
                                                         className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/20 font-mono transition-all"
                                                         autoComplete="cc-exp"
-                                                        disabled={stage === 'card_processing'}
+                                                        disabled={isProcessing}
                                                     />
                                                 </div>
                                                 <div>
@@ -570,7 +570,7 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                                                         onChange={(e) => { setCardCVV(e.target.value.replace(/\D/g, '').slice(0, 4)); if (error) setError(''); }}
                                                         className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/20 font-mono transition-all"
                                                         autoComplete="cc-csc"
-                                                        disabled={stage === 'card_processing'}
+                                                        disabled={isProcessing}
                                                     />
                                                 </div>
                                             </div>
@@ -586,7 +586,7 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                                                     onChange={(e) => { setCardCPF(fmtCPF(e.target.value)); if (error) setError(''); }}
                                                     className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-zinc-600 focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/20 font-mono transition-all"
                                                     autoComplete="off"
-                                                    disabled={stage === 'card_processing'}
+                                                    disabled={isProcessing}
                                                 />
                                             </div>
 
@@ -597,7 +597,7 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                                                     value={cardInstall}
                                                     onChange={(e) => setCardInstall(Number(e.target.value))}
                                                     className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/20 appearance-none transition-all cursor-pointer"
-                                                    disabled={stage === 'card_processing'}
+                                                    disabled={isProcessing}
                                                 >
                                                     {[1, 2, 3, 6, 12].map((n) => (
                                                         <option key={n} value={n}>
@@ -620,10 +620,10 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                                             {/* Pay button */}
                                             <button
                                                 onClick={handleCard}
-                                                disabled={stage === 'card_processing'}
+                                                disabled={isProcessing}
                                                 className="w-full flex items-center justify-center gap-2.5 py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-black rounded-xl transition-all active:scale-[0.98] text-base shadow-lg shadow-blue-600/20 mt-1"
                                             >
-                                                {stage === 'card_processing' ? (
+                                                {isProcessing ? (
                                                     <><Loader2 className="w-5 h-5 animate-spin" strokeWidth={1.5} />Processando…</>
                                                 ) : (
                                                     <><CreditCard className="w-5 h-5" strokeWidth={1.5} />Pagar {fmt(order.amount)}</>

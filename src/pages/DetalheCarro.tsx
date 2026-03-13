@@ -152,6 +152,11 @@ export default function DetalheCarro() {
         exit:  (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
     };
 
+    // ── Financing calculator derived values ──────────────────────────────────
+    const financed = Math.max(0, car.preco - (parseFloat(downPayment) || 0));
+    const monthly  = financed > 0 ? calcPMT(financed, annualRate / 100, months) : 0;
+    const total    = monthly * months;
+
     const imgs  = car.imagens.length > 0 ? car.imagens : ['https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1400&q=80'];
     const total_ = imgs.length;
     const prevIdx = (imgIndex - 1 + total_) % total_;
