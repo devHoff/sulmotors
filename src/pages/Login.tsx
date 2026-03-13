@@ -11,9 +11,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { smToast } from '../utils/toast';
 import { useLanguage } from '../contexts/LanguageContext';
 
-// Providers enabled in this project's Supabase Dashboard.
-// Add 'apple' | 'facebook' here only after configuring them in the Dashboard.
-const ENABLED_SOCIAL_PROVIDERS = ['google'] as const;
+// Social providers enabled in this project's Supabase Dashboard.
+const ENABLED_SOCIAL_PROVIDERS = ['google', 'facebook', 'apple'] as const;
 type EnabledProvider = typeof ENABLED_SOCIAL_PROVIDERS[number];
 
 // ── Step types for registration flow ─────────────────────────────────────────
@@ -36,7 +35,11 @@ function mapAuthError(error: any, t: (k: string) => string): string {
     }
     // Supabase 400 – provider not enabled in the Dashboard
     if (msg.includes('unsupported provider') || msg.includes('provider is not enabled') || msg.includes('validation failed')) {
-        return 'Este método de login ainda não está disponível. Use e-mail e senha ou entre com Google.';
+        return 'Este método de login não está disponível no momento. Tente e-mail e senha ou Google.';
+    }
+    // Facebook / Apple specific errors
+    if (msg.includes('access_denied') || msg.includes('cancelled')) {
+        return 'Login cancelado. Tente novamente.';
     }
     return error?.message || t('common_error');
 }
@@ -67,7 +70,7 @@ const FacebookIcon = () => (
 
 export default function Login() {
     const navigate = useNavigate();
-    const { signInWithEmail, signInWithGoogle, resetPassword, signUp } = useAuth();
+    const { signInWithEmail, signInWithGoogle, signInWithFacebook, signInWithApple, resetPassword, signUp } = useAuth();
     const { t } = useLanguage();
 
     const [isLogin, setIsLogin] = useState(true);
@@ -113,11 +116,13 @@ export default function Login() {
         }
     };
 
-    // ── Social login (only Google is enabled) ───────────────────────────────
+    // ── Social login ────────────────────────────────────────────────────────
     const handleSocialLogin = async (provider: EnabledProvider) => {
         setSocialLoading(provider);
         try {
-            if (provider === 'google') await signInWithGoogle();
+            if (provider === 'google')   await signInWithGoogle();
+            if (provider === 'facebook') await signInWithFacebook();
+            if (provider === 'apple')    await signInWithApple();
         } catch (error: any) {
             toast.error(mapAuthError(error, t));
         } finally {
@@ -330,8 +335,9 @@ export default function Login() {
                                     <p className="text-slate-500 dark:text-zinc-500 text-sm">{t('login_login_sub')}</p>
                                 </div>
 
-                                {/* Social login — only Google is enabled */}
-                                <div className="mb-6">
+                                {/* Social login buttons */}
+                                <div className="mb-6 space-y-2.5">
+                                    {/* Google */}
                                     <button
                                         type="button"
                                         onClick={() => handleSocialLogin('google')}
@@ -345,6 +351,36 @@ export default function Login() {
                                             ? <Loader2 className="w-5 h-5 animate-spin" />
                                             : <GoogleIcon />}
                                         Continuar com Google
+                                    </button>
+                                    {/* Facebook */}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSocialLogin('facebook')}
+                                        disabled={!!socialLoading}
+                                        aria-label="Continuar com Facebook"
+                                        className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-[#1877F2] hover:bg-[#166FE5] text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-60"
+                                        style={{ transition: 'transform 0.15s ease, background-color 0.2s' }}
+                                        onMouseEnter={btnEnter} onMouseLeave={btnLeave}
+                                    >
+                                        {socialLoading === 'facebook'
+                                            ? <Loader2 className="w-5 h-5 animate-spin" />
+                                            : <FacebookIcon />}
+                                        Continuar com Facebook
+                                    </button>
+                                    {/* Apple */}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSocialLogin('apple')}
+                                        disabled={!!socialLoading}
+                                        aria-label="Continuar com Apple"
+                                        className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-black hover:bg-zinc-900 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-60"
+                                        style={{ transition: 'transform 0.15s ease, background-color 0.2s' }}
+                                        onMouseEnter={btnEnter} onMouseLeave={btnLeave}
+                                    >
+                                        {socialLoading === 'apple'
+                                            ? <Loader2 className="w-5 h-5 animate-spin" />
+                                            : <AppleIcon />}
+                                        Continuar com Apple
                                     </button>
                                 </div>
 
@@ -427,7 +463,7 @@ export default function Login() {
                                 {/* Trust message */}
                                 <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-slate-400 dark:text-zinc-600">
                                     <Shield className="w-3.5 h-3.5 text-brand-400" strokeWidth={1.5} aria-hidden="true" />
-                                    <span>🔒 {t('login_ssl_trust')}</span>
+                                    <span>{t('login_ssl_trust')}</span>
                                 </div>
 
                                 <p className="mt-5 text-center text-sm text-slate-500 dark:text-zinc-600">

@@ -28,17 +28,17 @@
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 
 // ── Sanitise payer email ───────────────────────────────────────────────────────
-// Never use the seller/merchant email as payer – that causes error 4390.
+// Never use the seller/merchant MP account email as payer – that causes error 4390.
+// Only block the actual merchant account email associated with the MP credentials.
 const SELLER_EMAILS = [
-    'luishenriquegrings@gmail.com',
     'contato@sulmotor.com',
-    'test_user_',
+    // Add other MP merchant account emails here if needed
 ];
 function sanitiseEmail(email) {
     if (!email || typeof email !== 'string') return null;
     const lower = email.toLowerCase().trim();
-    // Reject if it contains any seller email fragment
-    if (SELLER_EMAILS.some(s => lower.includes(s))) return null;
+    // Reject if it matches any seller/merchant email exactly
+    if (SELLER_EMAILS.some(s => lower === s.toLowerCase())) return null;
     // Basic RFC format check
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lower)) return null;
     return lower;
