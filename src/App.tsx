@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -22,10 +23,47 @@ import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
 import DashboardPayments from './pages/DashboardPayments';
 
+/**
+ * OAuthHashInterceptor
+ *
+ * Supabase OAuth redirects back to the "Site URL" configured in the Dashboard.
+ * If that URL is still set to http://localhost:3000 (or any root URL), the
+ * access_token lands in window.location.hash on the home page instead of
+ * reaching /auth/callback.
+ *
+ * This component runs on every page mount, detects the token in the hash,
+ * and immediately redirects to /auth/callback (preserving the full hash) so
+ * AuthCallback.tsx can process the session correctly.
+ *
+ * This makes Google / Apple / Facebook login resilient to Site URL
+ * misconfiguration in the Supabase Dashboard.
+ */
+function OAuthHashInterceptor() {
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const hash = window.location.hash;
+        // If we have auth tokens in the hash AND we are NOT already on the
+        // callback page, redirect there immediately preserving the hash.
+        if (
+            (hash.includes('access_token=') || hash.includes('error=')) &&
+            !window.location.pathname.startsWith('/auth/callback')
+        ) {
+            navigate('/auth/callback' + hash, { replace: true });
+        }
+    // Run once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    return null;
+}
+
 export default function App() {
     return (
         <>
             <ScrollToTop />
+            {/* Intercept OAuth tokens that land on the wrong page */}
+            <OAuthHashInterceptor />
             <Routes>
                 {/* ── Admin: full-screen layout (no navbar/footer) ── */}
                 <Route path="/admin" element={<Admin />} />
