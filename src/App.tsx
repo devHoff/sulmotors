@@ -22,6 +22,7 @@ import Cookies from './pages/Cookies';
 import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
 import DashboardPayments from './pages/DashboardPayments';
+import CarrosCategoria from './pages/CarrosCategoria';
 
 /**
  * OAuthHashInterceptor
@@ -89,6 +90,22 @@ export default function App() {
                     <Route path="/dashboard/payments"  element={<DashboardPayments />} />
                     <Route path="/carro/:id"           element={<DetalheCarro />} />
                     <Route path="/sobre-nos"           element={<SobreNos />} />
+
+                    {/* ── Programmatic SEO routes ── */}
+                    {/* All used cars */}
+                    <Route path="/carros-usados"                       element={<CarrosCategoria />} />
+                    {/* Used cars by city */}
+                    <Route path="/carros-usados/:cidade"               element={<CarrosCategoria />} />
+                    {/* Cars by brand */}
+                    <Route path="/carros/:marca"                       element={<CarrosCategoria />} />
+                    {/* Cars by brand + model */}
+                    <Route path="/carros/:marca/:modelo"               element={<CarrosCategoria />} />
+                    {/* Price range landing pages */}
+                    <Route path="/carros-ate-20-mil"                   element={<CarrosCategoria />} />
+                    <Route path="/carros-ate-30-mil"                   element={<CarrosCategoria />} />
+                    <Route path="/carros-ate-50-mil"                   element={<CarrosCategoria />} />
+                    <Route path="/carros-ate-80-mil"                   element={<CarrosCategoria />} />
+                    <Route path="/carros-ate-100-mil"                  element={<CarrosCategoria />} />
                     <Route path="/login"               element={<Login />} />
                     <Route path="/termos"              element={<Termos />} />
                     <Route path="/privacidade"         element={<Privacidade />} />

@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and private pages
+Disallow: /admin
+Disallow: /meus-anuncios
+Disallow: /meu-perfil
+Disallow: /favoritos
+Disallow: /dashboard/
+
+# Allow all crawlers on SEO pages
+Allow: /carros-usados
+Allow: /carros/
+Allow: /carros-ate-
+Allow: /carro/
+Allow: /estoque
+
+# Sitemap
+Sitemap: https://sulmotor.com.br/sitemap.xml

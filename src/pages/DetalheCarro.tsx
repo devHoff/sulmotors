@@ -5,7 +5,7 @@ import {
     ChevronLeft, ChevronRight, ArrowLeft, Mail,
     Calendar, Gauge, Fuel, Settings2, Palette, MapPin, ArrowLeftRight,
     Heart, Share2, ShieldAlert, Star, TrendingUp, Calculator,
-    CheckCircle2, AlertTriangle, BadgeCheck
+    CheckCircle2, AlertTriangle, BadgeCheck, Tag, ChevronRight as LinkArrow
 } from 'lucide-react';
 import { type Car } from '../data/mockCars';
 import { supabase, supabasePublic } from '../lib/supabase';
@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { trackView } from '../lib/viewTracker';
 import { generateSeoMetadata, injectSeoTags } from '../lib/seoService';
+import CarCard from '../components/CarCard';
 
 // ── Internal contact helper ───────────────────────────────────────────────────
 const WHATSAPP_NUMBER = '555192263188';
@@ -57,6 +58,10 @@ export default function DetalheCarro() {
     const touchStartY = useRef<number | null>(null);
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
+
+    // Related cars
+    const [relatedByBrand, setRelatedByBrand]   = useState<Car[]>([]);
+    const [relatedByCity, setRelatedByCity]     = useState<Car[]>([]);
 
     // ── Financing modal ───────────────────────────────────────────────────────
     const [showFinancing, setShowFinancing] = useState(false);
@@ -109,6 +114,57 @@ export default function DetalheCarro() {
         return cleanup;
     }, [car?.id]);
     // ── end SEO/tracking ──────────────────────────────────────────────────────
+
+    // ── Related cars fetch ────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!car) return;
+        const fetchRelated = async () => {
+            // By same brand (excluding current)
+            const { data: brandData } = await supabasePublic
+                .from('anuncios').select('*')
+                .eq('marca', car.marca).neq('id', car.id)
+                .order('prioridade', { ascending: false })
+                .limit(4);
+            if (brandData) {
+                setRelatedByBrand(brandData.map((d: any): Car => ({
+                    id: d.id, marca: d.marca, modelo: d.modelo, ano: Number(d.ano),
+                    preco: Number(d.preco), quilometragem: d.quilometragem,
+                    telefone: d.telefone, descricao: d.descricao || '',
+                    combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
+                    cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
+                    imagens: d.imagens || [], destaque: d.destaque ?? false,
+                    impulsionado: d.impulsionado ?? false,
+                    impulsionado_ate: d.impulsionado_ate || undefined,
+                    prioridade: d.prioridade ?? 0, modelo_3d: false,
+                    created_at: d.created_at, user_id: d.user_id, loja: d.loja,
+                })));
+            }
+
+            // By same city
+            const cityBase = car.cidade.split(',')[0].trim();
+            const { data: cityData } = await supabasePublic
+                .from('anuncios').select('*')
+                .ilike('cidade', `%${cityBase}%`).neq('id', car.id)
+                .order('prioridade', { ascending: false })
+                .limit(4);
+            if (cityData) {
+                setRelatedByCity(cityData.map((d: any): Car => ({
+                    id: d.id, marca: d.marca, modelo: d.modelo, ano: Number(d.ano),
+                    preco: Number(d.preco), quilometragem: d.quilometragem,
+                    telefone: d.telefone, descricao: d.descricao || '',
+                    combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
+                    cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
+                    imagens: d.imagens || [], destaque: d.destaque ?? false,
+                    impulsionado: d.impulsionado ?? false,
+                    impulsionado_ate: d.impulsionado_ate || undefined,
+                    prioridade: d.prioridade ?? 0, modelo_3d: false,
+                    created_at: d.created_at, user_id: d.user_id, loja: d.loja,
+                })));
+            }
+        };
+        fetchRelated();
+    }, [car?.id]);
+    // ── end related cars ──────────────────────────────────────────────────────
 
     const toggleLike = async () => {
         if (!user || !car) return;
@@ -200,7 +256,9 @@ export default function DetalheCarro() {
                     <AnimatePresence initial={false} custom={direction}>
                         <motion.img key={`mob-${imgIndex}`} custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit"
                             transition={{ duration: 0.38, ease: [0.32, 0.72, 0, 1] }} src={imgs[imgIndex]}
-                            alt={`${car.marca} ${car.modelo}`} className="absolute inset-0 w-full h-full object-cover" />
+                            alt={`${car.marca} ${car.modelo} ${car.ano} – foto ${imgIndex + 1}`}
+                            loading="lazy"
+                            className="absolute inset-0 w-full h-full object-cover" />
                     </AnimatePresence>
                     <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-zinc-950/40" />
                 </div>
@@ -222,7 +280,9 @@ export default function DetalheCarro() {
                         <AnimatePresence initial={false} custom={direction} mode="popLayout">
                             <motion.img key={`desk-${imgIndex}`} custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit"
                                 transition={{ duration: 0.42, ease: [0.32, 0.72, 0, 1] }} src={imgs[imgIndex]}
-                                alt={`${car.marca} ${car.modelo}`} className="absolute inset-0 w-full h-full object-cover" />
+                                alt={`${car.marca} ${car.modelo} ${car.ano} em ${car.cidade} – foto ${imgIndex + 1}`}
+                                loading="lazy"
+                                className="absolute inset-0 w-full h-full object-cover" />
                         </AnimatePresence>
                     </div>
                     {total_ > 1 && (
@@ -544,6 +604,83 @@ export default function DetalheCarro() {
                     </div>
                 </div>
             </div>
+
+            {/* ── Internal linking: Related cars ───────────────────────────── */}
+            {(relatedByBrand.length > 0 || relatedByCity.length > 0) && (
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-10">
+
+                    {/* Other cars of same brand */}
+                    {relatedByBrand.length > 0 && (
+                        <section>
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-2">
+                                    <Tag className="w-4 h-4 text-brand-500 dark:text-brand-400" strokeWidth={1.5} />
+                                    <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                                        Outros {car.marca} disponíveis
+                                    </h2>
+                                </div>
+                                <Link to={`/carros/${car.marca.toLowerCase().replace(/\s+/g, '-').normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`}
+                                    className="flex items-center gap-1 text-sm font-bold text-brand-500 dark:text-brand-400 hover:underline">
+                                    Ver todos <LinkArrow className="w-3.5 h-3.5" strokeWidth={1.5} />
+                                </Link>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {relatedByBrand.map((c, i) => (
+                                    <motion.div key={c.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+                                        <CarCard car={c} />
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Other cars in same city */}
+                    {relatedByCity.length > 0 && (
+                        <section>
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 text-brand-500 dark:text-brand-400" strokeWidth={1.5} />
+                                    <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                                        Outros carros em {car.cidade.split(',')[0].trim()}
+                                    </h2>
+                                </div>
+                                <Link to={`/carros-usados/${car.cidade.split(',')[0].trim().toLowerCase().replace(/\s+/g, '-').normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`}
+                                    className="flex items-center gap-1 text-sm font-bold text-brand-500 dark:text-brand-400 hover:underline">
+                                    Ver todos <LinkArrow className="w-3.5 h-3.5" strokeWidth={1.5} />
+                                </Link>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {relatedByCity.map((c, i) => (
+                                    <motion.div key={c.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+                                        <CarCard car={c} />
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Quick navigation by price range */}
+                    <div className="pt-2 border-t border-slate-200 dark:border-white/5">
+                        <p className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-3">
+                            Buscar por faixa de preço
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {[
+                                { label: 'Até R$ 20 mil', slug: 'carros-ate-20-mil' },
+                                { label: 'Até R$ 30 mil', slug: 'carros-ate-30-mil' },
+                                { label: 'Até R$ 50 mil', slug: 'carros-ate-50-mil' },
+                                { label: 'Até R$ 80 mil', slug: 'carros-ate-80-mil' },
+                                { label: 'Até R$ 100 mil', slug: 'carros-ate-100-mil' },
+                            ].map(({ label, slug }) => (
+                                <Link key={slug} to={`/${slug}`}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 hover:border-brand-400/40 hover:text-brand-500 transition-all">
+                                    {label}
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
