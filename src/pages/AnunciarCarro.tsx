@@ -227,24 +227,44 @@ export default function AnunciarCarro() {
 
         try {
             setLoading(true);
-            const { error } = await supabase.from('anuncios').insert({
+
+            // Base payload — only columns that always exist in the DB
+            const basePayload = {
                 user_id: user.id, marca: form.marca, modelo: form.modelo,
                 ano: parseInt(form.ano), preco: parseFloat(form.preco),
                 quilometragem: parseInt(form.quilometragem) || 0,
                 telefone: form.telefone, descricao: form.descricao,
                 combustivel: form.combustivel, cambio: form.cambio,
                 cor: form.cor, cidade: form.cidade,
+                aceita_troca: form.aceitaTroca, imagens: images,
+                destaque: false, impulsionado: false,
+            };
+
+            // Extended payload — includes columns that may need migration first.
+            // We attempt this first so new deployments get full data.
+            const extendedPayload = {
+                ...basePayload,
                 versao: form.versao || null,
                 placa: form.placa.toUpperCase().replace(/[^A-Z0-9]/g, ''),
                 blindado: form.blindado,
-                aceita_troca: form.aceitaTroca, imagens: images,
-                destaque: false, impulsionado: false,
-            });
-            if (error) throw error;
+            };
+
+            let result = await supabase.from('anuncios').insert(extendedPayload);
+
+            // If extended insert failed because columns don't exist yet (PGRST204),
+            // fall back to the base payload so the listing still gets created.
+            if (result.error?.code === 'PGRST204') {
+                console.warn('[AnunciarCarro] Colunas versao/placa/blindado ainda não existem no DB — usando payload base. Execute scripts/add-anuncios-columns.sql no Supabase.');
+                result = await supabase.from('anuncios').insert(basePayload);
+            }
+
+            if (result.error) throw result.error;
+
             incrementDailyListingCount();
             smToast.listingCreated(`${form.marca} ${form.modelo} ${form.ano}`);
             setTimeout(() => navigate('/meus-anuncios'), 1200);
-        } catch {
+        } catch (err: any) {
+            console.error('[AnunciarCarro] Erro ao criar anúncio:', err);
             toast.error('Erro ao criar anúncio. Tente novamente.');
         } finally {
             setLoading(false);
