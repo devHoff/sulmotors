@@ -11,6 +11,7 @@ import AddStoreModal from '../components/AddStoreModal';
 import { type Car as CarType } from '../data/mockCars';
 import { supabase, supabasePublic } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
+import { sortByRanking } from '../lib/rankingService';
 
 const heroImages = [
     'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1400&q=80',
@@ -38,26 +39,56 @@ export default function Home() {
     useEffect(() => {
         const fetchFeatured = async () => {
             setLoadingFeatured(true);
-            // Fetch only cars that have paid for boost (impulsionado=true or destaque=true)
-            const { data, error } = await supabasePublic.from('anuncios').select('*')
-                .or('impulsionado.eq.true,destaque.eq.true')
-                .order('impulsionado', { ascending: false })
-                .order('prioridade',   { ascending: false })
-                .order('created_at',   { ascending: false })
-                .limit(8);
-            if (!error && data) {
-                setFeaturedCars(data.map((d: any) => ({
-                    id: d.id, marca: d.marca, modelo: d.modelo, ano: d.ano,
-                    preco: Number(d.preco), quilometragem: d.quilometragem,
-                    telefone: d.telefone, descricao: d.descricao || '',
-                    combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
-                    cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
-                    imagens: d.imagens || [], destaque: d.destaque ?? false,
-                    impulsionado: d.impulsionado ?? false,
-                    impulsionado_ate: d.impulsionado_ate || undefined,
-                    prioridade: d.prioridade ?? 0, modelo_3d: false,
-                    created_at: d.created_at, user_id: d.user_id,
-                })));
+
+            const mapRow = (d: any): CarType => ({
+                id: d.id, marca: d.marca, modelo: d.modelo, ano: d.ano,
+                preco: Number(d.preco), quilometragem: d.quilometragem,
+                telefone: d.telefone, descricao: d.descricao || '',
+                combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
+                cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
+                imagens: d.imagens || [], destaque: d.destaque ?? false,
+                impulsionado: d.impulsionado ?? false,
+                impulsionado_ate: d.impulsionado_ate || undefined,
+                prioridade: d.prioridade ?? 0, modelo_3d: false,
+                created_at: d.created_at, user_id: d.user_id,
+                loja: d.loja,
+            });
+
+            try {
+                // Primary query: fetch all cars ordered by prioridade + recency.
+                // Avoid columns that may not exist (status, ranking_score).
+                // Prefer destaque/impulsionado cars; fall back to all cars.
+                const { data, error } = await supabasePublic
+                    .from('anuncios')
+                    .select('*')
+                    .or('impulsionado.eq.true,destaque.eq.true')
+                    .order('prioridade', { ascending: false })
+                    .order('created_at', { ascending: false })
+                    .limit(16);
+
+                if (!error && data && data.length > 0) {
+                    const ranked = sortByRanking(data.map(mapRow) as any[]) as CarType[];
+                    setFeaturedCars(ranked.slice(0, 8));
+                } else {
+                    // No boosted/destaque cars — show most recent listings instead
+                    const { data: all } = await supabasePublic
+                        .from('anuncios')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .limit(8);
+                    if (all) setFeaturedCars(all.map(mapRow));
+                }
+            } catch (err) {
+                console.error('[Home] fetchFeatured error:', err);
+                // Last-resort fallback
+                try {
+                    const { data } = await supabasePublic
+                        .from('anuncios')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .limit(8);
+                    if (data) setFeaturedCars(data.map(mapRow));
+                } catch { /* silent */ }
             }
             setLoadingFeatured(false);
         };

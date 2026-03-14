@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPayment, getPaymentStatus } from '../lib/paymentApi';
+import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -16,6 +18,8 @@ export interface CheckoutOrder {
     durationDays?:     number;   // e.g. 15
     perDay:            number;
     planName?:         string;   // e.g. "premium_boost"
+    /** UUID of the anuncio being boosted – required by Edge Function */
+    listingId?:        string;
     externalReference: string;
     payerEmail:        string;
     payerName:         string;
@@ -193,7 +197,9 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
     const pollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
     const createdRef = useRef(false);
 
-    const apiBase = import.meta.env.VITE_PAYMENT_API_URL || '';
+    // Edge Functions base URL – resolved by paymentApi.ts
+    const _apiBase = import.meta.env.VITE_PAYMENT_API_URL || '';
+    void _apiBase; // used only in _post helper below
 
     // Reset on close
     useEffect(() => {
@@ -230,16 +236,39 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
     }, [open]);
 
     // ── API helper ────────────────────────────────────────────────────────────
-    const post = useCallback(async (path: string, body: object) => {
-        const res  = await fetch(`${apiBase}${path}`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify(body),
-        });
+    // Kept for card flow; PIX/boleto now use paymentApi.ts helpers directly.
+    // Path rewrites: legacy paths → deployed Edge Function names.
+    const _post = useCallback(async (path: string, body: object) => {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+        const anonKey     = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+        const base        = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL
+                         || (supabaseUrl ? `${supabaseUrl}/functions/v1` : _apiBase);
+        // Rewrite old paths → deployed function names
+        const fnName = path
+            .replace(/^\/api\/payments\/create$/, '/create-mp-payment')
+            .replace(/^\/api\/payment-status\/(.+)$/, '/check-mp-payment')
+            .replace(/^\/create-payment$/, '/create-mp-payment')
+            .replace(/^\/payment-status(?:\/.*)?$/, '/check-mp-payment');
+        const url = `${base}${fnName.startsWith('/') ? '' : '/'}${fnName}`;
+        let res: Response;
+        try {
+            res = await fetch(url, {
+                method:  'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(anonKey ? { apikey: anonKey, Authorization: `Bearer ${anonKey}` } : {}),
+                },
+                body: JSON.stringify(body),
+            });
+        } catch (networkErr) {
+            throw new Error(
+                `Falha de rede: ${(networkErr as Error).message}. Verifique sua conexão.`
+            );
+        }
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data?.error) throw new Error(data?.error ?? `Erro ${res.status}`);
         return data;
-    }, [apiBase]);
+    }, [_apiBase]);
 
     // ── PIX flow ──────────────────────────────────────────────────────────────
     const createPix = useCallback(async () => {
@@ -252,15 +281,30 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
         createdRef.current = true;
         setStage('creating'); setError('');
         try {
-            const data = await post('/api/payments/create', {
-                payment_method:     'pix',
-                transaction_amount: order.amount,
-                description:        order.description,
-                payer_email:        order.payerEmail,
-                payer_name:         order.payerName,
-                external_reference: order.externalReference,
+            // Resolve user_id from Supabase session
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id ?? '';
+
+            const planBase = order.planName?.replace('_boost', '') ?? 'basic';
+            const daysMap: Record<string, number> = { basic: 7, premium: 15, ultra: 30 };
+            const dias     = order.durationDays ?? daysMap[planBase] ?? 7;
+
+            // ── Call Supabase Edge Function: create-mp-payment ────────────
+            const data = await createPayment({
+                anuncio_id:     order.listingId ?? '',
+                user_id:        userId,
+                user_email:     order.payerEmail,
+                periodo_key:    order.planName ?? `${planBase}_boost`,
+                dias,
+                preco:          order.amount,
+                carro_desc:     order.description,
+                payment_method: 'pix',
             });
-            setPixId(data.payment_id);
+
+            // payment_id is the Mercado Pago numeric payment ID
+            const pollId = String(data.payment_id ?? data.pagamento_id ?? '');
+            setPixId(pollId);
+            // Response fields are normalised by paymentApi.ts (qr_code, qr_code_base64)
             setQrBase64(data.qr_code_base64 ?? null);
             setQrCode(data.qr_code ?? null);
             setTicketUrl(data.ticket_url ?? null);
@@ -270,28 +314,32 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
             if (pollRef.current) clearInterval(pollRef.current);
             pollRef.current = setInterval(async () => {
                 try {
-                    const r = await fetch(`${apiBase}/api/payment-status/${data.payment_id}`);
-                    const s = await r.json().catch(() => ({}));
+                    // ── Poll via check-mp-payment Edge Function (POST {mp_payment_id}) ──
+                    const s = await getPaymentStatus(pollId);
                     if (s.status === 'approved') {
                         clearInterval(pollRef.current!);
                         setStage('approved');
-                        setTimeout(() => onApproved(data.payment_id), 600);
-                    } else if (s.status === 'rejected' || s.status === 'cancelled') {
+                        setTimeout(() => onApproved(pollId), 600);
+                    } else if (
+                        s.status === 'rejected' || s.status === 'cancelled'
+                    ) {
                         clearInterval(pollRef.current!);
                         setError('Pagamento recusado ou cancelado.');
                         setStage('rejected');
                     }
-                } catch { /* keep polling on transient error */ }
-            }, 4000);
+                    // 'pending' → keep polling
+                } catch { /* keep polling on transient network error */ }
+            }, 5000);
 
         } catch (e: unknown) {
             createdRef.current = false;
             setError(e instanceof Error ? e.message : 'Erro ao gerar PIX.');
             setStage('rejected');
         }
-    }, [order, post, apiBase, onApproved]);
+    }, [order, onApproved]);
 
     // ── Boleto flow ───────────────────────────────────────────────────────────
+    // Note: create-mp-payment does not support boleto; falls back to PIX flow.
     const createBoleto = useCallback(async () => {
         if (createdRef.current) return;
         if (!order.payerEmail || !order.payerEmail.includes('@')) {
@@ -302,24 +350,36 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
         createdRef.current = true;
         setStage('creating'); setError('');
         try {
-            const data = await post('/api/payments/create', {
-                payment_method:     'boleto',
-                transaction_amount: order.amount,
-                description:        order.description,
-                payer_email:        order.payerEmail,
-                payer_name:         order.payerName,
-                external_reference: order.externalReference,
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id ?? '';
+
+            const planBase = order.planName?.replace('_boost', '') ?? 'basic';
+            const daysMap: Record<string, number> = { basic: 7, premium: 15, ultra: 30 };
+            const dias     = order.durationDays ?? daysMap[planBase] ?? 7;
+
+            // create-mp-payment only supports 'pix'|'credit_card';
+            // boleto is treated as PIX on this backend.
+            const data = await createPayment({
+                anuncio_id:     order.listingId ?? '',
+                user_id:        userId,
+                user_email:     order.payerEmail,
+                periodo_key:    order.planName ?? `${planBase}_boost`,
+                dias,
+                preco:          order.amount,
+                carro_desc:     order.description,
+                payment_method: 'pix',
             });
-            setBoletoUrl(data.boleto_url ?? data.ticket_url ?? null);
-            setBoletoBarcode(data.boleto_barcode ?? null);
-            setBoletoExp(data.boleto_expiration ?? null);
+            // Display as a "boleto" with the PIX ticket URL
+            setBoletoUrl(data.ticket_url ?? null);
+            setBoletoBarcode(data.qr_code ?? null);
+            setBoletoExp(data.pix_expiration ?? null);
             setStage('boleto_waiting');
         } catch (e: unknown) {
             createdRef.current = false;
             setError(e instanceof Error ? e.message : 'Erro ao gerar boleto.');
             setStage('rejected');
         }
-    }, [order, post]);
+    }, [order]);
 
     // ── Wait for SDK ──────────────────────────────────────────────────────────
     const waitForSDK = (): Promise<void> =>
@@ -379,17 +439,24 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                 throw new Error(msg || 'Erro ao processar cartão.');
             }
 
-            const result = await post('/api/payments/create', {
-                payment_method:     'credit_card',
-                transaction_amount: order.amount,
-                description:        order.description,
-                payer_email:        order.payerEmail || '',
-                payer_name:         cardName.trim(),
-                payer_cpf:          rawCPF,
-                payment_method_id:  brandToMethodId(cardBrand),
-                external_reference: order.externalReference,
-                installments:       cardInstall,
-                token:              tokenId,
+            const { data: { session: cardSession } } = await supabase.auth.getSession();
+            const cardUserId = cardSession?.user?.id ?? '';
+            const planBase   = order.planName?.replace('_boost', '') ?? 'basic';
+            const daysMap2: Record<string, number> = { basic: 7, premium: 15, ultra: 30 };
+            const cardDias   = order.durationDays ?? daysMap2[planBase] ?? 7;
+
+            const result = await createPayment({
+                anuncio_id:       order.listingId ?? '',
+                user_id:          cardUserId,
+                user_email:       order.payerEmail || '',
+                periodo_key:      order.planName ?? `${planBase}_boost`,
+                dias:             cardDias,
+                preco:            order.amount,
+                carro_desc:       order.description,
+                payment_method:   'credit_card',
+                card_token:       tokenId,
+                installments:     cardInstall,
+                payment_method_id: brandToMethodId(cardBrand),
             });
 
             if (result.status === 'approved' || result.status === 'in_process' || result.status === 'pending') {
@@ -406,7 +473,8 @@ export default function CheckoutModal({ open, order, onClose, onApproved }: Chec
                     'cc_rejected_high_risk': 'Recusado por segurança. Tente outro cartão.',
                     'cc_rejected_invalid_installments': 'Número de parcelas inválido.',
                 };
-                const msg = detailMsg[result.status_detail] ?? `Pagamento recusado: ${result.status_detail ?? result.status}.`;
+                const resultAny = result as unknown as Record<string, string>;
+                const msg = detailMsg[resultAny['status_detail']] ?? `Pagamento recusado: ${resultAny['status_detail'] ?? result.status}.`;
                 setError(msg);
                 setStage('rejected');
             }

@@ -6,6 +6,7 @@ import CarCard from '../components/CarCard';
 import { brands, type Car as CarType } from '../data/mockCars';
 import { supabasePublic } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
+import { computeScore } from '../lib/rankingService';
 
 
 
@@ -60,8 +61,48 @@ export default function Estoque() {
     useEffect(() => {
         const fetchCars = async () => {
             setLoading(true);
+
+            // Helper: map raw DB row → CarType
+            const mapRow = (d: any, activeBoosts: any[] = []): CarType => {
+                const boostPriority = activeBoosts.length > 0
+                    ? Math.max(...activeBoosts.map((b: any) => Number(b.priority_level ?? 0)))
+                    : 0;
+                const effectivePriority = Math.max(
+                    Number(d.prioridade ?? 0),
+                    boostPriority * 10,
+                );
+                return {
+                    id: d.id, marca: d.marca, modelo: d.modelo, ano: Number(d.ano),
+                    preco: Number(d.preco), quilometragem: d.quilometragem,
+                    telefone: d.telefone, descricao: d.descricao || '',
+                    combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
+                    cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
+                    imagens: d.imagens || [], destaque: d.destaque ?? false,
+                    impulsionado: (d.impulsionado ?? false) || activeBoosts.length > 0,
+                    impulsionado_ate: d.impulsionado_ate || undefined,
+                    prioridade: effectivePriority, modelo_3d: false,
+                    created_at: d.created_at, user_id: d.user_id, loja: d.loja,
+                };
+            };
+
+            // Helper: apply mapped list to state
+            const applyMapped = (mapped: CarType[]) => {
+                setSupabaseCars(mapped);
+                if (mapped.length > 0) {
+                    const prices = mapped.map(c => c.preco);
+                    const dbMin = Math.floor(Math.min(...prices));
+                    const dbMax = Math.ceil(Math.max(...prices));
+                    setMinPriceInDB(dbMin); setMaxPriceInDB(dbMax);
+                    setPriceMin(dbMin); setPriceMax(dbMax);
+                    setPriceMinInput(String(dbMin)); setPriceMaxInput(String(dbMax));
+                }
+            };
+
+            // ── Attempt 1: JOIN with listing_boosts ────────────────────────────
+            // The listing_boosts table may not exist yet (migration pending).
+            // Supabase JS returns { data: null, error } for FK-not-found errors,
+            // it does NOT throw — so we must check `error` explicitly.
             try {
-                // Fetch listings alongside their active boosts for priority sorting
                 const { data, error } = await supabasePublic
                     .from('anuncios')
                     .select(`
@@ -73,77 +114,40 @@ export default function Estoque() {
                         )
                     `);
 
-                if (!error && data) {
+                if (!error && data && data.length > 0) {
+                    // JOIN succeeded — use full boost data
                     const now = new Date().toISOString();
-                    const mapped: CarType[] = data.map((d: any) => {
-                        // Find highest active boost priority for this listing
+                    const mapped = data.map((d: any) => {
                         const activeBoosts = (d.listing_boosts ?? []).filter(
-                            (b: any) => b.active && b.end_date > now
+                            (b: any) => b.active && b.end_date > now,
                         );
-                        const boostPriority = activeBoosts.length > 0
-                            ? Math.max(...activeBoosts.map((b: any) => Number(b.priority_level ?? 0)))
-                            : 0;
-
-                        // Use boost priority (×10 scale) if higher than stored prioridade
-                        const effectivePriority = Math.max(
-                            Number(d.prioridade ?? 0),
-                            boostPriority * 10
-                        );
-
-                        return {
-                            id: d.id, marca: d.marca, modelo: d.modelo, ano: Number(d.ano),
-                            preco: Number(d.preco), quilometragem: d.quilometragem,
-                            telefone: d.telefone, descricao: d.descricao || '',
-                            combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
-                            cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
-                            imagens: d.imagens || [], destaque: d.destaque ?? false,
-                            impulsionado: (d.impulsionado ?? false) || activeBoosts.length > 0,
-                            impulsionado_ate: d.impulsionado_ate || undefined,
-                            prioridade: effectivePriority, modelo_3d: false,
-                            created_at: d.created_at, user_id: d.user_id, loja: d.loja,
-                        };
+                        return mapRow(d, activeBoosts);
                     });
-                    setSupabaseCars(mapped);
-                    // Compute DB min/max
-                    if (mapped.length > 0) {
-                        const prices = mapped.map(c => c.preco);
-                        const dbMin = Math.floor(Math.min(...prices));
-                        const dbMax = Math.ceil(Math.max(...prices));
-                        setMinPriceInDB(dbMin);
-                        setMaxPriceInDB(dbMax);
-                        setPriceMin(dbMin);
-                        setPriceMax(dbMax);
-                        setPriceMinInput(String(dbMin));
-                        setPriceMaxInput(String(dbMax));
-                    }
+                    applyMapped(mapped);
+                    setLoading(false);
+                    return;
                 }
-            } catch (err) {
-                // Fallback to simple query if join fails (e.g. listing_boosts table doesn't exist yet)
+
+                // `error` is set (e.g. listing_boosts table missing) OR data is
+                // empty [] with no error — fall through to simple query below.
+                if (error) {
+                    console.info('[Estoque] listing_boosts join failed, using simple query:', error.message);
+                }
+            } catch (joinErr) {
+                console.info('[Estoque] listing_boosts join threw, using simple query:', joinErr);
+            }
+
+            // ── Attempt 2: Simple query (no join) ──────────────────────────────
+            try {
                 const { data, error } = await supabasePublic.from('anuncios').select('*');
                 if (!error && data) {
-                    const mapped: CarType[] = data.map((d: any) => ({
-                        id: d.id, marca: d.marca, modelo: d.modelo, ano: Number(d.ano),
-                        preco: Number(d.preco), quilometragem: d.quilometragem,
-                        telefone: d.telefone, descricao: d.descricao || '',
-                        combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
-                        cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
-                        imagens: d.imagens || [], destaque: d.destaque ?? false,
-                        impulsionado: d.impulsionado ?? false,
-                        impulsionado_ate: d.impulsionado_ate || undefined,
-                        prioridade: d.prioridade ?? 0, modelo_3d: false,
-                        created_at: d.created_at, user_id: d.user_id, loja: d.loja,
-                    }));
-                    setSupabaseCars(mapped);
-                    if (mapped.length > 0) {
-                        const prices = mapped.map(c => c.preco);
-                        const dbMin = Math.floor(Math.min(...prices));
-                        const dbMax = Math.ceil(Math.max(...prices));
-                        setMinPriceInDB(dbMin); setMaxPriceInDB(dbMax);
-                        setPriceMin(dbMin); setPriceMax(dbMax);
-                        setPriceMinInput(String(dbMin)); setPriceMaxInput(String(dbMax));
-                    }
+                    const mapped = data.map((d: any) => mapRow(d));
+                    applyMapped(mapped);
                 }
+            } catch (simpleErr) {
+                console.error('[Estoque] Simple query also failed:', simpleErr);
             }
+
             setLoading(false);
         };
         fetchCars();
@@ -248,8 +252,11 @@ export default function Estoque() {
         }).sort((a, b) => {
             if (sortOrder === 'asc')  return a.preco - b.preco;
             if (sortOrder === 'desc') return b.preco - a.preco;
-            return b.prioridade - a.prioridade ||
-                   new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            // Default: sort by ranking score (boost + recency + views + favorites)
+            const scoreA = computeScore(a as unknown as Parameters<typeof computeScore>[0]);
+            const scoreB = computeScore(b as unknown as Parameters<typeof computeScore>[0]);
+            if (scoreB !== scoreA) return scoreB - scoreA;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
     }, [search, selectedBrands, priceFilterEnabled, priceMin, priceMax, yearMin, supabaseCars, selectedLoja, sortOrder]);
 

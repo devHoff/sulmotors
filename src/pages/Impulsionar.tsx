@@ -9,6 +9,7 @@ import CheckoutModal, { CheckoutOrder } from '../components/CheckoutModal';
 import { toast } from '../utils/toast';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { getBoostPlans } from '../lib/paymentApi';
 import type { Car } from '../data/mockCars';
 
 // ── Boost plans (static fallback + API) ───────────────────────────────────────
@@ -22,9 +23,9 @@ export interface BoostPlan {
 }
 
 const STATIC_PLANS: BoostPlan[] = [
-    { id: 'basic_boost',   name: 'basic_boost',   label: 'Básico',  price: 19.90,  duration_days: 7,  priority_level: 1 },
-    { id: 'premium_boost', name: 'premium_boost', label: 'Premium', price: 39.90,  duration_days: 15, priority_level: 2 },
-    { id: 'ultra_boost',   name: 'ultra_boost',   label: 'Ultra',   price: 79.90,  duration_days: 30, priority_level: 3 },
+    { id: 'basic_boost',   name: 'basic_boost',   label: 'Básico',  price: 29.90,  duration_days: 7,  priority_level: 1 },
+    { id: 'premium_boost', name: 'premium_boost', label: 'Premium', price: 59.90,  duration_days: 15, priority_level: 2 },
+    { id: 'ultra_boost',   name: 'ultra_boost',   label: 'Ultra',   price: 99.90,  duration_days: 30, priority_level: 3 },
 ];
 
 const PLAN_META: Record<string, { icon: React.ElementType; color: string; badge: string; desc: string }> = {
@@ -37,6 +38,7 @@ const fmt = (n: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
 
 const API_BASE = import.meta.env.VITE_PAYMENT_API_URL || '';
+void API_BASE; // resolved via paymentApi.ts Edge Functions
 
 // ── Analytics helper ─────────────────────────────────────────────────────────
 async function trackEvent(
@@ -85,17 +87,32 @@ export default function Impulsionar() {
         document.head.appendChild(s);
     }, []);
 
-    // ── Fetch boost plans from API ────────────────────────────────────────────
+    // ── Fetch boost plans from Supabase Edge Function ─────────────────────────
     useEffect(() => {
         const loadPlans = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/boost-plans`);
-                if (!res.ok) return;
-                const { plans: data } = await res.json();
+                const data = await getBoostPlans();
+                // getBoostPlans() returns [] on error (boost-plans may not be deployed yet)
                 if (Array.isArray(data) && data.length > 0) {
-                    setPlans(data);
+                    // Map Edge Function response fields to local BoostPlan shape.
+                    // boost-plans returns: { id, name, type, price, days, duration_days, priority_level, ... }
+                    setPlans(data.map((p) => {
+                        // 'type' is 'basic' | 'premium' | 'ultra'
+                        const planType = (p.type as string) || p.id || 'basic';
+                        const cleanType = planType.replace('_boost', '');
+                        return {
+                            id:             cleanType + '_boost',
+                            name:           cleanType + '_boost',
+                            label:          p.name.replace('Impulso ', ''),
+                            price:          p.price,
+                            // boost-plans returns both `days` and `duration_days`
+                            duration_days:  (p.duration_days as number | undefined) ?? (p as any).days ?? 7,
+                            priority_level: (p as any).priority_level ?? (cleanType === 'ultra' ? 3 : cleanType === 'premium' ? 2 : 1),
+                        };
+                    }));
                 }
-            } catch { /* use static fallback */ }
+                // If empty array, STATIC_PLANS remain (set as default state)
+            } catch { /* use static STATIC_PLANS fallback */ }
         };
         loadPlans();
     }, []);
@@ -167,27 +184,11 @@ export default function Impulsionar() {
                 duration_days:  plan.duration_days,
             });
 
-            // Create pending order via API
-            const token = (await supabase.auth.getSession()).data.session?.access_token;
-            const res   = await fetch(`${API_BASE}/api/orders/create`, {
-                method:  'POST',
-                headers: {
-                    'Content-Type':  'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({ listing_id: id, plan_type: plan.name }),
-            });
-
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err?.error || 'Erro ao criar pedido.');
-            }
-
-            const { order_id, external_reference } = await res.json();
-            setOrderId(order_id);
-
-            // Store for checkout
-            (window as any).__sm_ext_ref = external_reference;
+            // Generate a client-side external reference.
+            // The create-payment Edge Function creates the DB order atomically.
+            const extRef = `sulmot-${id.slice(0, 8)}-${Date.now()}`;
+            (window as any).__sm_ext_ref = extRef;
+            setOrderId(extRef);
             setShowCheckout(true);
 
         } catch (e: unknown) {
@@ -254,6 +255,7 @@ export default function Impulsionar() {
         durationDays:      plan.duration_days,
         perDay:            parseFloat((plan.price / plan.duration_days).toFixed(2)),
         planName:          plan.name,
+        listingId:         id,
         externalReference: extRef,
         payerEmail:        user?.email ?? '',
         payerName:         user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'Cliente',

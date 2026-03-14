@@ -23,7 +23,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase, supabasePublic } from '../lib/supabase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const ADMIN_EMAIL = 'contato@sulmotor.com';
+// All emails in this list have admin access (case-insensitive match)
+const ADMIN_EMAILS = [
+    'contato@sulmotor.com',
+    'mvp.hoffmann@gmail.com',
+];
 const ADMIN_2FA_CODE = '834221';
 
 type AdminSection =
@@ -262,7 +266,7 @@ export default function Admin() {
     const { user, signOut } = useAuth();
     const navigate = useNavigate();
 
-    const isAdmin = user?.email === ADMIN_EMAIL;
+    const isAdmin = ADMIN_EMAILS.includes((user?.email ?? '').toLowerCase());
     const [tfaVerified, setTfaVerified] = useState(() => {
         return sessionStorage.getItem('admin_2fa') === '1';
     });

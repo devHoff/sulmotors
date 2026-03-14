@@ -11,6 +11,8 @@ import { type Car } from '../data/mockCars';
 import { supabase, supabasePublic } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { trackView } from '../lib/viewTracker';
+import { generateSeoMetadata, injectSeoTags } from '../lib/seoService';
 
 // ── Internal contact helper ───────────────────────────────────────────────────
 const WHATSAPP_NUMBER = '555192263188';
@@ -89,6 +91,24 @@ export default function DetalheCarro() {
         }
         fetchCar();
     }, [id, user]);
+
+    // ── View tracking + SEO injection (fire-and-forget, no UI impact) ─────────
+    useEffect(() => {
+        if (!car) return;
+
+        // Track view (deduped by session + IP server-side)
+        trackView({
+            listingId: car.id,
+            userId:    user?.id ?? null,
+            referrer:  document.referrer || undefined,
+        });
+
+        // Inject SEO meta tags into <head>
+        const seo     = generateSeoMetadata(car as any);
+        const cleanup = injectSeoTags(seo);
+        return cleanup;
+    }, [car?.id]);
+    // ── end SEO/tracking ──────────────────────────────────────────────────────
 
     const toggleLike = async () => {
         if (!user || !car) return;
