@@ -2,9 +2,11 @@
  * Supabase Edge Function — check-mp-payment
  *
  * Polls Mercado Pago for the current status of a payment.
- * Called by the frontend every few seconds while showing the PIX QR code.
+ * Called by the frontend every 5 seconds while showing the PIX QR code.
  *
- * Body: { mp_payment_id: string }
+ * MP Account: SulMotor (Leonardo Bandas De Oliveira)
+ *
+ * Body: { mp_payment_id: string | number }
  * Returns: { status: 'pending'|'approved'|'rejected'|'cancelled', status_detail: string }
  */
 
@@ -20,33 +22,49 @@ const json = (body: unknown, status = 200) =>
         headers: { ...cors, 'Content-Type': 'application/json' },
     });
 
+// SulMotor production MP access token (Leonardo Bandas De Oliveira)
+const SULMOTOR_MP_TOKEN = 'APP_USR-7239440808267582-031221-15802be9b3427f5b9e1e29d49413ed02-2697630578';
+
+function getMpToken(): string {
+    return Deno.env.get('MERCADOPAGO_ACCESS_TOKEN') || SULMOTOR_MP_TOKEN;
+}
+
 Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
     try {
-        const { mp_payment_id } = await req.json();
-        if (!mp_payment_id) return json({ error: 'mp_payment_id obrigatório.' }, 400);
+        const body = await req.json().catch(() => ({}));
+        const mpPaymentId = body?.mp_payment_id;
 
-        const mpToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
-        if (!mpToken) {
-            // Mock: simulate approval after a few seconds
-            return json({ status: 'pending', status_detail: 'waiting_transfer', _mock: true });
+        if (!mpPaymentId) {
+            return json({ error: 'mp_payment_id obrigatório.' }, 400);
         }
 
-        const res = await fetch(`https://api.mercadopago.com/v1/payments/${mp_payment_id}`, {
-            headers: { Authorization: `Bearer ${mpToken}` },
+        const mpToken = getMpToken();
+
+        const res = await fetch(`https://api.mercadopago.com/v1/payments/${mpPaymentId}`, {
+            headers: {
+                'Authorization': `Bearer ${mpToken}`,
+                'Content-Type':  'application/json',
+            },
         });
 
         const data = await res.json();
-        if (!res.ok) return json({ error: data?.message ?? 'Erro ao verificar pagamento.' }, 502);
+
+        if (!res.ok) {
+            console.error(`[check-mp-payment] MP API error for payment ${mpPaymentId}:`, data?.message);
+            return json({ error: data?.message ?? 'Erro ao verificar pagamento.' }, 502);
+        }
+
+        console.log(`[check-mp-payment] payment ${mpPaymentId} → status=${data.status}`);
 
         return json({
-            status:        data.status,
+            status:        data.status,         // 'pending' | 'approved' | 'rejected' | 'cancelled'
             status_detail: data.status_detail,
         });
 
     } catch (err) {
-        console.error('check-mp-payment error:', err);
+        console.error('[check-mp-payment] Unexpected error:', err);
         return json({ error: 'Erro interno.' }, 500);
     }
 });

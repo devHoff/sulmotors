@@ -1,14 +1,71 @@
-# Supabase configuration
+# ─────────────────────────────────────────────────────────────────────────────
+# SulMotor – Supabase project configuration
+# Project ref: imkzkvlktrixaxougqie
+# ─────────────────────────────────────────────────────────────────────────────
+
+[project]
+project_id = "imkzkvlktrixaxougqie"
+
 [api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[auth]
+enabled = true
+site_url = "https://sulmotor.com.br"
+additional_redirect_urls = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://sulmotor.com.br"
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+# ── Edge Functions ─────────────────────────────────────────────────────────────
+
+# create-payment: creates MP order, stores in DB, returns PIX QR data
+[functions.create-payment]
+verify_jwt = false   # JWT optionally verified internally; anon requests allowed
+
+# mercadopago-webhook: receives MP payment notifications (no JWT from MP)
+[functions.mercadopago-webhook]
+verify_jwt = false
+
+# payment-status: polls payment status (public polling endpoint)
+[functions.payment-status]
+verify_jwt = false
+
+# boost-plans: returns available boost plans (public catalog)
+[functions.boost-plans]
+verify_jwt = false
+
+# orders: create/list orders (requires user JWT internally)
+[functions.orders]
+verify_jwt = false   # JWT verified inside the function handler
+
+# expire-boosts: cron job secured by x-cron-secret header
+[functions.expire-boosts]
+verify_jwt = false
+
+# ── Legacy functions (kept for reference) ─────────────────────────────────────
 
 [functions.create-mp-preference]
-verify_jwt = true   # legacy preference-redirect flow (kept for reference)
+verify_jwt = true
 
 [functions.create-mp-payment]
-verify_jwt = false  # auth handled via anon key; user_id trusted from body
+verify_jwt = false
 
 [functions.check-mp-payment]
-verify_jwt = false  # public polling endpoint
+verify_jwt = false
 
 [functions.mp-webhook]
-verify_jwt = false  # Mercado Pago calls this without a JWT
+verify_jwt = false
