@@ -87,7 +87,7 @@ export default function DetalheCarro() {
 
             try {
                 if (UUID_RE.test(param)) {
-                    // ── Legacy UUID path: fetch by id, then 301-redirect to slug URL ──
+                    // ── Legacy UUID path: fetch by id, then redirect to slug URL ──
                     const res = await supabasePublic
                         .from('anuncios').select('*').eq('id', param).single();
                     if (res.error) throw res.error;
@@ -98,12 +98,65 @@ export default function DetalheCarro() {
                         return; // useEffect will re-run with the new slug param
                     }
                 } else {
-                    // ── Slug path: fetch by slug column ──────────────────────────────
+                    // ── Slug path ────────────────────────────────────────────────
+
+                    // 1st attempt: exact match on slug column (only works after migration 004)
                     const res = await supabasePublic
                         .from('anuncios').select('*').eq('slug', param).maybeSingle();
-                    if (res.error) throw res.error;
-                    data = res.data;
-                    // Slug not found — try treating param as UUID fallback
+                    // Do NOT throw on error here — the slug column may not exist yet.
+                    // Instead, treat any error or null result as a miss and keep trying.
+                    if (!res.error) {
+                        data = res.data;
+                    } else {
+                        console.warn('[DetalheCarro] slug column query failed (migration pending?):', res.error.message);
+                    }
+
+                    // 2nd attempt: prefix match on slug column (handles accent mismatches
+                    // between JS slugify and PL/pgSQL slugify, e.g. tramandaí → tramandae vs tramandai)
+                    if (!data) {
+                        const yearMatch = param.match(/^(.+-\d{4})/);
+                        if (yearMatch) {
+                            const prefix = yearMatch[1]; // e.g. "honda-civic-exl-2005"
+                            const prefixRes = await supabasePublic
+                                .from('anuncios').select('*')
+                                .ilike('slug', `${prefix}%`)
+                                .maybeSingle();
+                            if (!prefixRes.error && prefixRes.data) {
+                                data = prefixRes.data;
+                                // Redirect to the real DB slug so the URL becomes canonical
+                                navigate(`/carro/${data.slug}`, { replace: true });
+                            }
+                        }
+                    }
+
+                    // 3rd attempt: parse slug parts and search by marca + modelo + ano
+                    // This is the critical fallback when the slug column doesn't exist yet
+                    // or when the slug was generated with a different algorithm.
+                    // Slug format: {marca}-{modelo...}-{ano}-{cidade...}
+                    // The year is always a 4-digit number — use it as an anchor.
+                    if (!data) {
+                        const yearMatch = param.match(/^(.*?)-(\d{4})-/);
+                        if (yearMatch) {
+                            const slugPrefix = yearMatch[1]; // e.g. "honda-civic-exl"
+                            const slugYear   = parseInt(yearMatch[2], 10); // e.g. 2005
+                            // Reconstruct marca+modelo from the prefix
+                            // slug has spaces-as-dashes, so we search with ilike on marca+modelo
+                            const marcaModelo = slugPrefix.replace(/-/g, ' '); // "honda civic exl"
+                            const attrRes = await supabasePublic
+                                .from('anuncios').select('*')
+                                .ilike('marca', `%${marcaModelo.split(' ')[0]}%`)
+                                .eq('ano', slugYear)
+                                .maybeSingle();
+                            if (!attrRes.error && attrRes.data) {
+                                data = attrRes.data;
+                                // Redirect to the proper canonical URL
+                                const canonicalSlug = data.slug || data.id;
+                                navigate(`/carro/${canonicalSlug}`, { replace: true });
+                            }
+                        }
+                    }
+
+                    // 4th attempt: treat param as a raw UUID (backward compat)
                     if (!data) {
                         const res2 = await supabasePublic
                             .from('anuncios').select('*').eq('id', param).maybeSingle();

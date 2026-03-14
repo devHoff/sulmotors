@@ -5,6 +5,11 @@
 
 -- 1. Helper function: convert any text to URL-safe slug
 --    "Porto Alegre" → "porto-alegre", "Fiat Argo 2021" → "fiat-argo-2021"
+--
+--    IMPORTANT: translate() maps characters 1-to-1 by position.
+--    Source and target strings MUST have the same character count.
+--    Source (24 chars): á à ã â ä é è ê ë í ì î ï ó ò õ ô ö ú ù û ü ç ñ
+--    Target (24 chars): a a a a a e e e e i i i i o o o o o u u u u c n
 CREATE OR REPLACE FUNCTION slugify(v TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -16,9 +21,11 @@ BEGIN
   -- lowercase
   result := lower(v);
   -- replace accented characters
+  -- Source: áàãâä éèêë íìîï óòõôö úùûü çñ  (24 chars)
+  -- Target: aaaaa eeee iiii ooooo uuuu cn   (24 chars)
   result := translate(result,
     'áàãâäéèêëíìîïóòõôöúùûüçñ',
-    'aaaaaaeeeeiiiiooooouuuucn');
+    'aaaaaeeeeiiiiooooouuuucn');
   -- keep only alphanumeric and spaces/hyphens
   result := regexp_replace(result, '[^a-z0-9\s\-]', '', 'g');
   -- collapse whitespace/underscores to hyphens
