@@ -251,38 +251,138 @@ async function listUserOrders(req, res) {
 }
 
 // ── POST /api/cron/expire-boosts ─────────────────────────────────────────────
-// Should be called daily by a cron job (e.g. GitHub Actions or Render cron).
+/**
+ * HTTP handler for the cron endpoint.
+ * Called by:
+ *   • The internal node-cron scheduler (api/cron/expire-boosts.js)
+ *   • GitHub Actions workflow (.github/workflows/cron-expire-boosts.yml)
+ *   • Vercel Cron (vercel.json)
+ *   • Any external scheduler via HTTP POST with x-cron-secret header
+ *
+ * Security:
+ *   • Requires x-cron-secret header matching CRON_SECRET_KEY env var.
+ *   • Internal calls (same process, req === null) bypass HTTP auth.
+ *   • Returns HTTP 403 if secret is missing or wrong.
+ *   • Returns HTTP 503 if Supabase is not configured.
+ */
 async function expireBoosts(req, res) {
-    // Simple auth: accept only from internal sources or with CRON_SECRET header
-    const secret = req.headers['x-cron-secret'];
-    if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
-        return res.status(401).json({ error: 'Unauthorized.' });
+    const ts = new Date().toISOString();
+
+    // ── Security: validate x-cron-secret ──────────────────────────────────────
+    const expectedSecret = process.env.CRON_SECRET_KEY || process.env.CRON_SECRET;
+    const receivedSecret = req?.headers?.['x-cron-secret'];
+
+    if (expectedSecret) {
+        if (!receivedSecret) {
+            console.warn(`[cron] ${ts} ⛔ Missing x-cron-secret header`);
+            return res?.status(403).json({ error: 'Forbidden: missing cron secret.' });
+        }
+        if (receivedSecret !== expectedSecret) {
+            console.warn(`[cron] ${ts} ⛔ Invalid x-cron-secret`);
+            return res?.status(403).json({ error: 'Forbidden: invalid cron secret.' });
+        }
+    } else {
+        console.warn(`[cron] ${ts} ⚠️  CRON_SECRET_KEY not set – endpoint is unprotected!`);
     }
 
-    const url = SUPABASE_URL();
-    const key = SERVICE_KEY();
-    if (!url || !key) {
-        return res.status(503).json({ error: 'Supabase not configured.' });
+    // ── Supabase availability check ────────────────────────────────────────────
+    const sbUrl = SUPABASE_URL();
+    const sbKey = SERVICE_KEY();
+
+    if (!sbUrl || !sbKey) {
+        const msg = 'Supabase SUPABASE_URL or SUPABASE_SERVICE_KEY not configured.';
+        console.error(`[cron] ${ts} ❌ ${msg}`);
+        return res?.status(503).json({ error: msg });
     }
+
+    // ── Execute expire_boosts() ────────────────────────────────────────────────
+    console.log(`[cron] ${ts} ▶  expire_boosts() starting…`);
 
     try {
-        // Call the stored SQL function expire_boosts()
-        const rpcRes = await fetch(`${url}/rest/v1/rpc/expire_boosts`, {
+        const rpcRes = await fetch(`${sbUrl}/rest/v1/rpc/expire_boosts`, {
             method:  'POST',
             headers: {
                 'Content-Type':  'application/json',
-                'apikey':        key,
-                'Authorization': `Bearer ${key}`,
+                'apikey':        sbKey,
+                'Authorization': `Bearer ${sbKey}`,
+                'Prefer':        'return=representation',
             },
             body: JSON.stringify({}),
         });
-        const result = await rpcRes.json();
-        console.log('[cron/expire-boosts] ✅ expired_count=', result);
-        return res.json({ success: true, expired_count: result });
+
+        const raw = await rpcRes.text();
+
+        if (!rpcRes.ok) {
+            const errBody = (() => { try { return JSON.parse(raw); } catch { return { raw }; } })();
+            throw new Error(errBody?.message || errBody?.error || `Supabase RPC → HTTP ${rpcRes.status}: ${raw}`);
+        }
+
+        // expire_boosts() returns the integer count of deactivated boosts
+        const expiredCount = (() => {
+            try { return Number(JSON.parse(raw)); } catch { return 0; }
+        })();
+
+        console.log(`[cron] ${ts} ✅ expire_boosts executed successfully`);
+        console.log(`[cron] ${ts} 📊 expired_boost_count = ${expiredCount}`);
+
+        // ── Optional: insert analytics event for each expiration batch ────────
+        if (expiredCount > 0) {
+            try {
+                await fetch(`${sbUrl}/rest/v1/analytics_events`, {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type':  'application/json',
+                        'apikey':        sbKey,
+                        'Authorization': `Bearer ${sbKey}`,
+                        'Prefer':        'return=minimal',
+                    },
+                    body: JSON.stringify({
+                        event_name: 'boost_expired',
+                        properties: {
+                            expired_count: expiredCount,
+                            triggered_at:  ts,
+                            source:        'cron/expire-boosts',
+                        },
+                    }),
+                });
+                console.log(`[cron] ${ts} 📝 analytics event "boost_expired" recorded (count=${expiredCount})`);
+            } catch (analyticsErr) {
+                // Non-fatal — log but don't fail the cron run
+                console.warn(`[cron] ${ts} ⚠️  analytics insert failed (non-fatal): ${analyticsErr.message}`);
+            }
+        }
+
+        const payload = {
+            success:       true,
+            expired_boosts: expiredCount,
+            executed_at:   ts,
+        };
+
+        if (res) return res.json(payload);
+        return payload;  // internal call (no HTTP response object)
+
     } catch (err) {
-        console.error('[cron/expire-boosts] ❌', err.message);
-        return res.status(500).json({ error: err.message });
+        console.error(`[cron] ${ts} ❌ expire_boosts failed: ${err.message}`);
+
+        if (res) return res.status(500).json({
+            success: false,
+            error:   err.message,
+            executed_at: ts,
+        });
+        throw err;  // re-throw for internal callers to handle
     }
+}
+
+// ── Internal direct caller (no HTTP req/res, used by node-cron) ──────────────
+/**
+ * Calls expire_boosts() directly without HTTP overhead.
+ * Returns { success, expired_boosts, executed_at } or throws.
+ */
+async function runExpireBoostsDirect() {
+    return expireBoosts(
+        { headers: { 'x-cron-secret': process.env.CRON_SECRET_KEY || process.env.CRON_SECRET || '' } },
+        null,
+    );
 }
 
 module.exports = {
@@ -291,5 +391,6 @@ module.exports = {
     getOrder,
     listUserOrders,
     expireBoosts,
+    runExpireBoostsDirect,
     STATIC_PLANS,
 };
