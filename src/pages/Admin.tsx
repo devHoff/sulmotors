@@ -323,29 +323,61 @@ export default function Admin() {
     }, [isAdmin, tfaVerified, loadData]);
 
     // Action handlers
+    // NOTE: these use the authenticated `supabase` client so the user JWT is
+    // sent with each request.  For admin actions to work on ANY listing (not
+    // just the admin's own), the Supabase RLS policies must include an
+    // admin-bypass policy (see scripts/006_admin_rls_policies.sql).
     const deleteCar = async (id: string) => {
         if (!confirm('Excluir este anúncio permanentemente?')) return;
-        try {
-            await supabase.from('anuncios').delete().eq('id', id);
-            setCars(c => c.filter(x => x.id !== id));
-            toast.success('Anúncio excluído.');
-        } catch { toast.error('Erro ao excluir.'); }
+        const { error } = await supabase.from('anuncios').delete().eq('id', id);
+        if (error) {
+            console.error('[Admin] deleteCar error:', error);
+            if (error.code === '42501' || error.message?.includes('policy')) {
+                toast.error('Sem permissão. Execute scripts/006_admin_rls_policies.sql no Supabase.');
+            } else {
+                toast.error(`Erro ao excluir: ${error.message}`);
+            }
+            return;
+        }
+        setCars(c => c.filter(x => x.id !== id));
+        toast.success('Anúncio excluído.');
     };
 
     const toggleDestaque = async (id: string, current: boolean) => {
-        try {
-            await supabase.from('anuncios').update({ destaque: !current }).eq('id', id);
-            setCars(c => c.map(x => x.id === id ? { ...x, destaque: !current } : x));
-            toast.success(!current ? 'Marcado como destaque.' : 'Destaque removido.');
-        } catch { toast.error('Erro.'); }
+        const newValue = !current;
+        const { error } = await supabase
+            .from('anuncios')
+            .update({ destaque: newValue })
+            .eq('id', id);
+        if (error) {
+            console.error('[Admin] toggleDestaque error:', error);
+            if (error.code === '42501' || error.message?.includes('policy')) {
+                toast.error('Sem permissão de RLS. Execute scripts/006_admin_rls_policies.sql no Supabase.');
+            } else {
+                toast.error(`Erro ao alterar destaque: ${error.message}`);
+            }
+            return;
+        }
+        setCars(c => c.map(x => x.id === id ? { ...x, destaque: newValue } : x));
+        toast.success(newValue ? 'Marcado como destaque.' : 'Destaque removido.');
     };
 
     const approveCar = async (id: string) => {
-        try {
-            await supabase.from('anuncios').update({ aprovado: true }).eq('id', id);
-            setCars(c => c.map(x => x.id === id ? { ...x, aprovado: true } : x));
-            toast.success('Anúncio aprovado.');
-        } catch { toast.error('Erro.'); }
+        const { error } = await supabase
+            .from('anuncios')
+            .update({ aprovado: true })
+            .eq('id', id);
+        if (error) {
+            console.error('[Admin] approveCar error:', error);
+            if (error.code === '42501' || error.message?.includes('policy')) {
+                toast.error('Sem permissão de RLS. Execute scripts/006_admin_rls_policies.sql no Supabase.');
+            } else {
+                toast.error(`Erro ao aprovar: ${error.message}`);
+            }
+            return;
+        }
+        setCars(c => c.map(x => x.id === id ? { ...x, aprovado: true } : x));
+        toast.success('Anúncio aprovado.');
     };
 
     const handleSignOut = async () => {
