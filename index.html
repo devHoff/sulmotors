@@ -11,7 +11,8 @@
     <meta name="keywords"    content="carros usados, comprar carro, vender carro, carros seminovos, marketplace automotivo, SulMotor, carros Sul do Brasil" />
     <meta name="robots"      content="index, follow" />
     <meta name="theme-color" content="#0a0a0a" />
-    <meta name="author"      content="SulMotor" />
+    <meta name="author"           content="SulMotor" />
+    <meta name="application-name" content="SulMotor" />
     <link rel="canonical"    href="https://sulmotor.com/" />
 
     <!-- Open Graph / Facebook -->
@@ -50,9 +51,19 @@
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": "SulMotor",
+      "alternateName": "SulMotor Marketplace Automotivo",
       "url": "https://sulmotor.com",
-      "logo": "https://sulmotor.com/apple-touch-icon.png",
-      "description": "Marketplace automotivo do Sul do Brasil",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://sulmotor.com/apple-touch-icon.png",
+        "width": 180,
+        "height": 180
+      },
+      "description": "Marketplace automotivo do Sul do Brasil. Compre e venda carros usados e seminovos com segurança.",
+      "foundingLocation": {
+        "@type": "Place",
+        "name": "Porto Alegre, RS, Brasil"
+      },
       "contactPoint": {
         "@type": "ContactPoint",
         "contactType": "customer support",
@@ -62,12 +73,15 @@
     }
     </script>
 
-    <!-- JSON-LD: WebSite (enables Sitelinks Searchbox) -->
+    <!-- JSON-LD: WebSite (enables Sitelinks Searchbox + Google site name) -->
+    <!-- Google uses WebSite.name as the displayed site name in search results -->
+    <!-- See: https://developers.google.com/search/docs/appearance/site-names -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "SulMotor",
+      "alternateName": "SulMotor — Marketplace Automotivo",
       "url": "https://sulmotor.com",
       "potentialAction": {
         "@type": "SearchAction",
