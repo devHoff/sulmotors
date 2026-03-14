@@ -25,8 +25,6 @@ interface AuthContextType {
     session: Session | null;
     loading: boolean;
     signInWithGoogle: () => Promise<void>;
-    signInWithApple: () => Promise<void>;
-    signInWithFacebook: () => Promise<void>;
     signInWithEmail: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string, data?: { [key: string]: any }) => Promise<void>;
     resetPassword: (email: string) => Promise<void>;
@@ -73,34 +71,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     // Force account-picker so users can switch Google accounts
                     prompt: 'select_account',
                 },
-            },
-        });
-        if (error) throw error;
-    };
-
-    /**
-     * Apple OAuth — requires Apple provider enabled in Supabase Dashboard
-     * with a valid Apple Service ID, Team ID, Key ID and private key configured.
-     */
-    const signInWithApple = async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'apple',
-            options: {
-                redirectTo: getRedirectUrl(),
-            },
-        });
-        if (error) throw error;
-    };
-
-    /**
-     * Facebook OAuth — requires Facebook provider enabled in Supabase Dashboard
-     * with a valid App ID and App Secret configured.
-     */
-    const signInWithFacebook = async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'facebook',
-            options: {
-                redirectTo: getRedirectUrl(),
             },
         });
         if (error) throw error;
@@ -157,8 +127,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 session,
                 loading,
                 signInWithGoogle,
-                signInWithApple,
-                signInWithFacebook,
                 signInWithEmail,
                 signUp,
                 resetPassword,

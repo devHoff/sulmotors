@@ -35,7 +35,7 @@ import DashboardPayments from './pages/DashboardPayments';
  * and immediately redirects to /auth/callback (preserving the full hash) so
  * AuthCallback.tsx can process the session correctly.
  *
- * This makes Google / Apple / Facebook login resilient to Site URL
+ * This makes Google login resilient to Site URL
  * misconfiguration in the Supabase Dashboard.
  */
 function OAuthHashInterceptor() {

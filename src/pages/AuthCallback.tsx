@@ -9,7 +9,7 @@ import { toast } from '../utils/toast';
  * /auth/callback
  *
  * Handles three Supabase redirect flows:
- *   1. OAuth social login  (Google / Apple / Facebook) → code exchange → home
+ *   1. OAuth social login (Google) → code exchange → home
  *   2. Password reset      → show "new password" form → update → login
  *   3. Email confirmation  → show success → home
  *
