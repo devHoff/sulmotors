@@ -34,8 +34,13 @@ RewriteEngine On
 <IfModule mod_expires.c>
     ExpiresActive On
     # Vite builds assets with content-hash filenames — cache them for 1 year
-    <FilesMatch "\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|ico|webp)$">
+    <FilesMatch "\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp)$">
         ExpiresDefault "access plus 1 year"
+    </FilesMatch>
+    # Favicon files: short cache so branding updates take effect quickly
+    <FilesMatch "^(favicon.*|apple-touch-icon.*|sulmotor-logo.*)$">
+        ExpiresDefault "access plus 1 day"
+        Header set Cache-Control "public, max-age=86400, must-revalidate"
     </FilesMatch>
     # Never cache index.html so the browser always gets the latest app shell
     <FilesMatch "^index\.html$">
