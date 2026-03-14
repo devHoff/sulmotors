@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- 
-  Static sitemap fallback for SulMotor.
-  A dynamic sitemap with all vehicle listings is generated at:
-    https://sulmotor.com/sitemap.xml  (served via React at runtime via /sitemap)
-  
-  This static file covers all main routes and is served by Hostinger.
+<!--
+  SulMotor — Static sitemap
+  Vehicle listing URLs follow the slug pattern:
+    https://sulmotor.com/carro/{marca}-{modelo}-{ano}-{cidade}
+  Example: https://sulmotor.com/carro/ford-territory-titanium-2021-porto-alegre
+
+  Old UUID-based URLs (/carro/<uuid>) are 301-redirected to slug URLs
+  automatically by the app (DetalheCarro.tsx).
+
+  This static file covers core + programmatic SEO pages.
+  Individual vehicle pages are added dynamically via seoService.ts.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 

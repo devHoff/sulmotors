@@ -21,6 +21,7 @@ export interface Car {
     created_at: string;
     user_id: string;
     loja?: string;
+    slug?: string;   // SEO-friendly URL slug (stored in DB after migration 004)
 }
 
 export const mockCars: Car[] = [

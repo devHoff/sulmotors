@@ -23,6 +23,7 @@ export interface SeoCarData {
     preco:         number;
     quilometragem: number;
     cidade:        string;
+    slug?:         string;   // DB-stored slug (preferred) — generated client-side as fallback
     descricao?:    string;
     imagens?:      string[];
     combustivel?:  string;
@@ -83,31 +84,48 @@ function slugify(text: string): string {
 }
 
 /**
- * Generate SEO-friendly slug for a listing.
- * Pattern: {brand}-{model}-{year}-{city}
- * Example: mercedes-amg-g63-2025-sao-paulo
+ * Build the URL-safe slug for a listing from its attributes.
+ * Uses the DB-stored slug when available (guaranteed unique by the DB trigger);
+ * otherwise derives it client-side as a fallback.
+ *
+ * Pattern: {marca}-{modelo}-{ano}-{cidade}
+ * Example: ford-territory-titanium-2021-porto-alegre
  */
-export function generateSlug(car: SeoCarData): string {
+export function buildCarSlug(car: SeoCarData): string {
+    // Prefer the slug stored in the DB (guaranteed unique, set by the trigger)
+    if (car.slug && car.slug.length > 0) return car.slug;
+    // Client-side fallback (used before migration is run)
     const city = car.cidade.split(',')[0].trim();
-    const parts = [car.marca, car.modelo, String(car.ano), city];
-    return slugify(parts.join(' '));
+    return slugify([car.marca, car.modelo, String(car.ano), city].join(' '));
+}
+
+/** @deprecated use buildCarSlug instead */
+export function generateSlug(car: SeoCarData): string {
+    return buildCarSlug(car);
 }
 
 /**
- * Full canonical URL for a listing.
- * Uses /carro/:id (current route) as canonical, not slug-based,
- * since slugs may change and IDs are stable.
+ * Full canonical URL for a listing — uses the friendly slug path.
+ * Example: https://sulmotor.com/carro/ford-territory-titanium-2021-porto-alegre
+ *
+ * If only the UUID is available (before migration), falls back to UUID URL.
+ * Old UUID URLs redirect 301 → slug URL via .htaccess RewriteRule.
  */
-export function getListingCanonical(carId: string): string {
-    return `${SITE_URL}/carro/${carId}`;
+export function getListingCanonical(car: SeoCarData | string): string {
+    // Called with a full car object → use slug
+    if (typeof car === 'object') {
+        return `${SITE_URL}/carro/${buildCarSlug(car)}`;
+    }
+    // Called with just an ID string → legacy fallback (will be redirected)
+    return `${SITE_URL}/carro/${car}`;
 }
 
 /**
  * Slug-based SEO URL (for structured data and sitemap).
- * Example: https://sulmotor.com/carros/mercedes-amg-g63-2025-sao-paulo
+ * Example: https://sulmotor.com/carro/ford-territory-titanium-2021-porto-alegre
  */
 export function getSlugUrl(car: SeoCarData): string {
-    return `${SITE_URL}/carros/${generateSlug(car)}`;
+    return `${SITE_URL}/carro/${buildCarSlug(car)}`;
 }
 
 // ── Meta title generation ─────────────────────────────────────────────────────
@@ -171,7 +189,7 @@ export function generateKeywords(car: SeoCarData): string[] {
 // ── JSON-LD structured data ───────────────────────────────────────────────────
 
 export function generateJsonLd(car: SeoCarData): VehicleJsonLd {
-    const canonical = getListingCanonical(car.id);
+    const canonical = getListingCanonical(car);
     return {
         '@context':        'https://schema.org',
         '@type':           'Vehicle',
@@ -203,11 +221,12 @@ export function generateJsonLd(car: SeoCarData): VehicleJsonLd {
 // ── Full SEO metadata object ──────────────────────────────────────────────────
 
 export function generateSeoMetadata(car: SeoCarData): SeoMetadata {
+    const slug = buildCarSlug(car);
     return {
         title:       generateMetaTitle(car),
         description: generateMetaDescription(car),
-        canonical:   getListingCanonical(car.id),
-        slug:        generateSlug(car),
+        canonical:   `${SITE_URL}/carro/${slug}`,
+        slug,        // the friendly slug string itself
         ogImage:     car.imagens?.[0] ?? DEFAULT_OG,
         ogType:      'product',
         jsonLd:      generateJsonLd(car),
@@ -319,7 +338,7 @@ export function getStaticSitemapEntries(): SitemapEntry[] {
 /** Generate sitemap XML entry for a single car listing */
 export function carToSitemapEntry(car: SeoCarData): SitemapEntry {
     return {
-        loc:        getListingCanonical(car.id),
+        loc:        getListingCanonical(car),  // slug-based URL
         lastmod:    (car.updated_at ?? car.created_at ?? new Date().toISOString()).split('T')[0],
         changefreq: 'daily',
         priority:   0.80,

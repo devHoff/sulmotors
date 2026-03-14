@@ -64,6 +64,12 @@ AddType text/plain .txt
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
+    # NOTE: UUID → slug 301 redirects are handled client-side by React Router
+    # (DetalheCarro.tsx detects a UUID param, fetches the slug, then calls
+    # navigate(..., { replace: true }) which produces the canonical slug URL).
+    # No server-side redirect is needed here because Apache cannot look up
+    # the slug from the DB; the JS bundle handles it seamlessly.
+
     # Everything else → index.html (React Router takes over)
     RewriteRule ^ index.html [L]
 </IfModule>

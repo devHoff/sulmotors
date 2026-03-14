@@ -88,6 +88,8 @@ export default function App() {
                     <Route path="/impulsionar/sucesso" element={<ImpulsionarSucesso />} />
                     <Route path="/impulsionar/:id"     element={<Impulsionar />} />
                     <Route path="/dashboard/payments"  element={<DashboardPayments />} />
+                    {/* Vehicle detail — accepts both slug (/carro/ford-argo-2021-porto-alegre)
+                        and legacy UUID (/carro/<uuid>); UUID is redirected → slug by the component */}
                     <Route path="/carro/:id"           element={<DetalheCarro />} />
                     <Route path="/sobre-nos"           element={<SobreNos />} />
 

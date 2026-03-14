@@ -1014,7 +1014,7 @@ export default function Admin() {
                                                         </td>
                                                         <td className="px-4 py-3">
                                                             <div className="flex items-center justify-end gap-1">
-                                                                <Link to={`/carro/${car.id}`} title="Visualizar" className="w-7 h-7 flex items-center justify-center text-zinc-600 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-all">
+                                                                <Link to={`/carro/${car.slug || car.id}`} title="Visualizar" className="w-7 h-7 flex items-center justify-center text-zinc-600 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-all">
                                                                     <Eye className="w-3.5 h-3.5" strokeWidth={1.5} />
                                                                 </Link>
                                                                 {!car.aprovado && (

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import type { Car } from '../data/mockCars';
 import { supabase, supabasePublic } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { buildCarSlug } from '../lib/seoService';
 
 interface CarCardProps {
     car: Car;
@@ -19,6 +20,9 @@ export default function CarCard({ car, showActions, onEdit, onDelete, onBoost }:
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // Prefer DB slug, fall back to client-side generated slug
+    const carSlug = buildCarSlug(car);
 
     const formatPrice = (price: number) =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(price);
@@ -75,7 +79,7 @@ export default function CarCard({ car, showActions, onEdit, onDelete, onBoost }:
             transition={{ duration: 0.25 }}
             className="group relative bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/8 rounded-2xl overflow-hidden hover:border-brand-400/40 dark:hover:border-brand-400/30 transition-all duration-300 hover:shadow-[0_8px_32px_rgba(0,180,220,0.12)] dark:hover:shadow-[0_8px_40px_rgba(0,212,255,0.12)]"
         >
-            <Link to={`/carro/${car.id}`} className="block">
+            <Link to={`/carro/${carSlug}`} className="block">
                 {/* Image */}
                 <div className="relative aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-zinc-800">
                     <img
@@ -112,7 +116,7 @@ export default function CarCard({ car, showActions, onEdit, onDelete, onBoost }:
 
             {/* Info */}
             <div className="p-5 flex flex-col" style={{ minHeight: 148 }}>
-                <Link to={`/carro/${car.id}`}>
+                <Link to={`/carro/${carSlug}`}>
                     <div className="flex items-start justify-between gap-2 mb-3">
                         <div className="flex-1 min-w-0">
                             <h3 className="font-bold text-slate-900 dark:text-white text-base leading-tight truncate group-hover:text-brand-500 dark:group-hover:text-brand-400 transition-colors">

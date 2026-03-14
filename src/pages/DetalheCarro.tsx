@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, ChevronRight, ArrowLeft, Mail,
@@ -46,8 +46,13 @@ function StarRating({ rating, max = 5 }: { rating: number; max?: number }) {
     );
 }
 
+// UUID regex — used to distinguish legacy /carro/<uuid> from /carro/<slug>
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default function DetalheCarro() {
-    const { id } = useParams();
+    // The route param is called `id` but now holds either a slug OR a UUID
+    const { id: param } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const { user } = useAuth();
     const { t } = useLanguage();
     const [car, setCar] = useState<Car | null>(null);
@@ -76,26 +81,66 @@ export default function DetalheCarro() {
 
     useEffect(() => {
         async function fetchCar() {
-            if (!id) return;
+            if (!param) return;
+            setLoading(true);
+            let data: any = null;
+
             try {
-                const { data, error } = await supabasePublic
-                    .from('anuncios').select('*').eq('id', id).single();
-                if (error) throw error;
+                if (UUID_RE.test(param)) {
+                    // ── Legacy UUID path: fetch by id, then 301-redirect to slug URL ──
+                    const res = await supabasePublic
+                        .from('anuncios').select('*').eq('id', param).single();
+                    if (res.error) throw res.error;
+                    data = res.data;
+                    // Redirect to the canonical slug URL (replaces history entry)
+                    if (data?.slug) {
+                        navigate(`/carro/${data.slug}`, { replace: true });
+                        return; // useEffect will re-run with the new slug param
+                    }
+                } else {
+                    // ── Slug path: fetch by slug column ──────────────────────────────
+                    const res = await supabasePublic
+                        .from('anuncios').select('*').eq('slug', param).maybeSingle();
+                    if (res.error) throw res.error;
+                    data = res.data;
+                    // Slug not found — try treating param as UUID fallback
+                    if (!data) {
+                        const res2 = await supabasePublic
+                            .from('anuncios').select('*').eq('id', param).maybeSingle();
+                        data = res2.data;
+                    }
+                }
+
                 if (data) {
-                    setCar({ ...data, aceitaTroca: data.aceita_troca, modelo_3d: data.modelo_3d, imagens: data.imagens || [] });
+                    const carObj: Car = {
+                        ...data,
+                        aceitaTroca: data.aceita_troca,
+                        modelo_3d: data.modelo_3d,
+                        imagens: data.imagens || [],
+                        slug: data.slug ?? undefined,
+                    };
+                    setCar(carObj);
+
+                    // Likes
                     if (user) {
                         const { data: likeData } = await supabase
-                            .from('curtidas').select('id').eq('anuncio_id', id).eq('user_id', user.id).maybeSingle();
+                            .from('curtidas').select('id')
+                            .eq('anuncio_id', data.id).eq('user_id', user.id).maybeSingle();
                         setLiked(!!likeData);
                     }
                     const { count } = await supabasePublic
-                        .from('curtidas').select('*', { count: 'exact', head: true }).eq('anuncio_id', id);
+                        .from('curtidas').select('*', { count: 'exact', head: true })
+                        .eq('anuncio_id', data.id);
                     setLikeCount(count ?? 0);
                 }
-            } catch { } finally { setLoading(false); }
+            } catch (err) {
+                console.error('[DetalheCarro] fetch error:', err);
+            } finally {
+                setLoading(false);
+            }
         }
         fetchCar();
-    }, [id, user]);
+    }, [param, user]);
 
     // ── View tracking + SEO injection (fire-and-forget, no UI impact) ─────────
     useEffect(() => {
