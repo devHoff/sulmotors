@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Car, Users, CreditCard, BarChart2, Settings,
@@ -282,6 +282,9 @@ export default function Admin() {
     const [userSearch, setUserSearch] = useState('');
     const [userFilter, setUserFilter] = useState<'all' | 'verified' | 'suspended' | 'suspicious'>('all');
     const [carStatusFilter, setCarStatusFilter] = useState<'all' | 'active' | 'pending' | 'reported' | 'removed'>('all');
+    const [bellOpen, setBellOpen] = useState(false);
+    const bellRef = useRef<HTMLDivElement>(null);
+
     const [alertsList, setAlertsList] = useState<{ id: number; msg: string; level: 'warn' | 'error'; ts: string }[]>([
         { id: 1, msg: 'API lenta detectada (>500ms) na rota /anuncios', level: 'warn', ts: new Date(Date.now() - 600000).toISOString() },
         { id: 2, msg: 'Múltiplos anúncios suspeitos de baixo preço detectados', level: 'error', ts: new Date(Date.now() - 1200000).toISOString() },
@@ -353,6 +356,17 @@ export default function Admin() {
 
     const dismissAlert = (id: number) => setAlertsList(a => a.filter(x => x.id !== id));
 
+    // Close bell dropdown on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+                setBellOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
     // Derived
     const stats = {
         totalUsers: users.length,
@@ -409,8 +423,8 @@ export default function Admin() {
             <aside className={`flex-shrink-0 flex flex-col bg-[#0a0e14] border-r border-white/8 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-60'}`}>
                 {/* Logo */}
                 <div className="flex items-center gap-3 px-4 py-5 border-b border-white/8">
-                    <div className="w-8 h-8 bg-cyan-500/15 border border-cyan-500/25 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Shield className="w-4 h-4 text-cyan-400" strokeWidth={1.5} />
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <img src="/sulmotor-logo-64.png" alt="SulMotor" className="w-8 h-8 object-contain" />
                     </div>
                     {!sidebarCollapsed && (
                         <div>
@@ -484,14 +498,101 @@ export default function Admin() {
                     </div>
 
                     {/* Alerts bell */}
-                    <button className="relative w-9 h-9 flex items-center justify-center bg-[#0d1117] border border-white/8 rounded-xl text-zinc-500 hover:text-white hover:border-white/20 transition-all">
-                        <Bell className="w-4 h-4" strokeWidth={1.5} />
-                        {alertsList.length > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black rounded-full w-4 h-4 flex items-center justify-center">
-                                {alertsList.length}
-                            </span>
-                        )}
-                    </button>
+                    <div className="relative" ref={bellRef}>
+                        <button
+                            onClick={() => setBellOpen(v => !v)}
+                            className={`relative w-9 h-9 flex items-center justify-center bg-[#0d1117] border rounded-xl transition-all ${
+                                bellOpen
+                                    ? 'border-cyan-500/40 text-cyan-400'
+                                    : 'border-white/8 text-zinc-500 hover:text-white hover:border-white/20'
+                            }`}
+                        >
+                            <Bell className="w-4 h-4" strokeWidth={1.5} />
+                            {alertsList.length > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                                    {alertsList.length}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Notification dropdown */}
+                        <AnimatePresence>
+                            {bellOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute right-0 top-full mt-2 w-80 z-50 bg-[#0d1117] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                                >
+                                    {/* Header */}
+                                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+                                        <div className="flex items-center gap-2">
+                                            <Bell className="w-4 h-4 text-amber-400" strokeWidth={1.5} />
+                                            <span className="text-sm font-black text-white">Alertas</span>
+                                            {alertsList.length > 0 && (
+                                                <span className="bg-red-500/20 text-red-400 text-[10px] font-black rounded-full px-1.5 py-0.5">
+                                                    {alertsList.length}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => { setBellOpen(false); setSection('logs'); }}
+                                            className="text-[10px] text-cyan-400 font-bold hover:text-cyan-300 transition-colors"
+                                        >
+                                            Ver todos
+                                        </button>
+                                    </div>
+
+                                    {/* Alert list */}
+                                    <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
+                                        {alertsList.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-8 gap-2">
+                                                <CheckCheck className="w-6 h-6 text-emerald-500" strokeWidth={1.5} />
+                                                <p className="text-xs text-zinc-500">Nenhum alerta ativo</p>
+                                            </div>
+                                        ) : alertsList.map(al => (
+                                            <div
+                                                key={al.id}
+                                                className={`flex items-start gap-3 px-4 py-3 hover:bg-white/3 transition-colors border-l-2 ${
+                                                    al.level === 'error' ? 'border-red-500/50' : 'border-amber-500/50'
+                                                }`}
+                                            >
+                                                <AlertTriangle
+                                                    className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+                                                        al.level === 'error' ? 'text-red-400' : 'text-amber-400'
+                                                    }`}
+                                                    strokeWidth={1.5}
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs text-zinc-300 leading-relaxed">{al.msg}</p>
+                                                    <p className="text-[10px] text-zinc-600 mt-0.5">{timeAgo(al.ts)}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => dismissAlert(al.id)}
+                                                    className="text-zinc-700 hover:text-zinc-400 transition-colors flex-shrink-0 mt-0.5"
+                                                >
+                                                    <X className="w-3.5 h-3.5" strokeWidth={2} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Footer */}
+                                    {alertsList.length > 0 && (
+                                        <div className="px-4 py-3 border-t border-white/8">
+                                            <button
+                                                onClick={() => { setAlertsList([]); setBellOpen(false); }}
+                                                className="w-full text-xs text-zinc-500 hover:text-zinc-300 font-semibold transition-colors text-center"
+                                            >
+                                                Limpar todos os alertas
+                                            </button>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
 
                     {/* Refresh */}
                     <button onClick={loadData} disabled={refreshing} className="w-9 h-9 flex items-center justify-center bg-[#0d1117] border border-white/8 rounded-xl text-zinc-500 hover:text-white hover:border-white/20 transition-all">
