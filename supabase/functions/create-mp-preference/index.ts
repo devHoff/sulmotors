@@ -26,7 +26,7 @@
  *
  * Env vars:
  *   MERCADOPAGO_ACCESS_TOKEN  — MP access token (TEST-... or APP_USR-...)
- *   APP_URL                   — public app URL (default: https://sulmotor.com.br)
+ *   APP_URL                   — public app URL (default: https://sulmotor.com)
  *   SUPABASE_URL              — auto-injected
  *   SUPABASE_SERVICE_ROLE_KEY — auto-injected
  */
@@ -64,7 +64,7 @@ function sanitisePayerEmail(email: string | undefined | null, mpToken: string): 
     }
     // Production: return a generic placeholder that won't be the seller's email
     // In real use, user_email should always be provided
-    return 'pagador@sulmotor.com.br';
+    return 'pagador@sulmotor.com';
 }
 
 Deno.serve(async (req) => {
@@ -99,13 +99,13 @@ Deno.serve(async (req) => {
         }
 
         const mpToken  = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
-        const baseUrl  = Deno.env.get('APP_URL') ?? 'https://sulmotor.com.br';
+        const baseUrl  = Deno.env.get('APP_URL') ?? 'https://sulmotor.com';
         const sbUrl    = Deno.env.get('SUPABASE_URL') ?? '';
         const sbSvcKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
         const payerEmail = mpToken
             ? sanitisePayerEmail(user_email, mpToken)
-            : (user_email ?? 'pagador@sulmotor.com.br');
+            : (user_email ?? 'pagador@sulmotor.com');
 
         // ── 1. Register pending pagamento in DB (best-effort) ─────────────────
         let pagamentoId: string | null = null;

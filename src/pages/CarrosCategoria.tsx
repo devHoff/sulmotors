@@ -40,7 +40,7 @@ const PRICE_RANGES: Record<string, { label: string; max: number; slug: string }>
     'carros-ate-100-mil': { label: 'até R$ 100.000', max: 100000, slug: 'carros-ate-100-mil' },
 };
 
-const SITE_URL = 'https://sulmotor.com.br';
+const SITE_URL = 'https://sulmotor.com';
 
 // ── Slug helpers ──────────────────────────────────────────────────────────────
 function slugify(text: string): string {

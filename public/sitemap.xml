@@ -2,7 +2,7 @@
 <!-- 
   Static sitemap fallback for SulMotor.
   A dynamic sitemap with all vehicle listings is generated at:
-    https://sulmotor.com.br/sitemap.xml  (served via React at runtime via /sitemap)
+    https://sulmotor.com/sitemap.xml  (served via React at runtime via /sitemap)
   
   This static file covers all main routes and is served by Hostinger.
 -->
@@ -10,212 +10,212 @@
 
   <!-- Core pages -->
   <url>
-    <loc>https://sulmotor.com.br/</loc>
+    <loc>https://sulmotor.com/</loc>
     <changefreq>daily</changefreq>
     <priority>1.00</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/estoque</loc>
+    <loc>https://sulmotor.com/estoque</loc>
     <changefreq>hourly</changefreq>
     <priority>0.90</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/anunciar</loc>
+    <loc>https://sulmotor.com/anunciar</loc>
     <changefreq>monthly</changefreq>
     <priority>0.70</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/sobre-nos</loc>
+    <loc>https://sulmotor.com/sobre-nos</loc>
     <changefreq>monthly</changefreq>
     <priority>0.40</priority>
   </url>
 
   <!-- Programmatic SEO – used cars hub -->
   <url>
-    <loc>https://sulmotor.com.br/carros-usados</loc>
+    <loc>https://sulmotor.com/carros-usados</loc>
     <changefreq>daily</changefreq>
     <priority>0.90</priority>
   </url>
 
   <!-- Price range landing pages -->
   <url>
-    <loc>https://sulmotor.com.br/carros-ate-20-mil</loc>
+    <loc>https://sulmotor.com/carros-ate-20-mil</loc>
     <changefreq>daily</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-ate-30-mil</loc>
+    <loc>https://sulmotor.com/carros-ate-30-mil</loc>
     <changefreq>daily</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-ate-50-mil</loc>
+    <loc>https://sulmotor.com/carros-ate-50-mil</loc>
     <changefreq>daily</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-ate-80-mil</loc>
+    <loc>https://sulmotor.com/carros-ate-80-mil</loc>
     <changefreq>daily</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-ate-100-mil</loc>
+    <loc>https://sulmotor.com/carros-ate-100-mil</loc>
     <changefreq>daily</changefreq>
     <priority>0.85</priority>
   </url>
 
   <!-- Brand pages (top Brazilian car brands) -->
   <url>
-    <loc>https://sulmotor.com.br/carros/fiat</loc>
+    <loc>https://sulmotor.com/carros/fiat</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/volkswagen</loc>
+    <loc>https://sulmotor.com/carros/volkswagen</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/chevrolet</loc>
+    <loc>https://sulmotor.com/carros/chevrolet</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/toyota</loc>
+    <loc>https://sulmotor.com/carros/toyota</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/honda</loc>
+    <loc>https://sulmotor.com/carros/honda</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/hyundai</loc>
+    <loc>https://sulmotor.com/carros/hyundai</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/ford</loc>
+    <loc>https://sulmotor.com/carros/ford</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/nissan</loc>
+    <loc>https://sulmotor.com/carros/nissan</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/renault</loc>
+    <loc>https://sulmotor.com/carros/renault</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/jeep</loc>
+    <loc>https://sulmotor.com/carros/jeep</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/mercedes-benz</loc>
+    <loc>https://sulmotor.com/carros/mercedes-benz</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/bmw</loc>
+    <loc>https://sulmotor.com/carros/bmw</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/audi</loc>
+    <loc>https://sulmotor.com/carros/audi</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/volvo</loc>
+    <loc>https://sulmotor.com/carros/volvo</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/mitsubishi</loc>
+    <loc>https://sulmotor.com/carros/mitsubishi</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/kia</loc>
+    <loc>https://sulmotor.com/carros/kia</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/peugeot</loc>
+    <loc>https://sulmotor.com/carros/peugeot</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros/citroen</loc>
+    <loc>https://sulmotor.com/carros/citroen</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
 
   <!-- City pages (main cities in Rio Grande do Sul / South Brazil) -->
   <url>
-    <loc>https://sulmotor.com.br/carros-usados/porto-alegre</loc>
+    <loc>https://sulmotor.com/carros-usados/porto-alegre</loc>
     <changefreq>daily</changefreq>
     <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-usados/caxias-do-sul</loc>
+    <loc>https://sulmotor.com/carros-usados/caxias-do-sul</loc>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-usados/pelotas</loc>
+    <loc>https://sulmotor.com/carros-usados/pelotas</loc>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-usados/canoas</loc>
+    <loc>https://sulmotor.com/carros-usados/canoas</loc>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-usados/santa-maria</loc>
+    <loc>https://sulmotor.com/carros-usados/santa-maria</loc>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-usados/novo-hamburgo</loc>
+    <loc>https://sulmotor.com/carros-usados/novo-hamburgo</loc>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-usados/sao-leopoldo</loc>
+    <loc>https://sulmotor.com/carros-usados/sao-leopoldo</loc>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-usados/tramandai</loc>
+    <loc>https://sulmotor.com/carros-usados/tramandai</loc>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-usados/gravatai</loc>
+    <loc>https://sulmotor.com/carros-usados/gravatai</loc>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/carros-usados/viamao</loc>
+    <loc>https://sulmotor.com/carros-usados/viamao</loc>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
 
   <!-- Legal / info pages -->
   <url>
-    <loc>https://sulmotor.com.br/termos</loc>
+    <loc>https://sulmotor.com/termos</loc>
     <changefreq>yearly</changefreq>
     <priority>0.20</priority>
   </url>
   <url>
-    <loc>https://sulmotor.com.br/privacidade</loc>
+    <loc>https://sulmotor.com/privacidade</loc>
     <changefreq>yearly</changefreq>
     <priority>0.20</priority>
   </url>

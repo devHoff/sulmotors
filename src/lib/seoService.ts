@@ -64,7 +64,7 @@ export interface VehicleJsonLd {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const SITE_URL   = 'https://sulmotor.com.br';
+const SITE_URL   = 'https://sulmotor.com';
 const SITE_NAME  = 'SulMotor';
 const DEFAULT_OG = `${SITE_URL}/og-default.jpg`;
 
@@ -104,7 +104,7 @@ export function getListingCanonical(carId: string): string {
 
 /**
  * Slug-based SEO URL (for structured data and sitemap).
- * Example: https://sulmotor.com.br/carros/mercedes-amg-g63-2025-sao-paulo
+ * Example: https://sulmotor.com/carros/mercedes-amg-g63-2025-sao-paulo
  */
 export function getSlugUrl(car: SeoCarData): string {
     return `${SITE_URL}/carros/${generateSlug(car)}`;

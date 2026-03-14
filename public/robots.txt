@@ -16,4 +16,4 @@ Allow: /carro/
 Allow: /estoque
 
 # Sitemap
-Sitemap: https://sulmotor.com.br/sitemap.xml
+Sitemap: https://sulmotor.com/sitemap.xml

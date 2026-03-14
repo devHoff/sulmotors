@@ -212,7 +212,7 @@ async function createPaymentHandler(req, res) {
             external_reference: String(external_reference).slice(0, 256),
             // Webhook URL: always set server-side, never from client
             notification_url: process.env.WEBHOOK_URL
-                ?? `${process.env.APP_URL ?? 'https://sulmotor.com.br'}/api/webhooks/mercadopago`,
+                ?? `${process.env.APP_URL ?? 'https://sulmotor.com'}/api/webhooks/mercadopago`,
             metadata: {
                 source:  'sulmotor',
                 service: 'impulsionar',

@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
  * Resolve the OAuth / password-reset redirect URL dynamically.
  *
  * In development  → http://localhost:5173/auth/callback
- * In production   → https://sulmotor.com.br/auth/callback
+ * In production   → https://sulmotor.com/auth/callback
  *
  * Supabase requires this URL to be listed in
  *   Dashboard → Authentication → URL Configuration → Redirect URLs
@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      * ⚠️  Make sure to add the redirect URL to Supabase Dashboard:
      *      Authentication → URL Configuration → Redirect URLs
      *      Add both:
-     *        - https://sulmotor.com.br/auth/callback
+     *        - https://sulmotor.com/auth/callback
      *        - http://localhost:5173/auth/callback  (for local dev)
      */
     const resetPassword = async (email: string) => {

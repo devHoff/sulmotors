@@ -70,13 +70,13 @@ Deno.serve(async (req) => {
         const mpToken  = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
         const sbUrl    = Deno.env.get('SUPABASE_URL') ?? '';
         const sbKey    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-        const baseUrl  = Deno.env.get('APP_URL') ?? 'https://sulmotor.com.br';
+        const baseUrl  = Deno.env.get('APP_URL') ?? 'https://sulmotor.com';
 
         // Sanitise payer email — never use the seller's email as fallback
         const rawEmail = (user_email ?? '').trim().toLowerCase();
         const payerEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)
             ? rawEmail
-            : (mpToken?.startsWith('TEST-') ? 'test_user_123456789@testuser.com' : 'pagador@sulmotor.com.br');
+            : (mpToken?.startsWith('TEST-') ? 'test_user_123456789@testuser.com' : 'pagador@sulmotor.com');
 
         // ── 1. Register pending pagamento in DB (best-effort) ─────────────────
         let pagamentoId: string | null = null;
