@@ -8,6 +8,8 @@
  * Used by PainelLoja to grant access and auto-tag listings.
  */
 
+import { ALEX_MEGAMOTORS_LOGO } from '../assets/alexMegamotorsLogo';
+
 export interface StoreProfile {
     /** Display name shown on the contact card and store panel */
     name: string;
@@ -38,7 +40,7 @@ export const STORE_PROFILES: Record<string, StoreProfile> = {
         userId:        '9b130f55-cfa0-4fa3-8379-7f928bb75afb',
         whatsappNumber:'5551980446474',
         phoneDisplay:  '+55 51 98044-6474',
-        logo:          '/alex-megamotors-logo.png',
+        logo:          ALEX_MEGAMOTORS_LOGO,
         tagline:       'Especialistas em veículos seminovos',
         cidade:        'Porto Alegre, RS',
     },

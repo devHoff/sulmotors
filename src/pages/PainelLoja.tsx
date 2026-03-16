@@ -12,6 +12,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ALEX_MEGAMOTORS_LOGO } from '../assets/alexMegamotorsLogo';
 import {
     Plus, Car, Trash2, Edit3, Eye, Star, TrendingUp,
     LogOut, BarChart2, CheckCircle2, XCircle, AlertCircle,
@@ -483,7 +484,7 @@ CREATE INDEX IF NOT EXISTS idx_profiles_cpf ON public.profiles (cpf)
                     {/* Logo + store name */}
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl bg-black border border-white/15 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                            <img src={store.logo || '/alex-megamotors-logo.png'} alt={store.name} className="w-full h-full object-contain" />
+                            <img src={store.logo || ALEX_MEGAMOTORS_LOGO} alt={store.name} className="w-full h-full object-contain" />
                         </div>
                         <div>
                             <p className="text-xs text-zinc-500 leading-none">Painel</p>
