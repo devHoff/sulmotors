@@ -21,7 +21,7 @@ import {
 import { toast } from '../utils/toast';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { getStoreByEmail } from '../lib/storeProfiles';
+import { getStoreByEmail, getStoreKeyByUserId } from '../lib/storeProfiles';
 import { brands, fuels, transmissions } from '../data/mockCars';
 import { useBrazilianCities } from '../hooks/useBrazilianCities';
 import CropModal from '../components/CropModal';
@@ -112,7 +112,7 @@ export default function PainelLoja() {
 
     // ── Redirect if not authorized ────────────────────────────────────────────
     useEffect(() => {
-        if (!user) { navigate('/login'); return; }
+        if (!user) { navigate('/login?from=/loja/painel'); return; }
         if (!store) { navigate('/'); return; }
     }, [user, store, navigate]);
 
@@ -448,7 +448,7 @@ export default function PainelLoja() {
                     {/* Logo + store name */}
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 flex items-center justify-center flex-shrink-0">
-                            <img src="/alex-megamotors-logo.png" alt={store.name} className="w-full h-full object-contain" />
+                            <img src={store.logo || '/alex-megamotors-logo.png'} alt={store.name} className="w-full h-full object-contain" />
                         </div>
                         <div>
                             <p className="text-xs text-zinc-500 leading-none">Painel</p>
@@ -474,6 +474,15 @@ export default function PainelLoja() {
 
                     {/* Right actions */}
                     <div className="flex items-center gap-2">
+                        {/* Link to public store page */}
+                        {getStoreKeyByUserId(user?.id) && (
+                            <Link
+                                to={`/loja/${getStoreKeyByUserId(user?.id)}`}
+                                target="_blank"
+                                className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-zinc-900 border border-white/10 hover:border-brand-400/40 text-zinc-400 hover:text-white text-xs font-bold rounded-xl transition-all">
+                                <Eye className="w-3.5 h-3.5" /> Página da loja
+                            </Link>
+                        )}
                         <Link to="/estoque" target="_blank"
                             className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-zinc-900 border border-white/10 hover:border-brand-400/40 text-zinc-400 hover:text-white text-xs font-bold rounded-xl transition-all">
                             <Eye className="w-3.5 h-3.5" /> Ver site

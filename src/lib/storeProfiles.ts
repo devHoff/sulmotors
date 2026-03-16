@@ -13,6 +13,8 @@ export interface StoreProfile {
     name: string;
     /** Authorized email(s) that can access this store's panel */
     emails: string[];
+    /** Supabase Auth user UUID linked to this store */
+    userId: string;
     /** WhatsApp number — digits only, with country code (55 = Brazil) */
     whatsappNumber: string;
     /** Formatted display phone, e.g. "+55 51 98044-6474" */
@@ -21,6 +23,8 @@ export interface StoreProfile {
     logo: string;
     /** Short tagline shown below the name */
     tagline?: string;
+    /** City / location displayed on the store page */
+    cidade?: string;
 }
 
 /**
@@ -31,10 +35,12 @@ export const STORE_PROFILES: Record<string, StoreProfile> = {
     alexmegamotors: {
         name:          'AlexMegamotors',
         emails:        ['bandasleonardo@gmail.com'],
+        userId:        '9b130f55-cfa0-4fa3-8379-7f928bb75afb',
         whatsappNumber:'5551980446474',
         phoneDisplay:  '+55 51 98044-6474',
         logo:          '/alex-megamotors-logo.png',
         tagline:       'Especialistas em veículos seminovos',
+        cidade:        'Porto Alegre, RS',
     },
 };
 
@@ -47,6 +53,22 @@ export const STORE_EMAIL_MAP: Record<string, string> = Object.fromEntries(
         profile.emails.map(email => [email.toLowerCase(), key])
     )
 );
+
+/**
+ * Returns the StoreProfile for a given Supabase user UUID, or undefined.
+ */
+export function getStoreByUserId(userId: string | undefined | null): StoreProfile | undefined {
+    if (!userId) return undefined;
+    return Object.values(STORE_PROFILES).find(p => p.userId === userId);
+}
+
+/**
+ * Returns the store key (e.g. 'alexmegamotors') for a given user UUID.
+ */
+export function getStoreKeyByUserId(userId: string | undefined | null): string | undefined {
+    if (!userId) return undefined;
+    return Object.entries(STORE_PROFILES).find(([, p]) => p.userId === userId)?.[0];
+}
 
 /**
  * Returns the StoreProfile for a given email address, or undefined.

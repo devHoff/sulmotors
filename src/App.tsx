@@ -19,6 +19,7 @@ import Privacidade from './pages/Privacidade';
 import SeusDireitos from './pages/SeusDireitos';
 import Admin from './pages/Admin';
 import PainelLoja from './pages/PainelLoja';
+import LojaPublica from './pages/LojaPublica';
 import Cookies from './pages/Cookies';
 import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
@@ -72,6 +73,7 @@ export default function App() {
 
                 {/* ── Store panel: full-screen layout for partner stores ── */}
                 <Route path="/loja/painel" element={<PainelLoja />} />
+                <Route path="/loja/:storeKey" element={<LojaPublica />} />
 
                 {/*
                  * ── Auth callback: handles OAuth redirects and password-reset

@@ -14,7 +14,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { trackView } from '../lib/viewTracker';
 import { generateSeoMetadata, injectSeoTags } from '../lib/seoService';
 import CarCard from '../components/CarCard';
-import { getStoreProfile, buildWhatsAppLink, type StoreProfile } from '../lib/storeProfiles';
+import { getStoreProfile, getStoreByUserId, getStoreKeyByUserId, buildWhatsAppLink, type StoreProfile } from '../lib/storeProfiles';
 
 // ── Fallback global WhatsApp (used when seller has no store profile) ──────────
 const WHATSAPP_FALLBACK = '555192263188';
@@ -272,8 +272,8 @@ export default function DetalheCarro() {
     useEffect(() => {
         if (!car) return;
 
-        // 1. Fast-path: check static store registry by car.loja field
-        const staticProfile = getStoreProfile(car.loja);
+        // 1. Fast-path: check static store registry by car.loja field OR user_id
+        const staticProfile = getStoreProfile(car.loja) ?? getStoreByUserId(car.user_id);
         if (staticProfile) {
             setSellerStore(staticProfile);
             return;
@@ -293,6 +293,7 @@ export default function DetalheCarro() {
                 const profile = getStoreProfile(data.store_name) ?? {
                     name:          data.store_name,
                     emails:        [] as string[],
+                    userId:        car.user_id || '',
                     whatsappNumber:(data.store_phone || data.phone || '').replace(/\D/g, ''),
                     phoneDisplay:  data.store_phone || data.phone || '',
                     logo:          data.store_logo  || '',
@@ -305,6 +306,7 @@ export default function DetalheCarro() {
                 setSellerStore({
                     name:          data.full_name || 'Vendedor',
                     emails:        [] as string[],
+                    userId:        car.user_id || '',
                     whatsappNumber: num,
                     phoneDisplay:  data.phone,
                     logo:          '',
@@ -712,6 +714,13 @@ export default function DetalheCarro() {
                                                     <StarRating rating={sellerRating} />
                                                     <span className="text-xs text-slate-500 dark:text-zinc-500">{sellerRating.toFixed(1)} ({sellerReviews})</span>
                                                 </div>
+                                            )}
+                                            {/* Link to public store page */}
+                                            {car.user_id && getStoreKeyByUserId(car.user_id) && (
+                                                <a href={`/loja/${getStoreKeyByUserId(car.user_id)}`}
+                                                    className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 font-semibold mt-1 transition-colors">
+                                                    Ver perfil da loja →
+                                                </a>
                                             )}
                                         </div>
                                     </div>

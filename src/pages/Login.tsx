@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getStoreByEmail } from '../lib/storeProfiles';
 import {
     Mail, Loader2, User, Phone, ArrowRight,
     Eye, EyeOff, Shield, CheckCircle2, AlertTriangle,
@@ -71,9 +72,13 @@ const GoogleIcon = () => (
 
 
 export default function Login() {
-    const navigate = useNavigate();
+    const navigate   = useNavigate();
+    const location    = useLocation();
     const { signInWithEmail, signInWithGoogle, resetPassword, signUp } = useAuth();
     const { t } = useLanguage();
+
+    // Redirect destination — respects ?from= param or store panel
+    const fromParam = new URLSearchParams(location.search).get('from') || null;
 
     const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
@@ -110,7 +115,15 @@ export default function Login() {
         try {
             await signInWithEmail(form.email, form.password);
             smToast.loginSuccess();
-            navigate('/');
+            // Redirect store users to their panel, others to home or ?from= param
+            const storeProfile = getStoreByEmail(form.email);
+            if (storeProfile) {
+                navigate('/loja/painel');
+            } else if (fromParam) {
+                navigate(fromParam);
+            } else {
+                navigate('/');
+            }
         } catch (error: any) {
             setLoginError(mapAuthError(error, t));
         } finally {

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, Car, ArrowUpDown, ChevronDown, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CarCard from '../components/CarCard';
@@ -7,6 +7,7 @@ import { brands, type Car as CarType } from '../data/mockCars';
 import { supabasePublic } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { computeScore } from '../lib/rankingService';
+import { STORE_PROFILES } from '../lib/storeProfiles';
 
 
 
@@ -15,6 +16,9 @@ export default function Estoque() {
     const [searchParams] = useSearchParams();
     const initialQuery   = searchParams.get('q')    || '';
     const selectedLoja   = searchParams.get('loja') || '';
+
+    // Resolve store profile from ?loja= param
+    const activeStoreProfile = selectedLoja ? STORE_PROFILES[selectedLoja.toLowerCase()] : undefined;
 
     const [loading, setLoading]           = useState(true);
     const [supabaseCars, setSupabaseCars] = useState<CarType[]>([]);
@@ -81,7 +85,7 @@ export default function Estoque() {
                     impulsionado: (d.impulsionado ?? false) || activeBoosts.length > 0,
                     impulsionado_ate: d.impulsionado_ate || undefined,
                     prioridade: effectivePriority, modelo_3d: false,
-                    created_at: d.created_at, user_id: d.user_id, loja: d.loja,
+                    created_at: d.created_at, user_id: d.user_id, loja: d.user_id,
                 };
             };
 
@@ -247,7 +251,8 @@ export default function Estoque() {
             const matchesBrand   = selectedBrands.length === 0 || selectedBrands.includes(car.marca);
             const matchesPrice   = !priceFilterEnabled || (car.preco >= priceMin && car.preco <= priceMax);
             const matchesYear    = car.ano >= yearMin;
-            const matchesLoja    = selectedLoja === '' || car.loja === selectedLoja;
+            // Match by user_id when filtering by store (no loja column in DB)
+            const matchesLoja    = !activeStoreProfile || car.user_id === activeStoreProfile.userId;
             return matchesSearch && matchesBrand && matchesPrice && matchesYear && matchesLoja;
         }).sort((a, b) => {
             if (sortOrder === 'asc')  return a.preco - b.preco;
@@ -258,7 +263,7 @@ export default function Estoque() {
             if (scoreB !== scoreA) return scoreB - scoreA;
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
-    }, [search, selectedBrands, priceFilterEnabled, priceMin, priceMax, yearMin, supabaseCars, selectedLoja, sortOrder]);
+    }, [search, selectedBrands, priceFilterEnabled, priceMin, priceMax, yearMin, supabaseCars, activeStoreProfile, sortOrder]);
 
     // ── Formatting helper ──────────────────────────────────────────────────────
     const fmtBRL = (n: number) =>
@@ -277,11 +282,24 @@ export default function Estoque() {
                             <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest mb-2">
                                 {filteredCars.length} veículos encontrados
                             </p>
+                            {activeStoreProfile && (
+                                <div className="flex items-center gap-3 mb-2">
+                                    <img src={activeStoreProfile.logo} alt={activeStoreProfile.name}
+                                        className="w-10 h-10 object-contain rounded-lg bg-zinc-800 p-1"
+                                    />
+                                    <Link to={`/loja/${selectedLoja}`}
+                                        className="text-xs font-bold text-brand-400 uppercase tracking-widest hover:text-brand-300 transition-colors">
+                                        Ver perfil da loja →
+                                    </Link>
+                                </div>
+                            )}
                             <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                                {selectedLoja ? selectedLoja : 'Estoque completo'}
+                                {activeStoreProfile ? activeStoreProfile.name : 'Estoque completo'}
                             </h1>
                             <p className="text-slate-500 dark:text-zinc-500 mt-1 text-sm">
-                                {selectedLoja ? `Todos os veículos da ${selectedLoja}` : 'Encontre o carro ideal para você'}
+                                {activeStoreProfile
+                                    ? `Todos os veículos da ${activeStoreProfile.name}${activeStoreProfile.tagline ? ' · ' + activeStoreProfile.tagline : ''}`
+                                    : 'Encontre o carro ideal para você'}
                             </p>
                         </div>
                         <div className="flex gap-3 flex-wrap">
