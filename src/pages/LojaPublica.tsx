@@ -110,10 +110,10 @@ export default function LojaPublica() {
                         <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="flex-shrink-0 w-28 h-28 md:w-36 md:h-36 rounded-2xl bg-zinc-800 border border-white/10 shadow-xl flex items-center justify-center p-3 overflow-hidden"
+                            className="flex-shrink-0 w-28 h-28 md:w-36 md:h-36 rounded-2xl bg-white shadow-2xl overflow-hidden border-2 border-white/20"
                         >
                             <img src={profile.logo} alt={profile.name}
-                                className="w-full h-full object-contain"
+                                className="w-full h-full object-cover"
                             />
                         </motion.div>
 
