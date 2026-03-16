@@ -117,11 +117,17 @@ export default function MeuPerfil() {
     useEffect(() => {
         if (!user) { navigate('/login'); return; }
         (async () => {
-            const { data } = await supabase
+            // Try to fetch extended columns; if they don't exist yet, fetch base columns only
+            const extSelect = await supabase
                 .from('profiles')
                 .select('full_name,phone,cpf,data_nascimento,genero,avatar_url')
                 .eq('id', user.id)
                 .single();
+
+            // Fallback: if extended columns are missing (PGRST204 / error), fetch base
+            const { data } = extSelect.error
+                ? await supabase.from('profiles').select('full_name,phone,avatar_url').eq('id', user.id).single() as any
+                : extSelect as any;
             if (data) {
                 setProfile({
                     full_name:               data.full_name   || '',
@@ -152,21 +158,36 @@ export default function MeuPerfil() {
         }
         setSaving(true);
         try {
-            const { error } = await supabase.from('profiles').upsert(
-                {
-                    id:              user.id,
-                    full_name:       profile.full_name.trim(),
-                    phone:           profile.phone.replace(/\D/g, ''),
-                    cpf:             profile.cpf.replace(/\D/g, ''),
-                    data_nascimento: dmyToISO(profile.data_nascimento_display),
-                    genero:          profile.genero,
-                    avatar_url:      profile.avatar_url,
-                    updated_at:      new Date().toISOString(),
-                },
-                { onConflict: 'id' }   // ensure row is matched by PK
-            );
-            if (error) {
-                console.error('[MeuPerfil] save error:', error);
+            // Full payload (requires cpf, data_nascimento, genero columns)
+            const fullPayload = {
+                id:              user.id,
+                full_name:       profile.full_name.trim(),
+                phone:           profile.phone.replace(/\D/g, ''),
+                cpf:             profile.cpf.replace(/\D/g, '') || null,
+                data_nascimento: dmyToISO(profile.data_nascimento_display) || null,
+                genero:          profile.genero || null,
+                avatar_url:      profile.avatar_url,
+                updated_at:      new Date().toISOString(),
+            };
+            // Base payload — only columns confirmed to exist
+            const basePayload = {
+                id:         user.id,
+                full_name:  profile.full_name.trim(),
+                phone:      profile.phone.replace(/\D/g, ''),
+                avatar_url: profile.avatar_url,
+                updated_at: new Date().toISOString(),
+            };
+
+            let result = await supabase.from('profiles').upsert(fullPayload, { onConflict: 'id' });
+
+            // If full payload fails because extra columns don't exist yet, save base fields
+            if (result.error?.code === 'PGRST204' || result.error?.message?.includes('cpf') || result.error?.message?.includes('schema cache')) {
+                console.warn('[MeuPerfil] extended columns missing, saving base fields only');
+                result = await supabase.from('profiles').upsert(basePayload, { onConflict: 'id' });
+            }
+
+            if (result.error) {
+                console.error('[MeuPerfil] save error:', result.error);
                 toast.error(t('notif_profile_error'));
             } else {
                 toast.success(t('notif_profile_saved'));

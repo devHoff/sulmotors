@@ -104,26 +104,26 @@ export default function LojaPublica() {
                 </div>
 
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+                    <div className="flex flex-col md:flex-row items-center gap-8">
 
-                        {/* Logo */}
+                        {/* Logo — centered vertically with content */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="flex-shrink-0 w-28 h-28 md:w-36 md:h-36 rounded-2xl bg-white shadow-2xl overflow-hidden border-2 border-white/20"
+                            className="flex-shrink-0 w-32 h-32 md:w-40 md:h-40 rounded-2xl bg-white shadow-2xl overflow-hidden border-2 border-white/20 self-center"
                         >
                             <img src={profile.logo} alt={profile.name}
                                 className="w-full h-full object-cover"
                             />
                         </motion.div>
 
-                        {/* Info */}
+                        {/* Info — centered text on all screen sizes */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="flex-1 text-center md:text-left"
+                            className="flex-1 text-center"
                         >
-                            <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+                            <div className="flex items-center justify-center gap-2 mb-1">
                                 <span className="text-xs font-bold text-brand-400 uppercase tracking-widest">Loja Parceira</span>
                                 <BadgeCheck className="w-4 h-4 text-brand-400" />
                             </div>
@@ -133,7 +133,7 @@ export default function LojaPublica() {
                             )}
 
                             {/* Location + phone */}
-                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-zinc-400 mb-6">
+                            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-zinc-400 mb-6">
                                 {profile.cidade && (
                                     <span className="flex items-center gap-1.5">
                                         <MapPin className="w-4 h-4 text-brand-400" />
@@ -147,7 +147,7 @@ export default function LojaPublica() {
                             </div>
 
                             {/* Stats */}
-                            <div className="flex flex-wrap gap-4 justify-center md:justify-start mb-6">
+                            <div className="flex flex-wrap gap-4 justify-center mb-6">
                                 <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 flex items-center gap-2">
                                     <CarIcon className="w-4 h-4 text-brand-400" />
                                     <span className="text-sm font-bold">{totalAds}</span>
