@@ -684,11 +684,11 @@ export default function DetalheCarro() {
                                     <div className="flex items-center gap-3 mb-3">
                                         {/* Logo: store logo image OR brand initial */}
                                         {sellerStore?.logo ? (
-                                            <div className="w-12 h-12 rounded-xl bg-white flex-shrink-0 border border-slate-200 dark:border-white/10 shadow flex items-center justify-center overflow-hidden">
+                                            <div className="w-12 h-12 rounded-xl bg-black flex-shrink-0 border border-slate-200 dark:border-white/10 shadow flex items-center justify-center overflow-hidden">
                                                 <img
                                                     src={sellerStore.logo}
                                                     alt={sellerStore.name}
-                                                    className="max-w-[80%] max-h-[80%] w-auto h-auto object-contain"
+                                                    className="w-full h-full object-contain"
                                                 />
                                             </div>
                                         ) : (
