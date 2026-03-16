@@ -27,6 +27,7 @@ import { supabase, supabasePublic } from '../lib/supabase';
 const ADMIN_EMAILS = [
     'contato@sulmotor.com',
     'mvp.hoffmann@gmail.com',
+    'luishenriquegrings@gmail.com',
 ];
 const ADMIN_2FA_CODE = '834221';
 
