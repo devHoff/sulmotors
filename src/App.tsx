@@ -18,6 +18,7 @@ import Termos from './pages/Termos';
 import Privacidade from './pages/Privacidade';
 import SeusDireitos from './pages/SeusDireitos';
 import Admin from './pages/Admin';
+import PainelLoja from './pages/PainelLoja';
 import Cookies from './pages/Cookies';
 import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
@@ -68,6 +69,9 @@ export default function App() {
             <Routes>
                 {/* ── Admin: full-screen layout (no navbar/footer) ── */}
                 <Route path="/admin" element={<Admin />} />
+
+                {/* ── Store panel: full-screen layout for partner stores ── */}
+                <Route path="/loja/painel" element={<PainelLoja />} />
 
                 {/*
                  * ── Auth callback: handles OAuth redirects and password-reset

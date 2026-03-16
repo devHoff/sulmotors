@@ -14,15 +14,16 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { trackView } from '../lib/viewTracker';
 import { generateSeoMetadata, injectSeoTags } from '../lib/seoService';
 import CarCard from '../components/CarCard';
+import { getStoreProfile, buildWhatsAppLink, type StoreProfile } from '../lib/storeProfiles';
 
-// ── Internal contact helper ───────────────────────────────────────────────────
-const WHATSAPP_NUMBER = '555192263188';
-function contactLink(car: Car) {
+// ── Fallback global WhatsApp (used when seller has no store profile) ──────────
+const WHATSAPP_FALLBACK = '555192263188';
+function contactLinkFallback(car: Car) {
     const priceStr = new Intl.NumberFormat('pt-BR', {
         style: 'currency', currency: 'BRL', minimumFractionDigits: 0
     }).format(car.preco);
     const msg = encodeURIComponent(`Olá! Tenho interesse no veículo anunciado na SulMotor:\n\n🚗 ${car.marca} ${car.modelo} ${car.ano}\n💰 ${priceStr}\n🔗 ${window.location.href}\n\nAguardo retorno!`);
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
+    return `https://wa.me/${WHATSAPP_FALLBACK}?text=${msg}`;
 }
 
 // ── Financing calculator ──────────────────────────────────────────────────────
@@ -78,6 +79,9 @@ export default function DetalheCarro() {
     const [sellerRating] = useState<number>(4.2);
     const [sellerReviews] = useState<number>(37);
     const [sellerVerified] = useState<boolean>(true);
+
+    // ── Seller / Store profile ────────────────────────────────────────────────
+    const [sellerStore, setSellerStore] = useState<StoreProfile | null>(null);
 
     useEffect(() => {
         async function fetchCar() {
@@ -263,6 +267,52 @@ export default function DetalheCarro() {
         fetchRelated();
     }, [car?.id]);
     // ── end related cars ──────────────────────────────────────────────────────
+
+    // ── Seller / Store profile fetch ──────────────────────────────────────────
+    useEffect(() => {
+        if (!car) return;
+
+        // 1. Fast-path: check static store registry by car.loja field
+        const staticProfile = getStoreProfile(car.loja);
+        if (staticProfile) {
+            setSellerStore(staticProfile);
+            return;
+        }
+
+        // 2. Async: fetch from profiles table (requires migration 007)
+        if (!car.user_id) return;
+        (async () => {
+            const { data } = await supabasePublic
+                .from('profiles')
+                .select('store_name, store_phone, store_logo, is_store, full_name, phone')
+                .eq('id', car.user_id)
+                .single();
+
+            if (data?.is_store && data.store_name) {
+                // Try static config first (has logo + tagline), fallback to DB data
+                const profile = getStoreProfile(data.store_name) ?? {
+                    name:          data.store_name,
+                    emails:        [] as string[],
+                    whatsappNumber:(data.store_phone || data.phone || '').replace(/\D/g, ''),
+                    phoneDisplay:  data.store_phone || data.phone || '',
+                    logo:          data.store_logo  || '',
+                };
+                setSellerStore(profile);
+            } else if (data?.phone) {
+                // Regular seller with phone on profile — build minimal store object
+                const raw = data.phone.replace(/\D/g, '');
+                const num = raw.startsWith('55') ? raw : `55${raw}`;
+                setSellerStore({
+                    name:          data.full_name || 'Vendedor',
+                    emails:        [] as string[],
+                    whatsappNumber: num,
+                    phoneDisplay:  data.phone,
+                    logo:          '',
+                });
+            }
+        })();
+    }, [car?.id, car?.user_id, car?.loja]);
+    // ── end seller profile ────────────────────────────────────────────────────
 
     const toggleLike = async () => {
         if (!user || !car) return;
@@ -588,7 +638,13 @@ export default function DetalheCarro() {
                                                     * Simulação meramente indicativa. Condições reais de crédito podem variar conforme análise do banco.
                                                 </p>
 
-                                                <a href={contactLink(car)}
+                                                <a href={(() => {
+                                                        const vehicleName = `${car.marca} ${car.modelo} ${car.ano}`;
+                                                        return sellerStore
+                                                            ? buildWhatsAppLink({ whatsappNumber: sellerStore.whatsappNumber, vehicleName, listingUrl: window.location.href })
+                                                            : contactLinkFallback(car);
+                                                    })()}
+                                                    target="_blank" rel="noopener noreferrer"
                                                     className="flex items-center justify-center gap-2 w-full py-3 bg-brand-500 hover:bg-brand-400 text-zinc-950 font-bold rounded-xl transition-all text-sm">
                                                     <Mail className="w-4 h-4" strokeWidth={1.5} />
                                                     Quero financiar — Falar com consultor
@@ -620,25 +676,43 @@ export default function DetalheCarro() {
 
                             {/* Contact card */}
                             <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/8 rounded-2xl overflow-hidden shadow-sm dark:shadow-none">
-                                {/* Seller header */}
+
+                                {/* ── Seller / Store header ─────────────────── */}
                                 <div className="p-6 border-b border-slate-100 dark:border-white/5">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center text-zinc-950 font-black text-lg">
-                                            {(car.marca || 'V').charAt(0)}
-                                        </div>
+                                        {/* Logo: store logo image OR brand initial */}
+                                        {sellerStore?.logo ? (
+                                            <div className="w-12 h-12 rounded-xl overflow-hidden bg-zinc-950 flex items-center justify-center flex-shrink-0 border border-white/10">
+                                                <img
+                                                    src={sellerStore.logo}
+                                                    alt={sellerStore.name}
+                                                    className="w-full h-full object-contain"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="w-12 h-12 bg-gradient-to-br from-brand-400 to-brand-600 rounded-xl flex items-center justify-center text-zinc-950 font-black text-lg flex-shrink-0">
+                                                {(sellerStore?.name || car.marca || 'V').charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-1.5 flex-wrap">
-                                                <p className="font-bold text-slate-900 dark:text-white">{t('detail_seller')}</p>
+                                                <p className="font-bold text-slate-900 dark:text-white truncate">
+                                                    {sellerStore?.name || t('detail_seller')}
+                                                </p>
                                                 {sellerVerified && (
-                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-md">
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-md flex-shrink-0">
                                                         <BadgeCheck className="w-3 h-3" strokeWidth={1.5} /> Verificado
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <StarRating rating={sellerRating} />
-                                                <span className="text-xs text-slate-500 dark:text-zinc-500">{sellerRating.toFixed(1)} ({sellerReviews})</span>
-                                            </div>
+                                            {sellerStore?.tagline ? (
+                                                <p className="text-xs text-slate-500 dark:text-zinc-500 mt-0.5 truncate">{sellerStore.tagline}</p>
+                                            ) : (
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <StarRating rating={sellerRating} />
+                                                    <span className="text-xs text-slate-500 dark:text-zinc-500">{sellerRating.toFixed(1)} ({sellerReviews})</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -664,19 +738,48 @@ export default function DetalheCarro() {
                                     )}
                                 </div>
 
-                                {/* CTAs — ALL via centralised WhatsApp */}
+                                {/* ── CTAs ─────────────────────────────────── */}
                                 <div className="p-6 space-y-3">
-                                    <a href={contactLink(car)}
-                                        className="flex items-center justify-center gap-2.5 w-full py-4 bg-gradient-to-r from-brand-500 to-brand-400 text-zinc-950 font-black rounded-xl hover:shadow-lg hover:shadow-brand-400/20 transition-all">
-                                        <Mail className="w-5 h-5" strokeWidth={1.5} />
-                                        {t('detail_contact_label')}
-                                    </a>
+                                    {/* Primary CTA: WhatsApp with dynamic pre-filled message */}
+                                    {(() => {
+                                        const vehicleName = `${car.marca} ${car.modelo} ${car.ano}`;
+                                        const listingUrl  = window.location.href;
+                                        const waLink = sellerStore
+                                            ? buildWhatsAppLink({
+                                                whatsappNumber: sellerStore.whatsappNumber,
+                                                vehicleName,
+                                                listingUrl,
+                                              })
+                                            : contactLinkFallback(car);
+                                        return (
+                                            <a
+                                                href={waLink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center justify-center gap-2.5 w-full py-4 bg-gradient-to-r from-brand-500 to-brand-400 text-zinc-950 font-black rounded-xl hover:shadow-lg hover:shadow-brand-400/20 transition-all">
+                                                {/* WhatsApp SVG icon */}
+                                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                                                </svg>
+                                                {t('detail_contact_label')}
+                                            </a>
+                                        );
+                                    })()}
+
+                                    {/* Secondary: Financing simulator */}
                                     <button
                                         onClick={() => setShowFinancing(true)}
                                         className="flex items-center justify-center gap-2.5 w-full py-3.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold rounded-xl transition-all text-sm">
                                         <TrendingUp className="w-4 h-4 text-brand-500 dark:text-brand-400" strokeWidth={1.5} />
                                         Simular Financiamento
                                     </button>
+
+                                    {/* Phone display (if store has phone) */}
+                                    {sellerStore?.phoneDisplay && (
+                                        <p className="text-center text-xs text-slate-400 dark:text-zinc-600 font-medium">
+                                            📞 {sellerStore.phoneDisplay}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Safety note */}
