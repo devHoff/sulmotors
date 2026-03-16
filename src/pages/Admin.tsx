@@ -217,22 +217,22 @@ function StatCard({ label, value, sub, icon: Icon, color, trend }: {
     icon: React.ElementType; color: string; trend?: 'up' | 'down' | 'neutral';
 }) {
     return (
-        <div className="bg-[#0d1117] border border-white/8 rounded-2xl p-5 hover:border-white/15 transition-colors">
-            <div className="flex items-start justify-between mb-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
-                    <Icon className="w-5 h-5" strokeWidth={1.5} />
+        <div className="bg-[#0d1117] border border-white/8 rounded-2xl p-3.5 md:p-5 hover:border-white/15 transition-colors">
+            <div className="flex items-start justify-between mb-2 md:mb-3">
+                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center ${color}`}>
+                    <Icon className="w-4 h-4 md:w-5 md:h-5" strokeWidth={1.5} />
                 </div>
                 {trend && (
-                    <span className={`flex items-center gap-1 text-xs font-bold ${
+                    <span className={`flex items-center gap-0.5 text-[10px] md:text-xs font-bold ${
                         trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-zinc-500'
                     }`}>
-                        {trend === 'up' ? <ArrowUpRight className="w-3.5 h-3.5" /> : trend === 'down' ? <ArrowDownRight className="w-3.5 h-3.5" /> : null}
-                        {sub}
+                        {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : trend === 'down' ? <ArrowDownRight className="w-3 h-3" /> : null}
+                        <span className="truncate max-w-[70px] md:max-w-none">{sub}</span>
                     </span>
                 )}
             </div>
-            <p className="text-2xl font-black text-white">{value}</p>
-            <p className="text-xs text-zinc-500 mt-1">{label}</p>
+            <p className="text-xl md:text-2xl font-black text-white">{value}</p>
+            <p className="text-[11px] md:text-xs text-zinc-500 mt-0.5 md:mt-1 leading-tight">{label}</p>
         </div>
     );
 }
@@ -272,6 +272,7 @@ export default function Admin() {
     });
     const [section, setSection] = useState<AdminSection>('dashboard');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Data
     const [cars, setCars] = useState<any[]>([]);
@@ -451,8 +452,83 @@ export default function Admin() {
     return (
         <div className="flex h-screen bg-[#080c10] overflow-hidden">
 
-            {/* ── SIDEBAR ── */}
-            <aside className={`flex-shrink-0 flex flex-col bg-[#0a0e14] border-r border-white/8 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-60'}`}>
+            {/* ── MOBILE DRAWER OVERLAY ── */}
+            <AnimatePresence>
+                {mobileMenuOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="md:hidden fixed inset-0 z-50 flex"
+                    >
+                        {/* Backdrop */}
+                        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+
+                        {/* Drawer */}
+                        <motion.aside
+                            initial={{ x: -280 }}
+                            animate={{ x: 0 }}
+                            exit={{ x: -280 }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                            className="relative z-10 w-72 flex flex-col bg-[#0a0e14] border-r border-white/10 h-full"
+                        >
+                            {/* Drawer header */}
+                            <div className="flex items-center gap-3 px-5 py-5 border-b border-white/8">
+                                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                    <img src="/sulmotor-logo-64.png" alt="SulMotor" className="w-9 h-9 object-contain" />
+                                </div>
+                                <div>
+                                    <span className="text-sm font-black text-white leading-none block">SulMotor</span>
+                                    <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest">Admin</span>
+                                </div>
+                                <button onClick={() => setMobileMenuOpen(false)} className="ml-auto text-zinc-500 hover:text-white transition-colors p-1">
+                                    <X className="w-5 h-5" strokeWidth={1.5} />
+                                </button>
+                            </div>
+
+                            {/* Drawer nav */}
+                            <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-3">
+                                {sidebarItems.map(({ id, label, icon: Icon, badge }) => (
+                                    <button
+                                        key={id}
+                                        onClick={() => { setSection(id as AdminSection); setMobileMenuOpen(false); }}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all relative ${
+                                            section === id
+                                                ? 'bg-cyan-500/10 border border-cyan-500/20 text-cyan-400'
+                                                : 'border border-transparent text-zinc-400 hover:bg-white/5 hover:text-white'
+                                        }`}
+                                    >
+                                        <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.5} />
+                                        <span className="flex-1 text-left">{label}</span>
+                                        {badge && (
+                                            <span className="bg-red-500 text-white text-[10px] font-black rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                                                {badge}
+                                            </span>
+                                        )}
+                                        {section === id && <ChevronRight className="w-4 h-4 opacity-60" strokeWidth={1.5} />}
+                                    </button>
+                                ))}
+                            </nav>
+
+                            {/* Drawer bottom */}
+                            <div className="border-t border-white/8 p-4 space-y-1">
+                                <Link to="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-zinc-400 hover:text-white hover:bg-white/5 transition-all">
+                                    <ExternalLink className="w-5 h-5 flex-shrink-0" strokeWidth={1.5} />
+                                    Ver site
+                                </Link>
+                                <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                                    <LogOut className="w-5 h-5 flex-shrink-0" strokeWidth={1.5} />
+                                    Sair
+                                </button>
+                            </div>
+                        </motion.aside>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── SIDEBAR (desktop only) ── */}
+            <aside className={`hidden md:flex flex-shrink-0 flex-col bg-[#0a0e14] border-r border-white/8 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-60'}`}>
                 {/* Logo */}
                 <div className="flex items-center gap-3 px-4 py-5 border-b border-white/8">
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -517,8 +593,49 @@ export default function Admin() {
             {/* ── MAIN ── */}
             <div className="flex-1 flex flex-col overflow-hidden">
 
-                {/* ── TOPBAR ── */}
-                <header className="flex-shrink-0 flex items-center gap-4 px-6 py-4 bg-[#0a0e14] border-b border-white/8">
+                {/* ── MOBILE TOP HEADER ── */}
+                <header className="md:hidden flex-shrink-0 flex items-center gap-3 px-4 py-3.5 bg-[#0a0e14] border-b border-white/8">
+                    <button
+                        onClick={() => setMobileMenuOpen(true)}
+                        className="w-9 h-9 flex items-center justify-center bg-[#0d1117] border border-white/8 rounded-xl text-zinc-400 hover:text-white transition-all flex-shrink-0"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                    </button>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <img src="/sulmotor-logo-64.png" alt="SulMotor" className="w-7 h-7 object-contain flex-shrink-0" />
+                        <div className="min-w-0">
+                            <span className="text-sm font-black text-white leading-none block truncate">
+                                {sidebarItems.find(i => i.id === section)?.label ?? 'Dashboard'}
+                            </span>
+                            <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest">Admin</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="relative" ref={bellRef}>
+                            <button
+                                onClick={() => setBellOpen(v => !v)}
+                                className={`relative w-9 h-9 flex items-center justify-center bg-[#0d1117] border rounded-xl transition-all ${
+                                    bellOpen ? 'border-cyan-500/40 text-cyan-400' : 'border-white/8 text-zinc-500'
+                                }`}
+                            >
+                                <Bell className="w-4 h-4" strokeWidth={1.5} />
+                                {alertsList.length > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                                        {alertsList.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                        <button onClick={loadData} disabled={refreshing} className="w-9 h-9 flex items-center justify-center bg-[#0d1117] border border-white/8 rounded-xl text-zinc-500">
+                            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} strokeWidth={1.5} />
+                        </button>
+                    </div>
+                </header>
+
+                {/* ── DESKTOP TOPBAR ── */}
+                <header className="hidden md:flex flex-shrink-0 items-center gap-4 px-6 py-4 bg-[#0a0e14] border-b border-white/8">
                     {/* Search */}
                     <div className="flex-1 relative max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" strokeWidth={1.5} />
@@ -645,7 +762,7 @@ export default function Admin() {
 
                 {/* ── ALERT BANNER ── */}
                 {alertsList.length > 0 && (
-                    <div className="flex-shrink-0 px-6 py-3 bg-red-950/30 border-b border-red-500/20 flex items-center gap-3">
+                    <div className="flex-shrink-0 px-4 md:px-6 py-2.5 bg-red-950/30 border-b border-red-500/20 flex items-center gap-2 md:gap-3">
                         <AlertOctagon className="w-4 h-4 text-red-400 flex-shrink-0" strokeWidth={1.5} />
                         <p className="text-xs text-red-300 flex-1 truncate">{alertsList[0].msg}</p>
                         <button onClick={() => setSection('logs')} className="text-xs text-red-400 font-bold hover:text-red-300 flex-shrink-0">Ver logs</button>
@@ -656,7 +773,7 @@ export default function Admin() {
                 )}
 
                 {/* ── CONTENT ── */}
-                <main className="flex-1 overflow-y-auto p-6">
+                <main className="flex-1 overflow-y-auto p-3 md:p-6 pb-24 md:pb-6">
                     <AnimatePresence mode="wait">
 
                         {/* ════════════════════ DASHBOARD ════════════════════ */}
@@ -670,13 +787,13 @@ export default function Admin() {
                                 </div>
 
                                 {/* KPI Cards */}
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                                     <StatCard label="Usuários cadastrados" value={loading ? '—' : `${stats.totalUsers.toLocaleString('pt-BR')}`} sub={`+${stats.todayUsers} hoje`} icon={Users} color="bg-blue-500/10 text-blue-400" trend="up" />
                                     <StatCard label="Anúncios ativos" value={loading ? '—' : stats.activeCars} sub={`+${stats.todayCars} hoje`} icon={Car} color="bg-cyan-500/10 text-cyan-400" trend="up" />
                                     <StatCard label="Publicados hoje" value={loading ? '—' : stats.todayCars} sub="veículos" icon={Package} color="bg-violet-500/10 text-violet-400" trend="neutral" />
                                     <StatCard label="Mensagens trocadas" value="9.420" sub="+312 hoje" icon={MessageSquare} color="bg-emerald-500/10 text-emerald-400" trend="up" />
                                 </div>
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                                     <StatCard label="Pendentes de aprovação" value={loading ? '—' : stats.pendingCars} sub="requerem ação" icon={AlertTriangle} color="bg-amber-500/10 text-amber-400" trend="neutral" />
                                     <StatCard label="Em destaque" value={loading ? '—' : stats.featuredCars} sub="anúncios" icon={Star} color="bg-yellow-500/10 text-yellow-400" trend="neutral" />
                                     <StatCard label="Denúncias abertas" value="5" sub="pendentes" icon={Flag} color="bg-red-500/10 text-red-400" trend="down" />
@@ -1530,6 +1647,57 @@ export default function Admin() {
                     </AnimatePresence>
                 </main>
             </div>
+
+            {/* ── MOBILE BOTTOM NAV BAR ── */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0a0e14] border-t border-white/10 flex items-stretch" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                {[
+                    { id: 'dashboard',  icon: LayoutDashboard, label: 'Início'    },
+                    { id: 'vehicles',   icon: Car,             label: 'Veículos'  },
+                    { id: 'listings',   icon: Package,         label: 'Anúncios'  },
+                    { id: 'users',      icon: Users,           label: 'Usuários'  },
+                ].map(({ id, icon: Icon, label }) => {
+                    const isActive = section === id;
+                    const item = sidebarItems.find(s => s.id === id);
+                    return (
+                        <button
+                            key={id}
+                            onClick={() => setSection(id as AdminSection)}
+                            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-all relative ${
+                                isActive ? 'text-cyan-400' : 'text-zinc-600 active:text-zinc-300'
+                            }`}
+                        >
+                            {isActive && <span className="absolute top-0 left-1/4 right-1/4 h-0.5 bg-cyan-400 rounded-full" />}
+                            <div className="relative">
+                                <Icon className="w-5 h-5" strokeWidth={isActive ? 2 : 1.5} />
+                                {item?.badge && (
+                                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-black rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
+                                        {item.badge}
+                                    </span>
+                                )}
+                            </div>
+                            <span className={`text-[10px] font-bold leading-none ${isActive ? 'text-cyan-400' : 'text-zinc-600'}`}>{label}</span>
+                        </button>
+                    );
+                })}
+                {/* "More" button opens drawer */}
+                <button
+                    onClick={() => setMobileMenuOpen(true)}
+                    className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-600 active:text-zinc-300 transition-all relative"
+                >
+                    {['reports','financial','analytics','performance','logs','antifraud','settings','messages'].includes(section) && (
+                        <span className="absolute top-0 left-1/4 right-1/4 h-0.5 bg-cyan-400 rounded-full" />
+                    )}
+                    <div className="relative">
+                        <MoreVertical className="w-5 h-5" strokeWidth={1.5} />
+                        {(sidebarItems.filter(i => i.badge && !['dashboard','vehicles','listings','users'].includes(i.id)).reduce((acc, i) => acc + (i.badge ?? 0), 0) > 0) && (
+                            <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-black rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">
+                                !
+                            </span>
+                        )}
+                    </div>
+                    <span className={`text-[10px] font-bold leading-none ${ ['reports','financial','analytics','performance','logs','antifraud','settings','messages'].includes(section) ? 'text-cyan-400' : 'text-zinc-600' }`}>Mais</span>
+                </button>
+            </nav>
         </div>
     );
 }
