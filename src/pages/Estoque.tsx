@@ -61,98 +61,55 @@ export default function Estoque() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Fetch cars from Supabase with active boost priority
+    // Fetch cars from Supabase
     useEffect(() => {
         const fetchCars = async () => {
             setLoading(true);
 
             // Helper: map raw DB row → CarType
-            const mapRow = (d: any, activeBoosts: any[] = []): CarType => {
-                const boostPriority = activeBoosts.length > 0
-                    ? Math.max(...activeBoosts.map((b: any) => Number(b.priority_level ?? 0)))
-                    : 0;
-                const effectivePriority = Math.max(
-                    Number(d.prioridade ?? 0),
-                    boostPriority * 10,
-                );
-                return {
-                    id: d.id, marca: d.marca, modelo: d.modelo, ano: Number(d.ano),
-                    preco: Number(d.preco), quilometragem: d.quilometragem,
-                    telefone: d.telefone, descricao: d.descricao || '',
-                    combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
-                    cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
-                    imagens: d.imagens || [], destaque: d.destaque ?? false,
-                    impulsionado: (d.impulsionado ?? false) || activeBoosts.length > 0,
-                    impulsionado_ate: d.impulsionado_ate || undefined,
-                    prioridade: effectivePriority, modelo_3d: false,
-                    created_at: d.created_at, user_id: d.user_id, loja: d.user_id,
-                };
-            };
+            const mapRow = (d: any): CarType => ({
+                id: d.id, marca: d.marca, modelo: d.modelo, ano: Number(d.ano),
+                preco: Number(d.preco), quilometragem: d.quilometragem,
+                telefone: d.telefone, descricao: d.descricao || '',
+                combustivel: d.combustivel, cambio: d.cambio, cor: d.cor,
+                cidade: d.cidade, aceitaTroca: d.aceita_troca ?? false,
+                imagens: d.imagens || [], destaque: d.destaque ?? false,
+                impulsionado: d.impulsionado ?? false,
+                impulsionado_ate: d.impulsionado_ate || undefined,
+                prioridade: Number(d.prioridade ?? 0), modelo_3d: false,
+                created_at: d.created_at, user_id: d.user_id, loja: d.user_id,
+                slug: d.slug,
+            });
 
-            // Helper: apply mapped list to state
-            const applyMapped = (mapped: CarType[]) => {
+            try {
+                const { data, error } = await supabasePublic
+                    .from('anuncios')
+                    .select('*')
+                    .order('prioridade', { ascending: false })
+                    .order('created_at',  { ascending: false });
+
+                if (error) {
+                    console.error('[Estoque] fetch error:', error.message);
+                    setLoading(false);
+                    return;
+                }
+
+                const mapped = (data || []).map(mapRow);
                 setSupabaseCars(mapped);
+
                 if (mapped.length > 0) {
-                    const prices = mapped.map(c => c.preco);
+                    const prices = mapped.map((c: CarType) => c.preco);
                     const dbMin = Math.floor(Math.min(...prices));
                     const dbMax = Math.ceil(Math.max(...prices));
                     setMinPriceInDB(dbMin); setMaxPriceInDB(dbMax);
                     setPriceMin(dbMin); setPriceMax(dbMax);
                     setPriceMinInput(String(dbMin)); setPriceMaxInput(String(dbMax));
                 }
-            };
-
-            // ── Attempt 1: JOIN with listing_boosts ────────────────────────────
-            // The listing_boosts table may not exist yet (migration pending).
-            // Supabase JS returns { data: null, error } for FK-not-found errors,
-            // it does NOT throw — so we must check `error` explicitly.
-            try {
-                const { data, error } = await supabasePublic
-                    .from('anuncios')
-                    .select(`
-                        *,
-                        listing_boosts!left(
-                            priority_level,
-                            active,
-                            end_date
-                        )
-                    `);
-
-                if (!error && data && data.length > 0) {
-                    // JOIN succeeded — use full boost data
-                    const now = new Date().toISOString();
-                    const mapped = data.map((d: any) => {
-                        const activeBoosts = (d.listing_boosts ?? []).filter(
-                            (b: any) => b.active && b.end_date > now,
-                        );
-                        return mapRow(d, activeBoosts);
-                    });
-                    applyMapped(mapped);
-                    setLoading(false);
-                    return;
-                }
-
-                // `error` is set (e.g. listing_boosts table missing) OR data is
-                // empty [] with no error — fall through to simple query below.
-                if (error) {
-                    console.info('[Estoque] listing_boosts join failed, using simple query:', error.message);
-                }
-            } catch (joinErr) {
-                console.info('[Estoque] listing_boosts join threw, using simple query:', joinErr);
+            } catch (err) {
+                console.error('[Estoque] unexpected error:', err);
+            } finally {
+                setLoading(false);
             }
-
-            // ── Attempt 2: Simple query (no join) ──────────────────────────────
-            try {
-                const { data, error } = await supabasePublic.from('anuncios').select('*');
-                if (!error && data) {
-                    const mapped = data.map((d: any) => mapRow(d));
-                    applyMapped(mapped);
-                }
-            } catch (simpleErr) {
-                console.error('[Estoque] Simple query also failed:', simpleErr);
-            }
-
-            setLoading(false);
         };
         fetchCars();
     }, []);
