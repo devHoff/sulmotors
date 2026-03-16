@@ -184,11 +184,11 @@ export default function PainelLoja() {
         if (!user || !store) return;
         setSubmitting(true);
         try {
-            const payload = {
+            // Base payload — only confirmed columns in anuncios table
+            const basePayload = {
                 user_id: user.id,
-                loja: store.name,
                 marca: form.marca, modelo: form.modelo,
-                ano: parseInt(form.ano), preco: parseFloat(form.preco.replace(/\D/g, '')),
+                ano: parseInt(form.ano), preco: parseFloat(form.preco.replace(/\D/g, '') || '0'),
                 quilometragem: parseInt(form.quilometragem) || 0,
                 telefone: form.telefone, descricao: form.descricao,
                 combustivel: form.combustivel, cambio: form.cambio,
@@ -196,8 +196,12 @@ export default function PainelLoja() {
                 aceita_troca: form.aceitaTroca, imagens: images,
                 destaque: false, impulsionado: false,
             };
-            const { error } = await supabase.from('anuncios').insert(payload);
-            if (error) throw error;
+            // Try with loja column (if migration was applied)
+            let result = await supabase.from('anuncios').insert({ ...basePayload, loja: store.name });
+            if (result.error?.code === 'PGRST204' || result.error?.message?.includes('loja')) {
+                result = await supabase.from('anuncios').insert(basePayload);
+            }
+            if (result.error) throw result.error;
             toast.success(`${form.marca} ${form.modelo} publicado com sucesso!`);
             setForm(EMPTY_FORM);
             setImages([]);
@@ -216,17 +220,23 @@ export default function PainelLoja() {
         if (!editTarget || !user) return;
         setSubmitting(true);
         try {
-            const { error } = await supabase.from('anuncios').update({
+            const baseUpdate = {
                 marca: form.marca, modelo: form.modelo,
-                ano: parseInt(form.ano), preco: parseFloat(form.preco.replace(/\D/g, '')),
+                ano: parseInt(form.ano), preco: parseFloat(form.preco.replace(/\D/g, '') || '0'),
                 quilometragem: parseInt(form.quilometragem) || 0,
                 telefone: form.telefone, descricao: form.descricao,
                 combustivel: form.combustivel, cambio: form.cambio,
                 cor: form.cor, cidade: form.cidade,
                 aceita_troca: form.aceitaTroca, imagens: images,
-                loja: store?.name,
-            }).eq('id', editTarget.id).eq('user_id', user.id);
-            if (error) throw error;
+            };
+            // Try with loja column first, fallback without if column missing
+            let result = await supabase.from('anuncios').update({ ...baseUpdate, loja: store?.name })
+                .eq('id', editTarget.id).eq('user_id', user.id);
+            if (result.error?.code === 'PGRST204' || result.error?.message?.includes('loja')) {
+                result = await supabase.from('anuncios').update(baseUpdate)
+                    .eq('id', editTarget.id).eq('user_id', user.id);
+            }
+            if (result.error) throw result.error;
             toast.success('Anúncio atualizado!');
             setActiveTab('listings');
             setEditTarget(null);
