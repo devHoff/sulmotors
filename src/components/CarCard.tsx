@@ -86,7 +86,7 @@ export default function CarCard({ car, showActions, onEdit, onDelete, onBoost }:
                         src={car.imagens[0] || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80'}
                         alt={`${car.marca} ${car.modelo} ${car.ano} usado em ${car.cidade}`}
                         loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        className="w-full h-full object-contain object-center group-hover:scale-105 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
                     {badge && (

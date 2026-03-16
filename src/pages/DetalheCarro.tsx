@@ -356,7 +356,7 @@ export default function DetalheCarro() {
                             transition={{ duration: 0.38, ease: [0.32, 0.72, 0, 1] }} src={imgs[imgIndex]}
                             alt={`${car.marca} ${car.modelo} ${car.ano} – foto ${imgIndex + 1}`}
                             loading="lazy"
-                            className="absolute inset-0 w-full h-full object-cover" />
+                            className="absolute inset-0 w-full h-full object-contain object-center" />
                     </AnimatePresence>
                     <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-zinc-950/40" />
                 </div>
@@ -380,7 +380,7 @@ export default function DetalheCarro() {
                                 transition={{ duration: 0.42, ease: [0.32, 0.72, 0, 1] }} src={imgs[imgIndex]}
                                 alt={`${car.marca} ${car.modelo} ${car.ano} em ${car.cidade} – foto ${imgIndex + 1}`}
                                 loading="lazy"
-                                className="absolute inset-0 w-full h-full object-cover" />
+                                className="absolute inset-0 w-full h-full object-contain object-center" />
                         </AnimatePresence>
                     </div>
                     {total_ > 1 && (
@@ -443,7 +443,7 @@ export default function DetalheCarro() {
                         {car.imagens.map((url, i) => (
                             <button key={i} onClick={() => jumpImg(i)}
                                 className={`flex-shrink-0 w-16 h-12 md:w-20 md:h-14 rounded-lg overflow-hidden border-2 transition-all ${i === imgIndex ? 'border-brand-400 opacity-100' : 'border-transparent opacity-50 hover:opacity-80'}`}>
-                                <img src={url} alt="" className="w-full h-full object-cover" />
+                                <img src={url} alt="" className="w-full h-full object-contain object-center" />
                             </button>
                         ))}
                     </div>
