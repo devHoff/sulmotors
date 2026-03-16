@@ -1,0 +1,184 @@
+name: Deploy Supabase Edge Functions
+
+# Trigger: push to main or genspark_ai_developer branch
+# Requires GitHub Secrets:
+#   SUPABASE_ACCESS_TOKEN  - Personal Access Token from https://supabase.com/dashboard/account/tokens
+#   SUPABASE_SERVICE_ROLE_KEY - Service role key from project settings
+
+on:
+  push:
+    branches: [main, genspark_ai_developer]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/migrations/**"
+      - ".github/workflows/deploy-supabase.yml"
+  workflow_dispatch:
+    inputs:
+      deploy_migrations:
+        description: "Apply database migrations"
+        required: false
+        default: "false"
+        type: boolean
+      deploy_functions:
+        description: "Deploy Edge Functions"
+        required: false
+        default: "true"
+        type: boolean
+
+concurrency:
+  group: supabase-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Supabase Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      PROJECT_REF: imkzkvlktrixaxougqie
+      SUPABASE_URL: https://imkzkvlktrixaxougqie.supabase.co
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Verify Supabase CLI
+        run: supabase --version
+
+      - name: Link Supabase project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link --project-ref $PROJECT_REF
+
+      # ── Deploy Edge Functions ────────────────────────────────────────────────
+      - name: Deploy boost-plans Edge Function
+        if: ${{ github.event.inputs.deploy_functions != 'false' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy boost-plans \
+            --project-ref $PROJECT_REF \
+            --no-verify-jwt
+
+      - name: Deploy orders Edge Function
+        if: ${{ github.event.inputs.deploy_functions != 'false' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy orders \
+            --project-ref $PROJECT_REF \
+            --no-verify-jwt
+
+      - name: Deploy create-payment Edge Function
+        if: ${{ github.event.inputs.deploy_functions != 'false' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy create-payment \
+            --project-ref $PROJECT_REF \
+            --no-verify-jwt
+
+      - name: Deploy payment-status Edge Function
+        if: ${{ github.event.inputs.deploy_functions != 'false' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy payment-status \
+            --project-ref $PROJECT_REF \
+            --no-verify-jwt
+
+      - name: Deploy mercadopago-webhook Edge Function
+        if: ${{ github.event.inputs.deploy_functions != 'false' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy mercadopago-webhook \
+            --project-ref $PROJECT_REF \
+            --no-verify-jwt
+
+      - name: Deploy expire-boosts Edge Function
+        if: ${{ github.event.inputs.deploy_functions != 'false' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy expire-boosts \
+            --project-ref $PROJECT_REF \
+            --no-verify-jwt
+
+      # ── Set Edge Function Secrets ────────────────────────────────────────────
+      - name: Set Edge Function secrets
+        if: ${{ github.event.inputs.deploy_functions != 'false' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase secrets set \
+            MP_ACCESS_TOKEN="${{ secrets.MP_ACCESS_TOKEN }}" \
+            SUPABASE_SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            CRON_SECRET_KEY="${{ secrets.CRON_SECRET_KEY }}" \
+            --project-ref $PROJECT_REF
+
+      # ── Apply Migrations (optional) ──────────────────────────────────────────
+      - name: Apply database migrations
+        if: ${{ github.event.inputs.deploy_migrations == 'true' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase db push --project-ref $PROJECT_REF
+
+      # ── Verify deployment ────────────────────────────────────────────────────
+      - name: List deployed functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions list --project-ref $PROJECT_REF
+
+      - name: Test function endpoints
+        run: |
+          ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+          ANON_KEY="${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlta3prdmxrdHJpeGF4b3VncWllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExNjY0NDEsImV4cCI6MjA4Njc0MjQ0MX0.JgmaLYSZp1oD5OZRCVA8jci1t6HCZyb6xE96ctuersE}"
+          
+          FUNCTIONS=("boost-plans" "create-payment" "payment-status" "orders" "mercadopago-webhook" "expire-boosts")
+          
+          ALL_OK=true
+          for fn in "${FUNCTIONS[@]}"; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "apikey: $ANON_KEY" \
+              "$SUPABASE_URL/functions/v1/$fn")
+            if [[ "$STATUS" != "404" ]]; then
+              echo "✅ $fn (HTTP $STATUS)"
+            else
+              echo "❌ $fn (HTTP $STATUS - Not deployed)"
+              ALL_OK=false
+            fi
+          done
+          
+          if [[ "$ALL_OK" == "false" ]]; then
+            echo "⚠️ Some functions are not deployed"
+            exit 1
+          fi
+
+      - name: Deployment summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ SulMotor Supabase Deployment Complete"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Edge Functions:"
+          echo "  $SUPABASE_URL/functions/v1/boost-plans"
+          echo "  $SUPABASE_URL/functions/v1/orders"
+          echo "  $SUPABASE_URL/functions/v1/create-payment"
+          echo "  $SUPABASE_URL/functions/v1/payment-status"
+          echo "  $SUPABASE_URL/functions/v1/mercadopago-webhook"
+          echo "  $SUPABASE_URL/functions/v1/expire-boosts"
+          echo ""
+          echo "Mercado Pago Webhook URL:"
+          echo "  $SUPABASE_URL/functions/v1/mercadopago-webhook"
+          echo ""
+          echo "Subscribe to: order.processed, order.cancelled, order.refunded, payment"

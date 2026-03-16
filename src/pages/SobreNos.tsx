@@ -1,22 +1,40 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Target, Eye, Heart, MapPin, Phone, Mail, Shield, Zap, Users, ArrowRight } from 'lucide-react';
+import { Target, Eye, Heart, MapPin, Phone, Mail, Shield, Zap, Users, ArrowRight, Car, Store, Globe } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { supabasePublic } from '../lib/supabase';
 
 export default function SobreNos() {
     const { t } = useLanguage();
+
+    // Live stats — same data source as Home.tsx
+    const [totalCars,  setTotalCars]  = useState<number | null>(null);
+    const [totalUsers, setTotalUsers] = useState<number | null>(null);
+
+    useEffect(() => {
+        supabasePublic
+            .from('anuncios')
+            .select('*', { count: 'exact', head: true })
+            .then(({ count }) => setTotalCars(count ?? 0));
+        supabasePublic
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .then(({ count }) => setTotalUsers(count ?? 0));
+    }, []);
+
+    // Same 4 stats + labels + icons as Home.tsx
+    const stats = [
+        { value: totalCars  !== null ? String(totalCars)  : '…', label: t.home_stats_vehicles, icon: Car   },
+        { value: '-',                                              label: t.home_stats_clients,  icon: Users },
+        { value: '1',                                              label: t.home_stats_stores,   icon: Store },
+        { value: totalUsers !== null ? String(totalUsers) : '…', label: t.home_stats_market,   icon: Globe },
+    ];
 
     const values = [
         { icon: Heart, title: t.sobre_val1_title, desc: t.sobre_val1_desc, color: 'text-red-500 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20' },
         { icon: Zap,   title: t.sobre_val2_title, desc: t.sobre_val2_desc, color: 'text-brand-500 dark:text-brand-400', bg: 'bg-brand-50 dark:bg-brand-400/10 border-brand-200 dark:border-brand-400/20' },
         { icon: Eye,   title: t.sobre_val3_title, desc: t.sobre_val3_desc, color: 'text-purple-500 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20' },
-    ];
-
-    const stats = [
-        { stat: '8+',    label: t.sobre_years },
-        { stat: '150k+', label: t.sobre_deals },
-        { stat: '98%',   label: t.sobre_satisfaction },
-        { stat: '2.4k+', label: t.sobre_vehicles },
     ];
 
     return (
@@ -43,15 +61,18 @@ export default function SobreNos() {
                 </div>
             </section>
 
-            {/* Stats bar */}
+            {/* Stats bar — same metrics & style as Home */}
             <section className="border-y border-slate-200 dark:border-white/5 bg-white dark:bg-zinc-900/50 transition-colors">
                 <div className="max-w-5xl mx-auto px-4">
                     <div className="grid grid-cols-2 md:grid-cols-4">
-                        {stats.map(({ stat, label }, i) => (
+                        {stats.map(({ value, label, icon: Icon }, i) => (
                             <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
                                 className={`px-8 py-8 text-center ${i < stats.length - 1 ? 'border-r border-slate-200 dark:border-white/5' : ''}`}>
-                                <p className="text-3xl font-black text-brand-500 dark:text-brand-400 mb-1">{stat}</p>
-                                <p className="text-xs text-slate-500 dark:text-zinc-600 font-medium uppercase tracking-wider">{label}</p>
+                                <div className="flex justify-center mb-2">
+                                    <Icon className="w-5 h-5 text-brand-400/60" strokeWidth={1.5} />
+                                </div>
+                                <p className="text-3xl font-black text-brand-500 dark:text-brand-400 mb-1">{value}</p>
+                                <p className="text-xs text-slate-500 dark:text-zinc-500 font-medium uppercase tracking-wider">{label}</p>
                             </motion.div>
                         ))}
                     </div>

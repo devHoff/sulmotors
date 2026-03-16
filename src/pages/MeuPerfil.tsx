@@ -152,18 +152,27 @@ export default function MeuPerfil() {
         }
         setSaving(true);
         try {
-            await supabase.from('profiles').upsert({
-                id:               user.id,
-                full_name:        profile.full_name,
-                phone:            profile.phone.replace(/\D/g, ''),
-                cpf:              profile.cpf.replace(/\D/g, ''),
-                data_nascimento:  dmyToISO(profile.data_nascimento_display),
-                genero:           profile.genero,
-                avatar_url:       profile.avatar_url,
-                updated_at:       new Date().toISOString(),
-            });
-            toast.success(t('notif_profile_saved'));
-        } catch {
+            const { error } = await supabase.from('profiles').upsert(
+                {
+                    id:              user.id,
+                    full_name:       profile.full_name.trim(),
+                    phone:           profile.phone.replace(/\D/g, ''),
+                    cpf:             profile.cpf.replace(/\D/g, ''),
+                    data_nascimento: dmyToISO(profile.data_nascimento_display),
+                    genero:          profile.genero,
+                    avatar_url:      profile.avatar_url,
+                    updated_at:      new Date().toISOString(),
+                },
+                { onConflict: 'id' }   // ensure row is matched by PK
+            );
+            if (error) {
+                console.error('[MeuPerfil] save error:', error);
+                toast.error(t('notif_profile_error'));
+            } else {
+                toast.success(t('notif_profile_saved'));
+            }
+        } catch (err) {
+            console.error('[MeuPerfil] unexpected save error:', err);
             toast.error(t('notif_profile_error'));
         } finally {
             setSaving(false);

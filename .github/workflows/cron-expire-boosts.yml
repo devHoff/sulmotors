@@ -1,0 +1,136 @@
+name: Cron – Expire Boosted Listings
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Purpose:
+#   Calls POST /api/cron/expire-boosts every 10 minutes to deactivate expired
+#   boost records and reset listing priority in the database.
+#
+# This workflow is a REDUNDANT FAILSAFE.
+# The primary scheduler is the node-cron inside the running Node.js server.
+# Use this workflow when:
+#   • The server is down / restarting
+#   • Deploying to a serverless platform (Vercel, Cloudflare Workers)
+#   • You want an audit trail of every cron execution in GitHub
+#
+# Required repository secrets (Settings → Secrets → Actions):
+#   CRON_SECRET_KEY   — matches the CRON_SECRET_KEY env var on your server
+#   PAYMENT_API_URL   — full URL of your API, e.g. https://api.sulmotor.com.br
+#                       (no trailing slash)
+#
+# GitHub Actions cron limitation:
+#   Minimum resolution is 5 minutes. The "*/10 * * * *" expression fires
+#   every 10 minutes. Under heavy GitHub load, runs may be delayed up to
+#   several minutes — this is acceptable as the database function is idempotent.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  schedule:
+    # Every 10 minutes, UTC
+    - cron: '*/10 * * * *'
+
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual trigger'
+        required: false
+        default: 'Manual run'
+
+concurrency:
+  group: cron-expire-boosts
+  cancel-in-progress: false  # let the current run finish
+
+jobs:
+  expire-boosts:
+    name: Expire boosted listings
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      # ── 1. Determine API URL ──────────────────────────────────────────────
+      - name: Set API URL
+        id: vars
+        run: |
+          # Use secret if set, fall back to production URL
+          API_URL="${{ secrets.PAYMENT_API_URL }}"
+          if [ -z "$API_URL" ]; then
+            API_URL="https://api.sulmotor.com.br"
+            echo "⚠️ PAYMENT_API_URL secret not set, using default: $API_URL"
+          fi
+          echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
+          echo "✅ Target: $API_URL/api/cron/expire-boosts"
+
+      # ── 2. Call the cron endpoint ─────────────────────────────────────────
+      - name: POST /api/cron/expire-boosts
+        id: cron_call
+        run: |
+          echo "⏱ $(date -u '+%Y-%m-%dT%H:%M:%SZ') — calling expire-boosts…"
+
+          HTTP_CODE=$(curl \
+            --silent \
+            --show-error \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 5 \
+            --retry-connrefused \
+            --output /tmp/cron_response.json \
+            --write-out "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET_KEY }}" \
+            "${{ steps.vars.outputs.api_url }}/api/cron/expire-boosts"
+          )
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response body:"
+          cat /tmp/cron_response.json || echo "(empty)"
+
+          # Parse expired count if jq is available
+          EXPIRED=$(cat /tmp/cron_response.json | python3 -c \
+            "import sys,json; d=json.load(sys.stdin); print(d.get('expired_boosts',0))" \
+            2>/dev/null || echo "unknown")
+
+          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+          echo "expired_count=$EXPIRED"  >> "$GITHUB_OUTPUT"
+
+          # Fail the step if HTTP code is not 2xx
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "❌ cron endpoint returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "✅ expire_boosts executed successfully"
+          echo "📊 expired_boost_count = $EXPIRED"
+
+      # ── 3. Summary ────────────────────────────────────────────────────────
+      - name: Write job summary
+        if: always()
+        run: |
+          HTTP="${{ steps.cron_call.outputs.http_code }}"
+          EXPIRED="${{ steps.cron_call.outputs.expired_count }}"
+          TS="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          TRIGGER="${{ github.event_name }}"
+
+          {
+            echo "## Cron – Expire Boosted Listings"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| **Executed at** | \`$TS\` |"
+            echo "| **Trigger** | \`$TRIGGER\` |"
+            echo "| **HTTP status** | \`$HTTP\` |"
+            echo "| **Expired boosts** | \`$EXPIRED\` |"
+            echo "| **Target** | \`${{ steps.vars.outputs.api_url }}/api/cron/expire-boosts\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── 4. Failure alert ──────────────────────────────────────────────────
+      - name: Alert on failure
+        if: failure()
+        run: |
+          echo "🚨 [cron] expire_boosts failed"
+          echo "   HTTP code : ${{ steps.cron_call.outputs.http_code }}"
+          echo "   Time      : $(date -u)"
+          echo "   Action    : Check PAYMENT_API_URL and CRON_SECRET_KEY secrets."
+          echo "               Ensure the server is running and Supabase is reachable."
+          # Exit 1 already propagated — workflow is marked failed in GitHub UI
+          exit 1

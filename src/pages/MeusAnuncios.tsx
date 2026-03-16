@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Car, Zap, CreditCard } from 'lucide-react';
+import { Plus, Car, Zap, CreditCard, MoreVertical } from 'lucide-react';
 import { toast } from '../utils/toast';
 import CarCard from '../components/CarCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,6 +15,19 @@ export default function MeusAnuncios() {
     const { t } = useLanguage();
     const [myCars, setMyCars] = useState<CarType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     useEffect(() => { if (user) fetchMyAds(); }, [user]);
 
@@ -57,24 +70,51 @@ export default function MeusAnuncios() {
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-10">
                     <div>
                         <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-widest mb-2">{myCars.length} {t.mads_count}</p>
-                        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{t.mads_title}</h1>
+                        <h1 className="mads-heading text-4xl font-black text-slate-900 dark:text-white tracking-tight">{t.mads_title}</h1>
                         <p className="text-slate-500 dark:text-zinc-500 mt-1 text-sm">{t.mads_subtitle}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Link
-                            to="/dashboard/payments"
-                            className="flex items-center gap-2 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-300 hover:text-white text-sm font-bold rounded-xl transition-all border border-white/8"
-                        >
-                            <CreditCard className="w-4 h-4" strokeWidth={1.5} />
-                            Pagamentos
-                        </Link>
+                        {/* Anunciar Carro — primary action */}
                         <button
                             onClick={() => navigate('/anunciar')}
                             className="flex items-center gap-2 px-5 py-3 bg-brand-400 hover:bg-brand-300 text-zinc-950 text-sm font-black rounded-xl transition-all hover:shadow-glow"
                         >
                             <Plus className="w-4 h-4" strokeWidth={1.5} />
-                            {t.mads_new}
+                            <span className="hidden sm:inline">{t.mads_new}</span>
                         </button>
+
+                        {/* Three-dot menu — contains: 1. Anunciar Carro, 2. Pagamentos */}
+                        <div className="relative" ref={menuRef}>
+                            <button
+                                onClick={() => setMenuOpen(o => !o)}
+                                className="flex items-center justify-center w-10 h-10 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 rounded-xl transition-all border border-slate-200 dark:border-white/8"
+                                aria-label="Mais opções"
+                            >
+                                <MoreVertical className="w-4 h-4" strokeWidth={1.5} />
+                            </button>
+
+                            {menuOpen && (
+                                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                                    {/* 1. Anunciar Carro */}
+                                    <button
+                                        onClick={() => { setMenuOpen(false); navigate('/anunciar'); }}
+                                        className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                                    >
+                                        <Plus className="w-4 h-4 text-brand-400" strokeWidth={1.5} />
+                                        {t.mads_new}
+                                    </button>
+                                    {/* 2. Pagamentos */}
+                                    <Link
+                                        to="/dashboard/payments"
+                                        onClick={() => setMenuOpen(false)}
+                                        className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors border-t border-slate-100 dark:border-white/5"
+                                    >
+                                        <CreditCard className="w-4 h-4 text-zinc-400" strokeWidth={1.5} />
+                                        Pagamentos
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </motion.div>
 
