@@ -109,6 +109,7 @@ export default function MeuPerfil() {
 
     const [cpfError, setCpfError]         = useState('');
     const [ageError, setAgeError]         = useState('');
+    const [extendedCols, setExtendedCols] = useState(true); // false = cpf/data_nascimento/genero columns don't exist yet
     const [cropSrc, setCropSrc]           = useState<string | null>(null);
     const [showCropModal, setShowCropModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -125,9 +126,11 @@ export default function MeuPerfil() {
                 .single();
 
             // Fallback: if extended columns are missing (PGRST204 / error), fetch base
-            const { data } = extSelect.error
-                ? await supabase.from('profiles').select('full_name,phone,avatar_url').eq('id', user.id).single() as any
-                : extSelect as any;
+            const hasExtended = !extSelect.error;
+            setExtendedCols(hasExtended);
+            const { data } = hasExtended
+                ? extSelect as any
+                : await supabase.from('profiles').select('full_name,phone,avatar_url').eq('id', user.id).single() as any;
             if (data) {
                 setProfile({
                     full_name:               data.full_name   || '',
@@ -307,8 +310,9 @@ export default function MeuPerfil() {
                                 type="text"
                                 value={profile.cpf}
                                 onChange={e => { setProfile(p => ({ ...p, cpf: cpfMask(e.target.value) })); setCpfError(''); }}
-                                placeholder="000.000.000-00"
-                                className={`${inputCls} ${cpfError ? 'border-red-500/60 focus:border-red-500/60' : ''}`}
+                                placeholder={extendedCols ? '000.000.000-00' : 'Aguardando migração...'}
+                                disabled={!extendedCols}
+                                className={`${extendedCols ? inputCls : inputDisabledCls} ${cpfError ? 'border-red-500/60 focus:border-red-500/60' : ''}`}
                             />
                             {cpfError && <p className="text-xs text-red-500 mt-1">{cpfError}</p>}
                         </Field>
@@ -319,8 +323,9 @@ export default function MeuPerfil() {
                                 type="text"
                                 value={profile.data_nascimento_display}
                                 onChange={e => { setProfile(p => ({ ...p, data_nascimento_display: dateMask(e.target.value) })); setAgeError(''); }}
-                                placeholder="DD/MM/AAAA"
-                                className={`${inputCls} ${ageError ? 'border-red-500/60 focus:border-red-500/60' : ''}`}
+                                placeholder={extendedCols ? 'DD/MM/AAAA' : 'Aguardando migração...'}
+                                disabled={!extendedCols}
+                                className={`${extendedCols ? inputCls : inputDisabledCls} ${ageError ? 'border-red-500/60 focus:border-red-500/60' : ''}`}
                             />
                             {ageError && <p className="text-xs text-red-500 mt-1">{ageError}</p>}
                         </Field>
@@ -330,13 +335,22 @@ export default function MeuPerfil() {
                             <select
                                 value={profile.genero}
                                 onChange={e => setProfile(p => ({ ...p, genero: e.target.value }))}
-                                className={inputCls}
+                                disabled={!extendedCols}
+                                className={extendedCols ? inputCls : inputDisabledCls}
                             >
                                 {GENDER_OPTIONS.map(o => (
                                     <option key={o.value} value={o.value}>{t(o.label)}</option>
                                 ))}
                             </select>
                         </Field>
+
+                        {/* Migration pending notice */}
+                        {!extendedCols && (
+                            <p className="text-xs text-amber-400/80 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 flex items-start gap-2">
+                                <span className="mt-0.5">⚠️</span>
+                                <span>Os campos CPF, data de nascimento e gênero estão aguardando uma migração no banco de dados. Entre em contato com o administrador do site para executar o script <code className="text-amber-300">009_profiles_extended_columns.sql</code>.</span>
+                            </p>
+                        )}
 
                         {/* Save button */}
                         <div className="pt-2">

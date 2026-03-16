@@ -16,7 +16,8 @@ import {
     Plus, Car, Trash2, Edit3, Eye, Star, TrendingUp,
     LogOut, BarChart2, CheckCircle2, XCircle, AlertCircle,
     Phone, MapPin, Image as ImageIcon, RefreshCw, Search,
-    ChevronDown, Zap, ShieldCheck, X, Upload, Loader2
+    ChevronDown, Zap, ShieldCheck, X, Upload, Loader2,
+    Database, ClipboardCopy, ChevronUp
 } from 'lucide-react';
 import { toast } from '../utils/toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -94,6 +95,9 @@ export default function PainelLoja() {
     // ── State ─────────────────────────────────────────────────────────────────
     const [listings, setListings]           = useState<Listing[]>([]);
     const [loading, setLoading]             = useState(true);
+    const [migrationNeeded, setMigrationNeeded] = useState(false);
+    const [migrationBannerOpen, setMigrationBannerOpen] = useState(true);
+    const [sqlCopied, setSqlCopied]         = useState(false);
     const [search, setSearch]               = useState('');
     const [activeTab, setActiveTab]         = useState<'listings' | 'new' | 'edit'>('listings');
     const [editTarget, setEditTarget]       = useState<Listing | null>(null);
@@ -136,6 +140,37 @@ export default function PainelLoja() {
     }, [user]);
 
     useEffect(() => { if (user && store) loadListings(); }, [user, store, loadListings]);
+
+    // ── Check if profiles migration is needed ────────────────────────────────
+    useEffect(() => {
+        (async () => {
+            if (!user) return;
+            const { error } = await supabase
+                .from('profiles')
+                .select('cpf')
+                .eq('id', user.id)
+                .single();
+            // PGRST204 = column not found in schema cache → migration needed
+            if (error?.code === 'PGRST204' || error?.message?.includes('cpf')) {
+                setMigrationNeeded(true);
+            }
+        })();
+    }, [user]);
+
+    const MIGRATION_SQL = `-- Cole este SQL no Supabase Dashboard → SQL Editor e clique em RUN
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS cpf             TEXT,
+  ADD COLUMN IF NOT EXISTS data_nascimento DATE,
+  ADD COLUMN IF NOT EXISTS genero          TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_profiles_cpf ON public.profiles (cpf)
+  WHERE cpf IS NOT NULL;`;
+
+    const copySql = () => {
+        navigator.clipboard.writeText(MIGRATION_SQL);
+        setSqlCopied(true);
+        setTimeout(() => setSqlCopied(false), 2000);
+    };
 
     // ── Image upload ──────────────────────────────────────────────────────────
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -497,6 +532,45 @@ export default function PainelLoja() {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+
+                {/* ── Migration notice ───────────────────────────────────── */}
+                <AnimatePresence>
+                {migrationNeeded && migrationBannerOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4"
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <Database className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-amber-300">Migração de banco de dados pendente</p>
+                                    <p className="text-xs text-amber-400/80 mt-0.5">
+                                        Para habilitar campos de CPF, data de nascimento e gênero nos perfis, execute o SQL abaixo no
+                                        {' '}<a href="https://supabase.com/dashboard/project/imkzkvlktrixaxougqie/sql" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-300">Supabase Dashboard → SQL Editor</a>.
+                                    </p>
+                                    <div className="mt-3 relative">
+                                        <pre className="text-xs text-zinc-300 bg-zinc-900/80 border border-white/10 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">{MIGRATION_SQL}</pre>
+                                        <button
+                                            onClick={copySql}
+                                            className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-lg text-xs text-zinc-400 hover:text-white transition-all"
+                                        >
+                                            {sqlCopied ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <ClipboardCopy className="w-3.5 h-3.5" />}
+                                            {sqlCopied ? 'Copiado!' : 'Copiar SQL'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onClick={() => setMigrationBannerOpen(false)}
+                                className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+                </AnimatePresence>
 
                 {/* ── Stats bar ──────────────────────────────────────────── */}
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
