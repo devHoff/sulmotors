@@ -482,8 +482,8 @@ CREATE INDEX IF NOT EXISTS idx_profiles_cpf ON public.profiles (cpf)
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
                     {/* Logo + store name */}
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl overflow-hidden bg-white border border-white/20 flex-shrink-0">
-                            <img src={store.logo || '/alex-megamotors-logo.png'} alt={store.name} className="w-full h-full object-cover" />
+                        <div className="w-9 h-9 rounded-xl bg-white border border-white/20 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                            <img src={store.logo || '/alex-megamotors-logo.png'} alt={store.name} className="max-w-[80%] max-h-[80%] w-auto h-auto object-contain" />
                         </div>
                         <div>
                             <p className="text-xs text-zinc-500 leading-none">Painel</p>

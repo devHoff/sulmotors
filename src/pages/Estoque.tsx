@@ -241,9 +241,9 @@ export default function Estoque() {
                             </p>
                             {activeStoreProfile && (
                                 <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-white border border-slate-200 dark:border-white/10 shadow flex-shrink-0">
+                                    <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 dark:border-white/10 shadow flex-shrink-0 flex items-center justify-center overflow-hidden">
                                         <img src={activeStoreProfile.logo} alt={activeStoreProfile.name}
-                                            className="w-full h-full object-cover"
+                                            className="max-w-[80%] max-h-[80%] w-auto h-auto object-contain"
                                         />
                                     </div>
                                     <Link to={`/loja/${selectedLoja}`}
