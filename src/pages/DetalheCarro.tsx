@@ -343,11 +343,11 @@ export default function DetalheCarro() {
             <div className="relative overflow-hidden" style={{ height: 'clamp(300px, 60vh, 680px)' }}>
                 <AnimatePresence initial={false}>
                     <motion.div key={`bg-${imgIndex}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.55 }} className="absolute inset-0">
-                        <img src={imgs[imgIndex]} alt="" aria-hidden className="w-full h-full object-cover scale-110" style={{ filter: 'blur(32px) saturate(1.1) brightness(0.35)' }} />
+                        <img src={imgs[imgIndex]} alt="" aria-hidden className="w-full h-full object-cover scale-110" style={{ filter: 'blur(28px) saturate(1.2) brightness(0.55)' }} />
                     </motion.div>
                 </AnimatePresence>
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/90 via-zinc-950/10 to-zinc-950/60 pointer-events-none z-10" />
-                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/70 via-transparent to-zinc-950/70 pointer-events-none z-10" />
+                {/* left/right gradient removed — blurred bg fills gaps instead */}
 
                 {/* Mobile: full-bleed swipeable */}
                 <div className="md:hidden absolute inset-0 z-20" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
